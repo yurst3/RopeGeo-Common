@@ -5,5 +5,6 @@ export {
     DifficultyTechnical,
     DifficultyTime,
     DifficultyWater,
+    GetRopewikiPagePreviewRow,
     PagePreview,
 } from './types/api/getRoutePreview/pagePreview';

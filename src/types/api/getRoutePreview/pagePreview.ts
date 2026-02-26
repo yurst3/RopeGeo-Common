@@ -1,5 +1,24 @@
 import { PageDataSource } from '../../pageDataSource';
 
+/**
+ * Row shape returned by the getRopewikiPagePreview query.
+ * Used when building a PagePreview from Ropewiki data via PagePreview.fromDbRow.
+ */
+export interface GetRopewikiPagePreviewRow {
+    pageId: string;
+    title: string;
+    quality: number | null;
+    userVotes: number | null;
+    technicalRating: string | null;
+    timeRating: string | null;
+    waterRating: string | null;
+    riskRating: string | null;
+    regionId: string;
+    regionName: string;
+    bannerFileUrl: string | null;
+    url: string | null;
+}
+
 /** Technical difficulty: 1–4 */
 export enum DifficultyTechnical {
     One = '1',
@@ -113,7 +132,7 @@ export class PagePreview {
     title: string;
     /** Region names (not ids) */
     regions: string[];
-    /** Difficulty ratings (technical, water, time, risk); always present, each field nullable */
+    /** Difficulty ratings (technical, water, time, risk); always present. risk is set to effective risk when built via fromDbRow. */
     difficulty: Difficulty;
     /** Map data id for the page route, or null if none */
     mapData: string | null;
@@ -142,5 +161,64 @@ export class PagePreview {
         this.difficulty = difficulty;
         this.mapData = mapData;
         this.externalLink = externalLink;
+    }
+
+    /**
+     * Builds a PagePreview from a getRopewikiPagePreview query row.
+     * Sets difficulty.risk to the effective risk (derived from technical when risk is not set).
+     */
+    static fromDbRow(
+        row: GetRopewikiPagePreviewRow,
+        mapData: string | null,
+        regions?: string[],
+    ): PagePreview {
+        const difficulty = new Difficulty(
+            row.technicalRating,
+            row.waterRating,
+            row.timeRating,
+            row.riskRating,
+        );
+        difficulty.risk = PagePreview.getEffectiveRisk(difficulty);
+        return new PagePreview(
+            row.pageId,
+            PageDataSource.Ropewiki,
+            row.bannerFileUrl ?? null,
+            row.quality != null ? Number(row.quality) : null,
+            row.userVotes ?? null,
+            row.title,
+            regions ?? [row.regionName],
+            difficulty,
+            mapData,
+            row.url ?? null,
+        );
+    }
+
+    private static readonly RISK_ORDER: Record<DifficultyRisk, number> = {
+        [DifficultyRisk.G]: 0,
+        [DifficultyRisk.PG]: 1,
+        [DifficultyRisk.PG13]: 2,
+        [DifficultyRisk.R]: 3,
+        [DifficultyRisk.X]: 4,
+        [DifficultyRisk.XX]: 5,
+    };
+
+    private static getDefaultRisk(difficulty: Difficulty): DifficultyRisk | null {
+        if (difficulty.technical === DifficultyTechnical.One) return DifficultyRisk.G;
+        if (difficulty.technical === DifficultyTechnical.Two) return DifficultyRisk.PG;
+        if (difficulty.technical === DifficultyTechnical.Three || difficulty.technical === DifficultyTechnical.Four) {
+            return DifficultyRisk.PG13;
+        }
+        return null;
+    }
+
+    private static getEffectiveRisk(difficulty: Difficulty): DifficultyRisk | null {
+        const defaultRisk = PagePreview.getDefaultRisk(difficulty);
+        if (difficulty.risk != null) {
+            return defaultRisk != null &&
+                PagePreview.RISK_ORDER[difficulty.risk] < PagePreview.RISK_ORDER[defaultRisk]
+                ? defaultRisk
+                : difficulty.risk;
+        }
+        return defaultRisk;
     }
 }
