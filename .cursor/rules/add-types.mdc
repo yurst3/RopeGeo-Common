@@ -1,6 +1,6 @@
 ---
 description: How to add new types to ropegeo-common and keep the README in sync
-globs: src/**/*.ts, src/index.ts, README.md
+globs: src/**/*.ts, src/index.ts, README.md, package.json
 alwaysApply: false
 ---
 
@@ -15,10 +15,16 @@ alwaysApply: false
 
 1. **Add the type** in the appropriate file under `src/types/` (new file or existing).
 2. **Export from the package** by adding the export in `src/index.ts`.
-3. **Build** – run `npm run build` to update `dist/`.
-4. **Update the README** – in the “What’s in this package” section:
+3. **Bump the package version** in `package.json` (e.g. patch: 1.0.0 → 1.0.1). The publish workflow will fail if the version is not greater than the one on npm.
+4. **Build** – run `npm run build` to update `dist/`.
+5. **Update the README** – in the “What’s in this package” section:
    - Add a bullet (or extend an existing one) that names the new type(s) and what they’re for.
    - If the new type is part of the public API, add it to the usage example import list in the README so consumers see it.
+
+## Checklist before pushing/publishing
+
+- Bump the `version` in `package.json` (publish workflow requires a version greater than npm).
+- Run `npm run build`.
 
 ## README checklist
 
