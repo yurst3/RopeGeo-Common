@@ -1,0 +1,28 @@
+---
+description: How to add new types to ropegeo-common and keep the README in sync
+globs: src/**/*.ts, src/index.ts, README.md
+alwaysApply: false
+---
+
+# Adding new types to ropegeo-common
+
+## Where to put new types
+
+- **General / cross-cutting types** (e.g. enums, shared domain concepts): `src/types/<name>.ts`
+- **API-specific types** (e.g. response shapes for a given endpoint): `src/types/api/<apiArea>/<name>.ts`. Example: route preview types live under `src/types/api/getRoutePreview/`.
+
+## Steps when adding types
+
+1. **Add the type** in the appropriate file under `src/types/` (new file or existing).
+2. **Export from the package** by adding the export in `src/index.ts`.
+3. **Build** – run `npm run build` to update `dist/`.
+4. **Update the README** – in the “What’s in this package” section:
+   - Add a bullet (or extend an existing one) that names the new type(s) and what they’re for.
+   - If the new type is part of the public API, add it to the usage example import list in the README so consumers see it.
+
+## README checklist
+
+After adding types, ensure README.md has:
+
+- A bullet under “What’s in this package” describing the new type(s).
+- The usage code block’s import list including any new exports you want to advertise (so the README stays an accurate list of what’s available).
