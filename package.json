@@ -1,12 +1,17 @@
 {
   "name": "ropegeo-common",
-  "version": "1.0.0",
-  "description": "A package for common code used by RopeGeo and its backend services",
+  "version": "1.0.1",
+  "description": "Shared types and utilities for RopeGeo and WebScraper",
   "license": "ISC",
-  "author": "",
   "type": "commonjs",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
-  }
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "files": ["dist"]
 }
