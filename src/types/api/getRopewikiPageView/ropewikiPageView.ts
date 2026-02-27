@@ -13,6 +13,7 @@ export interface RopewikiPageView {
     url: string;
     quality: number;
     userVotes: number;
+    regions: { name: string, id: string }[];
     difficulty: Difficulty;
     permit: PermitStatus | null;
     rappelCount: { min: number; max: number } | number | null;
