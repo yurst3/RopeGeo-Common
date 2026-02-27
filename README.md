@@ -4,7 +4,7 @@ Shared types and utilities for [RopeGeo](https://github.com/yurst3/RopeGeo) and 
 
 ## What’s in this package
 
-- **Page preview types** – `PagePreview`, `Difficulty`, and related enums used by the route preview API (e.g. GET /route/{routeId}/preview).
+- **Page preview types** – `PagePreview`, `Difficulty`, and related enums used by the route preview API (e.g. GET /route/{routeId}/preview). `PagePreview` includes optional `permit` (`PermitStatus` enum: Yes, No, Restricted, Closed, or null).
 - **Page data source** – `PageDataSource` enum (e.g. Ropewiki) used when linking routes to pages.
 
 ## Usage
@@ -22,6 +22,7 @@ import {
   DifficultyWater,
   DifficultyTime,
   DifficultyRisk,
+  PermitStatus,
 } from 'ropegeo-common';
 ```
 

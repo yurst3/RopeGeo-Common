@@ -7,4 +7,5 @@ export {
     DifficultyWater,
     GetRopewikiPagePreviewRow,
     PagePreview,
+    PermitStatus,
 } from './types/api/getRoutePreview/pagePreview';

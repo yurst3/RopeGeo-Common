@@ -17,6 +17,15 @@ export interface GetRopewikiPagePreviewRow {
     regionName: string;
     bannerFileUrl: string | null;
     url: string | null;
+    permits: string | null;
+}
+
+/** Permit status: Yes, No, Restricted, Closed, or null. */
+export enum PermitStatus {
+    Yes = 'Yes',
+    No = 'No',
+    Restricted = 'Restricted',
+    Closed = 'Closed',
 }
 
 /** Technical difficulty: 1–4 */
@@ -138,6 +147,8 @@ export class PagePreview {
     mapData: string | null;
     /** External link to the page (e.g. Ropewiki page URL) */
     externalLink: string | null;
+    /** Permit status: Yes, No, Restricted, Closed, or null */
+    permit: PermitStatus | null;
 
     constructor(
         id: string,
@@ -150,6 +161,7 @@ export class PagePreview {
         difficulty: Difficulty,
         mapData: string | null,
         externalLink: string | null,
+        permit: PermitStatus | null,
     ) {
         this.id = id;
         this.source = source;
@@ -161,6 +173,7 @@ export class PagePreview {
         this.difficulty = difficulty;
         this.mapData = mapData;
         this.externalLink = externalLink;
+        this.permit = permit;
     }
 
     /**
@@ -190,7 +203,14 @@ export class PagePreview {
             difficulty,
             mapData,
             row.url ?? null,
+            PagePreview.parsePermit(row.permits),
         );
+    }
+
+    private static parsePermit(value: string | null | undefined): PermitStatus | null {
+        if (value == null || value === '') return null;
+        const trimmed = value.trim();
+        return Object.values(PermitStatus).includes(trimmed as PermitStatus) ? (trimmed as PermitStatus) : null;
     }
 
     private static readonly RISK_ORDER: Record<DifficultyRisk, number> = {
