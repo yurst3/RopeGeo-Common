@@ -9,3 +9,5 @@ export {
     PagePreview,
     PermitStatus,
 } from './types/api/getRoutePreview/pagePreview';
+export { Route, RouteGeoJsonFeature, RouteType } from './types/route';
+export { RoutesGeojson } from './types/api/getRoutes/routeGeojson';

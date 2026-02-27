@@ -1,1 +1,23 @@
-{"name":"ropegeo-common","version":"1.0.4","description":"Shared types and utilities for RopeGeo and WebScraper","license":"ISC","repository":{"type":"git","url":"https://github.com/yurst3/RopeGeo-Common"},"type":"commonjs","main":"dist/index.js","types":"dist/index.d.ts","scripts":{"build":"tsc","test":"echo \"Error: no test specified\" && exit 1"},"devDependencies":{"typescript":"^5.9.3"},"files":["dist"]}
+{
+    "name": "ropegeo-common",
+    "version": "1.0.5",
+    "description": "Shared types and utilities for RopeGeo and WebScraper",
+    "license": "ISC",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/yurst3/RopeGeo-Common"
+    },
+    "type": "commonjs",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "devDependencies": {
+        "typescript": "^5.9.3"
+    },
+    "files": [
+        "dist"
+    ]
+}
