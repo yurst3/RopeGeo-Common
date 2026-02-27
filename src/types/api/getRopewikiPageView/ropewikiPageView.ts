@@ -15,7 +15,7 @@ export interface RopewikiPageView {
     userVotes: number;
     difficulty: Difficulty;
     permit: PermitStatus | null;
-    rappelCount: { min: number; max: number } | null;
+    rappelCount: { min: number; max: number } | number | null;
     vehicle: string;
     rappelLongest: number;
     shuttle: number;
