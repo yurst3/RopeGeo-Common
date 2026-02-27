@@ -17,12 +17,12 @@ export interface RopewikiPageView {
     permit: PermitStatus | null;
     rappelCount: { min: number; max: number } | number | null;
     jumps: number | null;
-    vehicle: string;
-    rappelLongest: number;
-    shuttle: number;
-    minTime: number;
-    maxTime: number;
-    hike: number;
+    vehicle: string | null;
+    rappelLongest: number | null;
+    shuttle: number | null;
+    minTime: number | null;
+    maxTime: number | null;
+    hike: number | null;
     months: string[];
     latestRevisionDate: Date;
     bannerImage: RopewikiImageView | null;
