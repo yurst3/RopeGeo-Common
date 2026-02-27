@@ -6,6 +6,7 @@ Shared types and utilities for [RopeGeo](https://github.com/yurst3/RopeGeo) and 
 
 - **Page preview types** – `PagePreview`, `Difficulty`, and related enums used by the route preview API (e.g. GET /route/{routeId}/preview). `PagePreview` includes optional `permit` (`PermitStatus` enum: Yes, No, Restricted, Closed, or null).
 - **Page data source** – `PageDataSource` enum (e.g. Ropewiki) used when linking routes to pages.
+- **Ropewiki page view types** – `RopewikiPageView`, `RopewikiBetaSectionView`, and `RopewikiImageView` for the getRopewikiPageView API (full Ropewiki page with beta sections and images).
 - **Routes (GET /routes)** – `Route`, `RouteType`, `RouteGeoJsonFeature`, and `RoutesGeojson` for the routes GeoJSON Feature Collection API. `RoutesGeojson.fromRoutes(routes)` builds the response shape from an array of `Route`.
 
 ## Usage
@@ -27,6 +28,9 @@ import {
   Route,
   RouteType,
   RoutesGeojson,
+  type RopewikiPageView,
+  type RopewikiBetaSectionView,
+  type RopewikiImageView,
 } from 'ropegeo-common';
 ```
 
