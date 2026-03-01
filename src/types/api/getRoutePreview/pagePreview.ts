@@ -1,8 +1,4 @@
-import {
-    Difficulty,
-    DifficultyRisk,
-    DifficultyTechnical,
-} from '../../difficulty';
+import { Difficulty } from '../../difficulty';
 import { PermitStatus } from '../../permitStatus';
 import { PageDataSource } from '../../pageDataSource';
 
@@ -45,7 +41,7 @@ export class PagePreview {
     title: string;
     /** Region names (not ids) */
     regions: string[];
-    /** Difficulty ratings (technical, water, time, risk); always present. risk is set to effective risk when built via fromDbRow. */
+    /** Difficulty ratings (technical, water, time, risk); always present. risk is the effective risk (derived from technical when not set). */
     difficulty: Difficulty;
     /** Map data id for the page route, or null if none */
     mapData: string | null;
@@ -82,7 +78,6 @@ export class PagePreview {
 
     /**
      * Builds a PagePreview from a getRopewikiPagePreview query row.
-     * Sets difficulty.risk to the effective risk (derived from technical when risk is not set).
      */
     static fromDbRow(
         row: GetRopewikiPagePreviewRow,
@@ -95,7 +90,6 @@ export class PagePreview {
             row.timeRating,
             row.riskRating,
         );
-        difficulty.risk = PagePreview.getEffectiveRisk(difficulty);
         return new PagePreview(
             row.pageId,
             PageDataSource.Ropewiki,
@@ -115,34 +109,5 @@ export class PagePreview {
         if (value == null || value === '') return null;
         const trimmed = value.trim();
         return Object.values(PermitStatus).includes(trimmed as PermitStatus) ? (trimmed as PermitStatus) : null;
-    }
-
-    private static readonly RISK_ORDER: Record<DifficultyRisk, number> = {
-        [DifficultyRisk.G]: 0,
-        [DifficultyRisk.PG]: 1,
-        [DifficultyRisk.PG13]: 2,
-        [DifficultyRisk.R]: 3,
-        [DifficultyRisk.X]: 4,
-        [DifficultyRisk.XX]: 5,
-    };
-
-    private static getDefaultRisk(difficulty: Difficulty): DifficultyRisk | null {
-        if (difficulty.technical === DifficultyTechnical.One) return DifficultyRisk.G;
-        if (difficulty.technical === DifficultyTechnical.Two) return DifficultyRisk.PG;
-        if (difficulty.technical === DifficultyTechnical.Three || difficulty.technical === DifficultyTechnical.Four) {
-            return DifficultyRisk.PG13;
-        }
-        return null;
-    }
-
-    private static getEffectiveRisk(difficulty: Difficulty): DifficultyRisk | null {
-        const defaultRisk = PagePreview.getDefaultRisk(difficulty);
-        if (difficulty.risk != null) {
-            return defaultRisk != null &&
-                PagePreview.RISK_ORDER[difficulty.risk] < PagePreview.RISK_ORDER[defaultRisk]
-                ? defaultRisk
-                : difficulty.risk;
-        }
-        return defaultRisk;
     }
 }
