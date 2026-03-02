@@ -21,13 +21,16 @@ export interface RopewikiPageView {
     vehicle: string | null;
     rappelLongest: number | null;
     shuttleTime: number | null;
-    overallTime: { min: number; max: number } | number | null;
-    hikeLength: number | null;
     overallLength: number | null;
+    descentLength: number | null;
+    exitLength: number | null;
+    approachLength: number | null;
+    overallTime: { min: number; max: number } | number | null;
     approachTime: { min: number; max: number } | number | null;
     descentTime: { min: number; max: number } | number | null;
     exitTime: { min: number; max: number } | number | null;
     approachElevGain: number | null;
+    descentElevGain: number | null;
     exitElevGain: number | null;
     months: string[];
     latestRevisionDate: Date;
