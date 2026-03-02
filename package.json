@@ -1,6 +1,6 @@
 {
     "name": "ropegeo-common",
-    "version": "1.0.12",
+    "version": "1.0.13",
     "description": "Shared types and utilities for RopeGeo and WebScraper",
     "license": "ISC",
     "repository": {
@@ -12,9 +12,12 @@
     "types": "dist/index.d.ts",
     "scripts": {
         "build": "tsc",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "jest -i --no-watchman"
     },
     "devDependencies": {
+        "@types/jest": "^29.5.14",
+        "jest": "^30.2.0",
+        "ts-jest": "^29.2.5",
         "typescript": "^5.9.3"
     },
     "files": [
