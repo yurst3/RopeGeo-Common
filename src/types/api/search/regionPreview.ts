@@ -4,6 +4,6 @@ export interface RegionPreview {
     id: string;
     name: string;
     parents: string[];
-    bannerUrl: string | null;
+    imageUrl: string | null;
     source: PageDataSource;
 }
