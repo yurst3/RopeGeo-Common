@@ -12,6 +12,7 @@ function validConstructorArgs(overrides: Partial<{
     similarityThreshold: number;
     includePages: boolean;
     includeRegions: boolean;
+    includeAka: boolean;
     regionId: string | null;
     order: 'similarity' | 'quality';
     limit: number;
@@ -22,6 +23,7 @@ function validConstructorArgs(overrides: Partial<{
         similarityThreshold: 0.5,
         includePages: true,
         includeRegions: true,
+        includeAka: true,
         regionId: null as string | null,
         order: 'similarity' as const,
         limit: 20,
@@ -39,6 +41,7 @@ describe('SearchParams', () => {
                 args.similarityThreshold,
                 args.includePages,
                 args.includeRegions,
+                args.includeAka,
                 args.regionId,
                 args.order,
                 args.limit,
@@ -48,6 +51,7 @@ describe('SearchParams', () => {
             expect(p.similarityThreshold).toBe(0.5);
             expect(p.includePages).toBe(true);
             expect(p.includeRegions).toBe(true);
+            expect(p.includeAka).toBe(true);
             expect(p.regionId).toBeNull();
             expect(p.order).toBe('similarity');
             expect(p.limit).toBe(20);
@@ -60,6 +64,7 @@ describe('SearchParams', () => {
                 0.3,
                 true,
                 false,
+                true,
                 validUuid,
                 'quality',
                 10,
@@ -79,6 +84,7 @@ describe('SearchParams', () => {
                     args.similarityThreshold,
                     args.includePages,
                     args.includeRegions,
+                    args.includeAka,
                     args.regionId,
                     args.order,
                     args.limit,
@@ -95,6 +101,7 @@ describe('SearchParams', () => {
                     args.similarityThreshold,
                     args.includePages,
                     args.includeRegions,
+                    args.includeAka,
                     args.regionId,
                     args.order,
                     args.limit,
@@ -111,6 +118,7 @@ describe('SearchParams', () => {
                     args.similarityThreshold,
                     args.includePages,
                     args.includeRegions,
+                    args.includeAka,
                     args.regionId,
                     args.order,
                     args.limit,
@@ -129,6 +137,7 @@ describe('SearchParams', () => {
                     args.similarityThreshold,
                     args.includePages,
                     args.includeRegions,
+                    args.includeAka,
                     args.regionId,
                     args.order,
                     args.limit,
@@ -147,6 +156,7 @@ describe('SearchParams', () => {
                     args.similarityThreshold,
                     args.includePages,
                     args.includeRegions,
+                    args.includeAka,
                     args.regionId,
                     args.order,
                     args.limit,
@@ -157,10 +167,11 @@ describe('SearchParams', () => {
             );
         });
 
-        it('throws when both includePages and includeRegions are false', () => {
+        it('throws when includeAka is true and includePages is false', () => {
             const args = validConstructorArgs({
                 includePages: false,
-                includeRegions: false,
+                includeRegions: true,
+                includeAka: true,
             });
             expect(() =>
                 new SearchParams(
@@ -168,6 +179,30 @@ describe('SearchParams', () => {
                     args.similarityThreshold,
                     args.includePages,
                     args.includeRegions,
+                    args.includeAka,
+                    args.regionId,
+                    args.order,
+                    args.limit,
+                    args.cursorEncoded,
+                ),
+            ).toThrow(
+                'include-aka cannot be true when include-pages is false',
+            );
+        });
+
+        it('throws when both includePages and includeRegions are false', () => {
+            const args = validConstructorArgs({
+                includePages: false,
+                includeRegions: false,
+                includeAka: false,
+            });
+            expect(() =>
+                new SearchParams(
+                    args.name,
+                    args.similarityThreshold,
+                    args.includePages,
+                    args.includeRegions,
+                    args.includeAka,
                     args.regionId,
                     args.order,
                     args.limit,
@@ -188,6 +223,7 @@ describe('SearchParams', () => {
                     args.similarityThreshold,
                     args.includePages,
                     args.includeRegions,
+                    args.includeAka,
                     args.regionId,
                     args.order,
                     args.limit,
@@ -206,6 +242,7 @@ describe('SearchParams', () => {
                     args.similarityThreshold,
                     args.includePages,
                     args.includeRegions,
+                    args.includeAka,
                     args.regionId,
                     args.order,
                     args.limit,
@@ -224,6 +261,7 @@ describe('SearchParams', () => {
                     args.similarityThreshold,
                     args.includePages,
                     args.includeRegions,
+                    args.includeAka,
                     args.regionId,
                     args.order,
                     args.limit,
@@ -242,6 +280,7 @@ describe('SearchParams', () => {
                     args.similarityThreshold,
                     args.includePages,
                     args.includeRegions,
+                    args.includeAka,
                     args.regionId,
                     args.order,
                     args.limit,
@@ -260,6 +299,7 @@ describe('SearchParams', () => {
                     args.similarityThreshold,
                     args.includePages,
                     args.includeRegions,
+                    args.includeAka,
                     args.regionId,
                     args.order,
                     args.limit,
@@ -278,6 +318,7 @@ describe('SearchParams', () => {
                     args.similarityThreshold,
                     args.includePages,
                     args.includeRegions,
+                    args.includeAka,
                     args.regionId,
                     args.order,
                     args.limit,
@@ -292,6 +333,7 @@ describe('SearchParams', () => {
                 0.5,
                 true,
                 true,
+                true,
                 null,
                 'similarity',
                 1,
@@ -304,6 +346,7 @@ describe('SearchParams', () => {
             const p = new SearchParams(
                 'x',
                 0.5,
+                true,
                 true,
                 true,
                 '',
@@ -322,6 +365,7 @@ describe('SearchParams', () => {
                     args.similarityThreshold,
                     args.includePages,
                     args.includeRegions,
+                    args.includeAka,
                     args.regionId,
                     args.order,
                     args.limit,
@@ -338,6 +382,7 @@ describe('SearchParams', () => {
             expect(p.similarityThreshold).toBe(0.5);
             expect(p.includePages).toBe(true);
             expect(p.includeRegions).toBe(true);
+            expect(p.includeAka).toBe(true);
             expect(p.regionId).toBeNull();
             expect(p.order).toBe('similarity');
             expect(p.limit).toBe(20);
@@ -350,6 +395,7 @@ describe('SearchParams', () => {
                 similarity: '0.3',
                 'include-pages': 'true',
                 'include-regions': 'false',
+                'include-aka': 'false',
                 region: validUuid,
                 order: 'quality',
                 limit: '10',
@@ -359,6 +405,7 @@ describe('SearchParams', () => {
             expect(p.similarityThreshold).toBe(0.3);
             expect(p.includePages).toBe(true);
             expect(p.includeRegions).toBe(false);
+            expect(p.includeAka).toBe(false);
             expect(p.regionId).toBe(validUuid);
             expect(p.order).toBe('quality');
             expect(p.limit).toBe(10);
@@ -450,6 +497,61 @@ describe('SearchParams', () => {
             ).toThrow(/Query parameter value must be true, false, 1, or 0/);
         });
 
+        it('throws when include-aka is invalid boolean', () => {
+            expect(() =>
+                SearchParams.fromQueryStringParams({
+                    name: 'x',
+                    'include-aka': 'nope',
+                }),
+            ).toThrow(/Query parameter value must be true, false, 1, or 0/);
+        });
+
+        it('throws when include-aka is true and include-pages is false', () => {
+            expect(() =>
+                SearchParams.fromQueryStringParams({
+                    name: 'x',
+                    'include-pages': 'false',
+                    'include-aka': 'true',
+                }),
+            ).toThrow(
+                'include-aka cannot be true when include-pages is false',
+            );
+        });
+
+        it('sets includeAka to false when include-aka not provided and include-pages is false', () => {
+            const p = SearchParams.fromQueryStringParams({
+                name: 'x',
+                'include-pages': 'false',
+                'include-regions': 'true',
+            });
+            expect(p.includePages).toBe(false);
+            expect(p.includeRegions).toBe(true);
+            expect(p.includeAka).toBe(false);
+        });
+
+        it('accepts when include-pages and include-aka are false', () => {
+            const p = SearchParams.fromQueryStringParams({
+                name: 'x',
+                'include-pages': 'false',
+                'include-regions': 'true',
+                'include-aka': 'false',
+            });
+            expect(p.includePages).toBe(false);
+            expect(p.includeAka).toBe(false);
+        });
+
+        it('throws when both include-pages and include-regions are false', () => {
+            expect(() =>
+                SearchParams.fromQueryStringParams({
+                    name: 'x',
+                    'include-pages': 'false',
+                    'include-regions': 'false',
+                }),
+            ).toThrow(
+                'At least one of include-pages or include-regions must be true',
+            );
+        });
+
         it('throws when region is not a valid UUID', () => {
             expect(() =>
                 SearchParams.fromQueryStringParams({
@@ -490,6 +592,27 @@ describe('SearchParams', () => {
             expect(p.includePages).toBe(true);
             expect(p.includeRegions).toBe(false);
         });
+
+        it('accepts include-aka as "1" and "0"', () => {
+            const p = SearchParams.fromQueryStringParams({
+                name: 'x',
+                'include-aka': '0',
+            });
+            expect(p.includeAka).toBe(false);
+            const p2 = SearchParams.fromQueryStringParams({
+                name: 'x',
+                'include-aka': '1',
+            });
+            expect(p2.includeAka).toBe(true);
+        });
+
+        it('uses Include-Aka (capital A) when include-aka key is present', () => {
+            const p = SearchParams.fromQueryStringParams({
+                name: 'x',
+                'Include-Aka': 'false',
+            });
+            expect(p.includeAka).toBe(false);
+        });
     });
 
     describe('toQueryStringParams', () => {
@@ -499,6 +622,7 @@ describe('SearchParams', () => {
                 0.4,
                 true,
                 false,
+                true,
                 validUuid,
                 'quality',
                 15,
@@ -509,6 +633,7 @@ describe('SearchParams', () => {
             expect(q.similarity).toBe('0.4');
             expect(q['include-pages']).toBe('true');
             expect(q['include-regions']).toBe('false');
+            expect(q['include-aka']).toBe('true');
             expect(q.region).toBe(validUuid);
             expect(q.order).toBe('quality');
             expect(q.limit).toBe('15');
@@ -519,6 +644,7 @@ describe('SearchParams', () => {
             const p = new SearchParams(
                 'x',
                 0.5,
+                true,
                 true,
                 true,
                 null,
@@ -536,6 +662,7 @@ describe('SearchParams', () => {
                 0.5,
                 true,
                 true,
+                true,
                 null,
                 'similarity',
                 20,
@@ -551,6 +678,7 @@ describe('SearchParams', () => {
                 similarity: '0.7',
                 'include-pages': 'false',
                 'include-regions': 'true',
+                'include-aka': 'false',
                 region: validUuid,
                 order: 'quality',
                 limit: '5',
@@ -561,6 +689,7 @@ describe('SearchParams', () => {
             expect(q.similarity).toBe(input.similarity);
             expect(q['include-pages']).toBe(input['include-pages']);
             expect(q['include-regions']).toBe(input['include-regions']);
+            expect(q['include-aka']).toBe(input['include-aka']);
             expect(q.region).toBe(input.region);
             expect(q.order).toBe(input.order);
             expect(q.limit).toBe(input.limit);

@@ -27,6 +27,8 @@ export interface GetRopewikiPagePreviewRow {
  * Used by GET /route/{routeId}/preview.
  */
 export class PagePreview {
+    /** Discriminator for search results: always 'page' */
+    readonly previewType = 'page' as const;
     /** Page identifier (e.g. RopewikiPage id) */
     id: string;
     /** Source of the page (e.g. ropewiki) */

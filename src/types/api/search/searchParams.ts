@@ -16,6 +16,7 @@ export class SearchParams {
     public readonly similarityThreshold: number;
     public readonly includePages: boolean;
     public readonly includeRegions: boolean;
+    public readonly includeAka: boolean;
     public readonly regionId: string | null;
     public readonly order: SearchOrder;
     public readonly limit: number;
@@ -26,6 +27,7 @@ export class SearchParams {
         similarityThreshold: number,
         includePages: boolean,
         includeRegions: boolean,
+        includeAka: boolean,
         regionId: string | null,
         order: SearchOrder,
         limit: number,
@@ -47,6 +49,11 @@ export class SearchParams {
         if (!includePages && !includeRegions) {
             throw new Error(
                 'At least one of include-pages or include-regions must be true',
+            );
+        }
+        if (includeAka && !includePages) {
+            throw new Error(
+                'include-aka cannot be true when include-pages is false',
             );
         }
         if (order !== 'similarity' && order !== 'quality') {
@@ -76,6 +83,7 @@ export class SearchParams {
         this.similarityThreshold = similarityThreshold;
         this.includePages = includePages;
         this.includeRegions = includeRegions;
+        this.includeAka = includeAka;
         this.regionId = trimmedRegionId;
         this.order = order;
         this.limit = limit;
@@ -102,6 +110,7 @@ export class SearchParams {
             similarity: String(this.similarityThreshold),
             'include-pages': String(this.includePages),
             'include-regions': String(this.includeRegions),
+            'include-aka': String(this.includeAka),
             order: this.order,
             limit: String(this.limit),
         };
@@ -174,6 +183,22 @@ export class SearchParams {
             q['include-regions'] ?? q['Include-Regions'],
             true,
         );
+        if (!includePages && !includeRegions) {
+            throw new Error(
+                'At least one of include-pages or include-regions must be true',
+            );
+        }
+        const includeAkaParam = q['include-aka'] ?? q['Include-Aka'];
+        const includeAkaExplicit = (includeAkaParam ?? '').trim() !== '';
+        let includeAka = SearchParams.parseBoolean(includeAkaParam, true);
+        if (!includeAkaExplicit && !includePages) {
+            includeAka = false;
+        }
+        if (includeAkaExplicit && includeAka && !includePages) {
+            throw new Error(
+                'include-aka cannot be true when include-pages is false',
+            );
+        }
 
         const region = (q.region ?? q.Region ?? '').trim() || null;
         if (region !== null && !UUID_REGEX.test(region)) {
@@ -187,6 +212,7 @@ export class SearchParams {
             similarity,
             includePages,
             includeRegions,
+            includeAka,
             region,
             order,
             limit,

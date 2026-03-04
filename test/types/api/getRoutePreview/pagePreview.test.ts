@@ -33,6 +33,7 @@ describe('PagePreview', () => {
     describe('fromDbRow', () => {
         it('builds PagePreview with mapped row fields and Difficulty', () => {
             const preview = PagePreview.fromDbRow(baseRow, null);
+            expect(preview.previewType).toBe('page');
             expect(preview.id).toBe('page-1');
             expect(preview.source).toBe(PageDataSource.Ropewiki);
             expect(preview.title).toBe('Test Page');

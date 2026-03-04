@@ -7,7 +7,7 @@ export { RoutesGeojson } from './types/api/getRoutes/routeGeojson';
 export type { RopewikiImageView } from './types/api/getRopewikiPageView/ropewikiImageView';
 export type { RopewikiBetaSectionView } from './types/api/getRopewikiPageView/ropewikiBetaSectionView';
 export type { RopewikiPageView } from './types/api/getRopewikiPageView/ropewikiPageView';
-export type { RegionPreview } from './types/api/search/regionPreview';
+export { RegionPreview } from './types/api/search/regionPreview';
 export { SearchCursor } from './types/api/search/searchCursor';
 export type { SearchCursorType } from './types/api/search/searchCursor';
 export { SearchParams } from './types/api/search/searchParams';
