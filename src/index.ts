@@ -7,3 +7,4 @@ export { RoutesGeojson } from './types/api/getRoutes/routeGeojson';
 export type { RopewikiImageView } from './types/api/getRopewikiPageView/ropewikiImageView';
 export type { RopewikiBetaSectionView } from './types/api/getRopewikiPageView/ropewikiBetaSectionView';
 export type { RopewikiPageView } from './types/api/getRopewikiPageView/ropewikiPageView';
+export type { RegionPreview } from './types/api/search/regionPreview';
