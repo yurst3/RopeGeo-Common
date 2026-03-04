@@ -8,3 +8,4 @@ export type { RopewikiImageView } from './types/api/getRopewikiPageView/ropewiki
 export type { RopewikiBetaSectionView } from './types/api/getRopewikiPageView/ropewikiBetaSectionView';
 export type { RopewikiPageView } from './types/api/getRopewikiPageView/ropewikiPageView';
 export type { RegionPreview } from './types/api/search/regionPreview';
+export type { SearchResults } from './types/api/search/searchResults';

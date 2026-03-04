@@ -8,6 +8,7 @@ Shared types and utilities for [RopeGeo](https://github.com/yurst3/RopeGeo) and 
 - **Page data source** – `PageDataSource` enum (e.g. Ropewiki) used when linking routes to pages.
 - **Ropewiki page view types** – `RopewikiPageView`, `RopewikiBetaSectionView`, and `RopewikiImageView` for the getRopewikiPageView API (full Ropewiki page with beta sections and images).
 - **Routes (GET /routes)** – `Route`, `RouteType`, `RouteGeoJsonFeature`, and `RoutesGeojson` for the routes GeoJSON Feature Collection API. `RoutesGeojson.fromRoutes(routes)` builds the response shape from an array of `Route`.
+- **Search API types** – `SearchResults` (paginated search response with `results: (PagePreview | RegionPreview)[]` and `nextCursor: string`), `RegionPreview` (region search hit with id, name, parents, imageUrl, source), and `PagePreview` (page search hit; same type as route preview).
 
 ## Usage
 
@@ -31,6 +32,8 @@ import {
   type RopewikiPageView,
   type RopewikiBetaSectionView,
   type RopewikiImageView,
+  type RegionPreview,
+  type SearchResults,
 } from 'ropegeo-common';
 ```
 
