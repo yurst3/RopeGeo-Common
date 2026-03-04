@@ -8,4 +8,8 @@ export type { RopewikiImageView } from './types/api/getRopewikiPageView/ropewiki
 export type { RopewikiBetaSectionView } from './types/api/getRopewikiPageView/ropewikiBetaSectionView';
 export type { RopewikiPageView } from './types/api/getRopewikiPageView/ropewikiPageView';
 export type { RegionPreview } from './types/api/search/regionPreview';
-export type { SearchResults } from './types/api/search/searchResults';
+export { SearchCursor } from './types/api/search/searchCursor';
+export type { SearchCursorType } from './types/api/search/searchCursor';
+export { SearchParams } from './types/api/search/searchParams';
+export type { SearchOrder } from './types/api/search/searchParams';
+export { SearchResults } from './types/api/search/searchResults';
