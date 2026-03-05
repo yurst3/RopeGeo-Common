@@ -40,6 +40,7 @@ describe('PagePreview', () => {
             expect(preview.rating).toBe(4.5);
             expect(preview.ratingCount).toBe(10);
             expect(preview.regions).toEqual(['Test Region']);
+            expect(preview.aka).toEqual([]);
             expect(preview.imageUrl).toBe('https://example.com/banner.jpg');
             expect(preview.externalLink).toBe('https://ropewiki.com/page');
             expect(preview.mapData).toBeNull();
@@ -54,6 +55,11 @@ describe('PagePreview', () => {
         it('uses optional regions override when provided', () => {
             const preview = PagePreview.fromDbRow(baseRow, null, ['Region A', 'Region B']);
             expect(preview.regions).toEqual(['Region A', 'Region B']);
+        });
+
+        it('uses optional aka when provided', () => {
+            const preview = PagePreview.fromDbRow(baseRow, null, undefined, ['Imlay', 'Imlay Canyon']);
+            expect(preview.aka).toEqual(['Imlay', 'Imlay Canyon']);
         });
 
         it('parses null permit as null', () => {

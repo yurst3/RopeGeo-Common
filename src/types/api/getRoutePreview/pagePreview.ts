@@ -43,6 +43,8 @@ export class PagePreview {
     title: string;
     /** Region names (not ids) */
     regions: string[];
+    /** AKA (also-known-as) names */
+    aka: string[];
     /** Difficulty ratings (technical, water, time, risk); always present. risk is the effective risk (derived from technical when not set). */
     difficulty: Difficulty;
     /** Map data id for the page route, or null if none */
@@ -60,6 +62,7 @@ export class PagePreview {
         ratingCount: number | null,
         title: string,
         regions: string[],
+        aka: string[],
         difficulty: Difficulty,
         mapData: string | null,
         externalLink: string | null,
@@ -72,6 +75,7 @@ export class PagePreview {
         this.ratingCount = ratingCount;
         this.title = title;
         this.regions = regions;
+        this.aka = aka;
         this.difficulty = difficulty;
         this.mapData = mapData;
         this.externalLink = externalLink;
@@ -85,6 +89,7 @@ export class PagePreview {
         row: GetRopewikiPagePreviewRow,
         mapData: string | null,
         regions?: string[],
+        aka?: string[],
     ): PagePreview {
         const difficulty = new Difficulty(
             row.technicalRating,
@@ -100,6 +105,7 @@ export class PagePreview {
             row.userVotes ?? null,
             row.title,
             regions ?? [row.regionName],
+            aka ?? [],
             difficulty,
             mapData,
             row.url ?? null,
