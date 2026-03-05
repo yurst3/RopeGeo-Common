@@ -143,10 +143,10 @@ describe('SearchCursor', () => {
 
 describe('SearchResults', () => {
     describe('constructor', () => {
-        it('sets results and nextCursor to empty string when cursor is null', () => {
+        it('sets results and nextCursor to null when cursor is null', () => {
             const sr = new SearchResults([], null);
             expect(sr.results).toEqual([]);
-            expect(sr.nextCursor).toBe('');
+            expect(sr.nextCursor).toBeNull();
         });
 
         it('sets results and nextCursor from cursor.encodeBase64() when cursor provided', () => {
@@ -155,13 +155,13 @@ describe('SearchResults', () => {
             const sr = new SearchResults(results, cursor);
             expect(sr.results).toBe(results);
             expect(sr.nextCursor).toBe(cursor.encodeBase64());
-            expect(sr.nextCursor).not.toBe('');
+            expect(sr.nextCursor).not.toBeNull();
         });
 
         it('round-trip: nextCursor can be decoded back to SearchCursor', () => {
             const cursor = new SearchCursor(0.75, 'region', 'region-1');
             const sr = new SearchResults([], cursor);
-            const decoded = SearchCursor.decodeBase64(sr.nextCursor);
+            const decoded = SearchCursor.decodeBase64(sr.nextCursor!);
             expect(decoded.sortKey).toBe(0.75);
             expect(decoded.type).toBe('region');
             expect(decoded.id).toBe('region-1');

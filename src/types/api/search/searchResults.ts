@@ -4,10 +4,10 @@ import { SearchCursor } from './searchCursor';
 
 export class SearchResults {
     results: (PagePreview | RegionPreview)[];
-    nextCursor: string;
+    nextCursor: string | null;
 
-    constructor(results: (PagePreview | RegionPreview)[], nextCursorCursor: SearchCursor | null) {
+    constructor(results: (PagePreview | RegionPreview)[], nextCursor: SearchCursor | null) {
         this.results = results;
-        this.nextCursor = nextCursorCursor !== null ? nextCursorCursor.encodeBase64() : '';
+        this.nextCursor = nextCursor !== null ? nextCursor.encodeBase64() : null;
     }
 }
