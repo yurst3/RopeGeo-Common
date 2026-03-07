@@ -2,9 +2,9 @@ import { describe, it, expect } from '@jest/globals';
 import { RegionPreviewsCursor } from '../../../../src/types/api/getRopewikiRegionPreviews/regionPreviewsCursor';
 import { RopewikiRegionPreviewsParams } from '../../../../src/types/api/getRopewikiRegionPreviews/ropewikiRegionPreviewsParams';
 
-/** Base64url-encoded RegionPreviewsCursor with value "v" */
+/** Base64url-encoded RegionPreviewsCursor with sortKey 0.5, type 'page', id 'v' */
 const validCursorEncoded = Buffer.from(
-    JSON.stringify({ value: 'v' }),
+    JSON.stringify({ sortKey: 0.5, type: 'page', id: 'v' }),
     'utf8',
 ).toString('base64url');
 
@@ -20,7 +20,9 @@ describe('RopewikiRegionPreviewsParams', () => {
             const p = new RopewikiRegionPreviewsParams(10, validCursorEncoded);
             expect(p.limit).toBe(10);
             expect(p.cursor).toBeInstanceOf(RegionPreviewsCursor);
-            expect(p.cursor!.value).toBe('v');
+            expect(p.cursor!.sortKey).toBe(0.5);
+            expect(p.cursor!.type).toBe('page');
+            expect(p.cursor!.id).toBe('v');
         });
 
         it('treats empty string cursor as null', () => {
@@ -87,7 +89,9 @@ describe('RopewikiRegionPreviewsParams', () => {
                 Cursor: validCursorEncoded,
             });
             expect(p.limit).toBe(10);
-            expect(p.cursor!.value).toBe('v');
+            expect(p.cursor!.sortKey).toBe(0.5);
+            expect(p.cursor!.type).toBe('page');
+            expect(p.cursor!.id).toBe('v');
         });
 
         it('throws when limit is invalid (validation in constructor)', () => {

@@ -13,7 +13,7 @@ describe('RopewikiRegionPreviewsResult', () => {
         });
 
         it('sets results and nextCursor from cursor.encodeBase64() when cursor provided', () => {
-            const cursor = new RegionPreviewsCursor('next-id');
+            const cursor = new RegionPreviewsCursor(0.7, 'page', 'next-id');
             const results: (PagePreview | RegionPreview)[] = [];
             const r = new RopewikiRegionPreviewsResult(results, cursor);
             expect(r.results).toBe(results);
@@ -22,10 +22,12 @@ describe('RopewikiRegionPreviewsResult', () => {
         });
 
         it('round-trip: nextCursor can be decoded back to RegionPreviewsCursor', () => {
-            const cursor = new RegionPreviewsCursor('page-2');
+            const cursor = new RegionPreviewsCursor(0.75, 'region', 'page-2');
             const r = new RopewikiRegionPreviewsResult([], cursor);
             const decoded = RegionPreviewsCursor.decodeBase64(r.nextCursor!);
-            expect(decoded.value).toBe('page-2');
+            expect(decoded.sortKey).toBe(0.75);
+            expect(decoded.type).toBe('region');
+            expect(decoded.id).toBe('page-2');
         });
     });
 });
