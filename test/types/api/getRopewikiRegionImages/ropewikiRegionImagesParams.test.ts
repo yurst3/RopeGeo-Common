@@ -2,9 +2,13 @@ import { describe, it, expect } from '@jest/globals';
 import { RegionImagesCursor } from '../../../../src/types/api/getRopewikiRegionImages/regionImagesCursor';
 import { RopewikiRegionImagesParams } from '../../../../src/types/api/getRopewikiRegionImages/ropewikiRegionImagesParams';
 
-/** Base64url-encoded RegionImagesCursor with value "v" */
+/** Base64url-encoded RegionImagesCursor with sortKey 0.5, pageId 'page-1', imageId 'img-v' */
 const validCursorEncoded = Buffer.from(
-    JSON.stringify({ value: 'v' }),
+    JSON.stringify({
+        sortKey: 0.5,
+        pageId: 'page-1',
+        imageId: 'img-v',
+    }),
     'utf8',
 ).toString('base64url');
 
@@ -20,7 +24,9 @@ describe('RopewikiRegionImagesParams', () => {
             const p = new RopewikiRegionImagesParams(10, validCursorEncoded);
             expect(p.limit).toBe(10);
             expect(p.cursor).toBeInstanceOf(RegionImagesCursor);
-            expect(p.cursor!.value).toBe('v');
+            expect(p.cursor!.sortKey).toBe(0.5);
+            expect(p.cursor!.pageId).toBe('page-1');
+            expect(p.cursor!.imageId).toBe('img-v');
         });
 
         it('treats empty string cursor as null', () => {
@@ -87,7 +93,9 @@ describe('RopewikiRegionImagesParams', () => {
                 Cursor: validCursorEncoded,
             });
             expect(p.limit).toBe(10);
-            expect(p.cursor!.value).toBe('v');
+            expect(p.cursor!.sortKey).toBe(0.5);
+            expect(p.cursor!.pageId).toBe('page-1');
+            expect(p.cursor!.imageId).toBe('img-v');
         });
 
         it('throws when limit is invalid (validation in constructor)', () => {
