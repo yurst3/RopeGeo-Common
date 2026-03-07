@@ -124,57 +124,26 @@ export class SearchParams {
     }
 
     /**
-     * Parses and validates query string parameters. Throws with a descriptive
-     * error message if any value is invalid.
+     * Parses query string parameters and returns validated params.
+     * Validation is performed by the constructor.
      */
     static fromQueryStringParams(
         q: Record<string, string | undefined>,
     ): SearchParams {
         const name = (q.name ?? q.Name ?? '').trim();
-        if (!name) {
-            throw new Error(
-                'Missing or empty required query parameter: name',
-            );
-        }
-
         const limitParam = q.limit ?? q.Limit ?? '';
-        let limit: number;
-        if (limitParam === '') {
-            limit = DEFAULT_LIMIT;
-        } else {
-            const limitNum = Number(limitParam);
-            if (
-                Number.isNaN(limitNum) ||
-                !Number.isInteger(limitNum) ||
-                limitNum < 1
-            ) {
-                throw new Error(
-                    'Query parameter "limit" must be a whole number greater than 0',
-                );
-            }
-            limit = limitNum;
-        }
-
+        const limit = limitParam === '' ? DEFAULT_LIMIT : Number(limitParam);
         const cursorRaw = (q.cursor ?? q.Cursor ?? '').trim();
         const cursorEncoded = cursorRaw === '' ? null : cursorRaw;
-
         const similarityParam = q.similarity ?? q.Similarity ?? '';
         const similarity =
             similarityParam === '' ? 0.5 : Number(similarityParam);
-
         const orderParam = (q.order ?? q.Order ?? '').trim().toLowerCase();
-        if (
-            orderParam !== '' &&
-            orderParam !== 'similarity' &&
-            orderParam !== 'quality'
-        ) {
-            throw new Error(
-                'Query parameter "order" must be one of: similarity, quality',
-            );
-        }
-        const order: SearchOrder =
-            orderParam === 'quality' ? 'quality' : 'similarity';
-
+        const order = (orderParam === 'quality'
+            ? 'quality'
+            : orderParam === 'similarity'
+              ? 'similarity'
+              : orderParam || 'similarity') as SearchOrder;
         const includePages = SearchParams.parseBoolean(
             q['include-pages'] ?? q['Include-Pages'],
             true,
@@ -183,29 +152,12 @@ export class SearchParams {
             q['include-regions'] ?? q['Include-Regions'],
             true,
         );
-        if (!includePages && !includeRegions) {
-            throw new Error(
-                'At least one of include-pages or include-regions must be true',
-            );
-        }
         const includeAkaParam = q['include-aka'] ?? q['Include-Aka'];
         const includeAkaExplicit = (includeAkaParam ?? '').trim() !== '';
-        let includeAka = SearchParams.parseBoolean(includeAkaParam, true);
-        if (!includeAkaExplicit && !includePages) {
-            includeAka = false;
-        }
-        if (includeAkaExplicit && includeAka && !includePages) {
-            throw new Error(
-                'include-aka cannot be true when include-pages is false',
-            );
-        }
-
+        const includeAka = includeAkaExplicit
+            ? SearchParams.parseBoolean(includeAkaParam, true)
+            : includePages;
         const region = (q.region ?? q.Region ?? '').trim() || null;
-        if (region !== null && !UUID_REGEX.test(region)) {
-            throw new Error(
-                'Query parameter "region" must be a valid UUID',
-            );
-        }
 
         return new SearchParams(
             name,
