@@ -9,14 +9,15 @@ describe('RoutesParams', () => {
                 PageDataSource.Ropewiki,
                 'region-uuid-123',
             );
-            expect(p.source).toBe(PageDataSource.Ropewiki);
-            expect(p.region).toBe('region-uuid-123');
+            expect(p.region).toEqual({
+                source: PageDataSource.Ropewiki,
+                id: 'region-uuid-123',
+            });
         });
 
         it('accepts both source and region absent (undefined)', () => {
             const p = new RoutesParams(undefined, undefined);
-            expect(p.source).toBeUndefined();
-            expect(p.region).toBeUndefined();
+            expect(p.region).toBeNull();
         });
 
         it('throws when source is present but region is absent', () => {
@@ -45,12 +46,12 @@ describe('RoutesParams', () => {
     });
 
     describe('toQueryStringParams', () => {
-        it('returns empty object when both are undefined', () => {
+        it('returns empty object when region is null', () => {
             const p = new RoutesParams(undefined, undefined);
             expect(p.toQueryStringParams()).toEqual({});
         });
 
-        it('returns source and region when both set', () => {
+        it('returns source and region from region.id when set', () => {
             const p = new RoutesParams(
                 PageDataSource.Ropewiki,
                 'region-uuid',
@@ -63,10 +64,9 @@ describe('RoutesParams', () => {
     });
 
     describe('fromQueryStringParams', () => {
-        it('parses empty query as both absent', () => {
+        it('parses empty query as region null', () => {
             const p = RoutesParams.fromQueryStringParams({});
-            expect(p.source).toBeUndefined();
-            expect(p.region).toBeUndefined();
+            expect(p.region).toBeNull();
         });
 
         it('parses source and region when both provided', () => {
@@ -74,8 +74,10 @@ describe('RoutesParams', () => {
                 source: 'ropewiki',
                 region: 'my-region-id',
             });
-            expect(p.source).toBe(PageDataSource.Ropewiki);
-            expect(p.region).toBe('my-region-id');
+            expect(p.region).toEqual({
+                source: PageDataSource.Ropewiki,
+                id: 'my-region-id',
+            });
         });
 
         it('accepts Source and Region (capitalized) keys', () => {
@@ -83,8 +85,10 @@ describe('RoutesParams', () => {
                 Source: 'ropewiki',
                 Region: 'region-123',
             });
-            expect(p.source).toBe(PageDataSource.Ropewiki);
-            expect(p.region).toBe('region-123');
+            expect(p.region).toEqual({
+                source: PageDataSource.Ropewiki,
+                id: 'region-123',
+            });
         });
 
         it('trims whitespace from source and region', () => {
@@ -92,8 +96,10 @@ describe('RoutesParams', () => {
                 source: '  ropewiki  ',
                 region: '  region-id  ',
             });
-            expect(p.source).toBe(PageDataSource.Ropewiki);
-            expect(p.region).toBe('region-id');
+            expect(p.region).toEqual({
+                source: PageDataSource.Ropewiki,
+                id: 'region-id',
+            });
         });
 
         it('throws when only source is in query', () => {

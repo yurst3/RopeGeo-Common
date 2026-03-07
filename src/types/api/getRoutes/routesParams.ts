@@ -2,37 +2,40 @@ import { PageDataSource } from '../../pageDataSource';
 
 /**
  * Validated params for getRoutes (GET /routes).
- * source and region are optional with no defaults; if one is present the other must also be present.
+ * region is null when neither source nor region id are in the query; if one query param is present the other must also be present.
  */
 export class RoutesParams {
-    public readonly source: PageDataSource | undefined;
-    public readonly region: string | undefined;
+    /** When set, both source and region id were provided in the query. */
+    public readonly region: { source: PageDataSource; id: string } | null;
 
-    constructor(source: PageDataSource | undefined, region: string | undefined) {
+    constructor(source: PageDataSource | undefined, regionId: string | undefined) {
         const sourcePresent = source !== undefined;
         const regionPresent =
-            region !== undefined && typeof region === 'string' && region !== '';
+            regionId !== undefined &&
+            typeof regionId === 'string' &&
+            regionId !== '';
         if (sourcePresent !== regionPresent) {
             throw new Error(
                 'Query parameters "source" and "region" must both be present or both be absent',
             );
         }
-        this.source = sourcePresent ? source : undefined;
-        this.region = regionPresent ? region : undefined;
+        this.region =
+            sourcePresent && regionPresent
+                ? { source: source!, id: regionId! }
+                : null;
     }
 
     /**
      * Returns an object suitable for use as query string parameters.
      */
     toQueryStringParams(): Record<string, string> {
-        const params: Record<string, string> = {};
-        if (this.source !== undefined) {
-            params.source = this.source;
+        if (this.region === null) {
+            return {};
         }
-        if (this.region !== undefined) {
-            params.region = this.region;
-        }
-        return params;
+        return {
+            source: this.region.source,
+            region: this.region.id,
+        };
     }
 
     /**
