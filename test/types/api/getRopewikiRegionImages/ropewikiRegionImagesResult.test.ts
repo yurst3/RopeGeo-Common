@@ -1,6 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 import { RopewikiRegionImageView } from '../../../../src/types/api/getRopewikiRegionImages/ropewikiRegionImageView';
-import { RegionImagesCursor } from '../../../../src/types/api/getRopewikiRegionImages/regionImagesCursor';
+import { RegionImagesCursor } from '../../../../src/types/cursors/regionImagesCursor';
 import { RopewikiRegionImagesResult } from '../../../../src/types/api/getRopewikiRegionImages/ropewikiRegionImagesResult';
 import type { RopewikiRegionImageViewRow } from '../../../../src/types/api/getRopewikiRegionImages/ropewikiRegionImageView';
 

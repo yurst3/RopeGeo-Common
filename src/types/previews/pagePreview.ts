@@ -1,6 +1,7 @@
-import { Difficulty } from '../../difficulty';
-import { PermitStatus } from '../../permitStatus';
-import { PageDataSource } from '../../pageDataSource';
+import { Difficulty } from '../difficulty';
+import { PermitStatus } from '../permitStatus';
+import { PageDataSource } from '../pageDataSource';
+import { Preview, PreviewType } from './preview';
 
 /**
  * Row shape returned by the getRopewikiPagePreview query.
@@ -26,9 +27,9 @@ export interface GetRopewikiPagePreviewRow {
  * Preview of a page linked to a route (e.g. Ropewiki page).
  * Used by GET /route/{routeId}/preview.
  */
-export class PagePreview {
+export class PagePreview extends Preview {
     /** Discriminator for search results: always 'page' */
-    readonly previewType = 'page' as const;
+    readonly previewType = PreviewType.Page;
     /** Page identifier (e.g. RopewikiPage id) */
     id: string;
     /** Source of the page (e.g. ropewiki) */
@@ -68,6 +69,7 @@ export class PagePreview {
         externalLink: string | null,
         permit: PermitStatus | null,
     ) {
+        super();
         this.id = id;
         this.source = source;
         this.imageUrl = imageUrl;

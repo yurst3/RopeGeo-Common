@@ -1,12 +1,11 @@
-import { PagePreview } from '../getRoutePreview/pagePreview';
-import { RegionPreview } from './regionPreview';
-import { SearchCursor } from './searchCursor';
+import { Preview } from '../../previews/preview';
+import { SearchCursor } from '../../cursors/searchCursor';
 
 export class SearchResults {
-    results: (PagePreview | RegionPreview)[];
+    results: Preview[];
     nextCursor: string | null;
 
-    constructor(results: (PagePreview | RegionPreview)[], nextCursor: SearchCursor | null) {
+    constructor(results: Preview[], nextCursor: SearchCursor | null) {
         this.results = results;
         this.nextCursor = nextCursor !== null ? nextCursor.encodeBase64() : null;
     }

@@ -1,7 +1,8 @@
 import { describe, it, expect } from '@jest/globals';
-import type { PagePreview } from '../../../../src/types/api/getRoutePreview/pagePreview';
-import type { RegionPreview } from '../../../../src/types/api/search/regionPreview';
-import { RegionPreviewsCursor } from '../../../../src/types/api/getRopewikiRegionPreviews/regionPreviewsCursor';
+import type { PagePreview } from '../../../../src/types/previews/pagePreview';
+import type { Preview } from '../../../../src/types/previews/preview';
+import type { RegionPreview } from '../../../../src/types/previews/regionPreview';
+import { RegionPreviewsCursor } from '../../../../src/types/cursors/regionPreviewsCursor';
 import { RopewikiRegionPreviewsResult } from '../../../../src/types/api/getRopewikiRegionPreviews/ropewikiRegionPreviewsResult';
 
 describe('RopewikiRegionPreviewsResult', () => {
@@ -14,7 +15,7 @@ describe('RopewikiRegionPreviewsResult', () => {
 
         it('sets results and nextCursor from cursor.encodeBase64() when cursor provided', () => {
             const cursor = new RegionPreviewsCursor(0.7, 'page', 'next-id');
-            const results: (PagePreview | RegionPreview)[] = [];
+            const results: Preview[] = [];
             const r = new RopewikiRegionPreviewsResult(results, cursor);
             expect(r.results).toBe(results);
             expect(r.nextCursor).toBe(cursor.encodeBase64());

@@ -11,7 +11,7 @@ import { PageDataSource } from '../../../../src/types/pageDataSource';
 import {
     PagePreview,
     type GetRopewikiPagePreviewRow,
-} from '../../../../src/types/api/getRoutePreview/pagePreview';
+} from '../../../../src/types/previews/pagePreview';
 
 describe('PagePreview', () => {
     const baseRow: GetRopewikiPagePreviewRow = {

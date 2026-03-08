@@ -1,5 +1,5 @@
 import type { RopewikiRegionImageView } from './ropewikiRegionImageView';
-import { RegionImagesCursor } from './regionImagesCursor';
+import { RegionImagesCursor } from '../../cursors/regionImagesCursor';
 
 /**
  * Result of getRopewikiRegionImages (GET /ropewiki/region/{id}/images).

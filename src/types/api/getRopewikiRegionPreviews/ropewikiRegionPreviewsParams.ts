@@ -1,4 +1,4 @@
-import { RegionPreviewsCursor } from './regionPreviewsCursor';
+import { RegionPreviewsCursor } from '../../cursors/regionPreviewsCursor';
 
 const DEFAULT_LIMIT = 20;
 

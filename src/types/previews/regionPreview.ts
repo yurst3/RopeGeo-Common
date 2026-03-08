@@ -1,7 +1,8 @@
-import { PageDataSource } from '../../pageDataSource';
+import { PageDataSource } from '../pageDataSource';
+import { Preview, PreviewType } from './preview';
 
-export class RegionPreview {
-    readonly previewType = 'region' as const;
+export class RegionPreview extends Preview {
+    readonly previewType = PreviewType.Region;
     id: string;
     name: string;
     parents: string[];
@@ -14,16 +15,17 @@ export class RegionPreview {
         id: string,
         name: string,
         parents: string[],
-        pageCount: number | null,
-        regionCount: number | null,
+        pageCount: number,
+        regionCount: number,
         imageUrl: string | null,
         source: PageDataSource,
     ) {
+        super();
         this.id = id;
         this.name = name;
         this.parents = parents;
-        this.pageCount = pageCount ?? 0;
-        this.regionCount = regionCount ?? 0;
+        this.pageCount = pageCount;
+        this.regionCount = regionCount;
         this.imageUrl = imageUrl;
         this.source = source;
     }

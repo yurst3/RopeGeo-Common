@@ -1,4 +1,4 @@
-import { RegionImagesCursor } from './regionImagesCursor';
+import { RegionImagesCursor } from '../../cursors/regionImagesCursor';
 
 const DEFAULT_LIMIT = 20;
 

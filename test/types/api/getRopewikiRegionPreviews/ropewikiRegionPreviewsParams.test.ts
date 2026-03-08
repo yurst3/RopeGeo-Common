@@ -1,12 +1,9 @@
 import { describe, it, expect } from '@jest/globals';
-import { RegionPreviewsCursor } from '../../../../src/types/api/getRopewikiRegionPreviews/regionPreviewsCursor';
+import { RegionPreviewsCursor } from '../../../../src/types/cursors/regionPreviewsCursor';
 import { RopewikiRegionPreviewsParams } from '../../../../src/types/api/getRopewikiRegionPreviews/ropewikiRegionPreviewsParams';
 
 /** Base64url-encoded RegionPreviewsCursor with sortKey 0.5, type 'page', id 'v' */
-const validCursorEncoded = Buffer.from(
-    JSON.stringify({ sortKey: 0.5, type: 'page', id: 'v' }),
-    'utf8',
-).toString('base64url');
+const validCursorEncoded = new RegionPreviewsCursor(0.5, 'page', 'v').encodeBase64();
 
 describe('RopewikiRegionPreviewsParams', () => {
     describe('constructor', () => {

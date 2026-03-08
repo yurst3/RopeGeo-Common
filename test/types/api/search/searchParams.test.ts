@@ -1,11 +1,11 @@
 import { describe, it, expect } from '@jest/globals';
-import { SearchCursor } from '../../../../src/types/api/search/searchCursor';
+import { SearchCursor } from '../../../../src/types/cursors/searchCursor';
 import { SearchParams } from '../../../../src/types/api/search/searchParams';
 
 const validUuid = 'c3d4e5f6-a7b8-9012-cdef-123456789012';
 
-/** Base64url-encoded cursor: { sortKey: 0.9, type: 'page', id: 'a123' } */
-const validCursorEncoded = 'eyJzb3J0S2V5IjowLjksInR5cGUiOiJwYWdlIiwiaWQiOiJhMTIzIn0';
+/** Base64url-encoded cursor: SearchCursor(0.9, 'page', 'a123') including cursorType */
+const validCursorEncoded = new SearchCursor(0.9, 'page', 'a123').encodeBase64();
 
 function validConstructorArgs(overrides: Partial<{
     name: string;

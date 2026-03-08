@@ -1,16 +1,9 @@
 import { describe, it, expect } from '@jest/globals';
-import { RegionImagesCursor } from '../../../../src/types/api/getRopewikiRegionImages/regionImagesCursor';
+import { RegionImagesCursor } from '../../../../src/types/cursors/regionImagesCursor';
 import { RopewikiRegionImagesParams } from '../../../../src/types/api/getRopewikiRegionImages/ropewikiRegionImagesParams';
 
 /** Base64url-encoded RegionImagesCursor with sortKey 0.5, pageId 'page-1', imageId 'img-v' */
-const validCursorEncoded = Buffer.from(
-    JSON.stringify({
-        sortKey: 0.5,
-        pageId: 'page-1',
-        imageId: 'img-v',
-    }),
-    'utf8',
-).toString('base64url');
+const validCursorEncoded = new RegionImagesCursor(0.5, 'page-1', 'img-v').encodeBase64();
 
 describe('RopewikiRegionImagesParams', () => {
     describe('constructor', () => {

@@ -1,7 +1,9 @@
 import { describe, it, expect } from '@jest/globals';
-import type { PagePreview } from '../../../../src/types/api/getRoutePreview/pagePreview';
-import type { RegionPreview } from '../../../../src/types/api/search/regionPreview';
-import { SearchCursor } from '../../../../src/types/api/search/searchCursor';
+import type { PagePreview } from '../../../../src/types/previews/pagePreview';
+import type { Preview } from '../../../../src/types/previews/preview';
+import type { RegionPreview } from '../../../../src/types/previews/regionPreview';
+import { CursorType } from '../../../../src/types/cursors/cursor';
+import { SearchCursor } from '../../../../src/types/cursors/searchCursor';
 import { SearchResults } from '../../../../src/types/api/search/searchResults';
 
 describe('SearchCursor', () => {
@@ -49,7 +51,12 @@ describe('SearchCursor', () => {
     describe('decodeBase64', () => {
         it('decodes valid page cursor', () => {
             const encoded = Buffer.from(
-                JSON.stringify({ sortKey: 0.9, type: 'page', id: 'page-id' }),
+                JSON.stringify({
+                    cursorType: CursorType.Search,
+                    sortKey: 0.9,
+                    type: 'page',
+                    id: 'page-id',
+                }),
                 'utf8',
             ).toString('base64url');
             const c = SearchCursor.decodeBase64(encoded);
@@ -61,7 +68,12 @@ describe('SearchCursor', () => {
 
         it('decodes valid region cursor', () => {
             const encoded = Buffer.from(
-                JSON.stringify({ sortKey: 1, type: 'region', id: 'region-uuid' }),
+                JSON.stringify({
+                    cursorType: CursorType.Search,
+                    sortKey: 1,
+                    type: 'region',
+                    id: 'region-uuid',
+                }),
                 'utf8',
             ).toString('base64url');
             const c = SearchCursor.decodeBase64(encoded);
@@ -71,17 +83,17 @@ describe('SearchCursor', () => {
 
         it('throws for empty string', () => {
             expect(() => SearchCursor.decodeBase64('')).toThrow(
-                'Search cursor must be a non-empty string',
+                'search cursor must be a non-empty string',
             );
         });
 
         it('throws for non-string input', () => {
             expect(() =>
                 SearchCursor.decodeBase64(null as unknown as string),
-            ).toThrow('Search cursor must be a non-empty string');
+            ).toThrow('search cursor must be a non-empty string');
             expect(() =>
                 SearchCursor.decodeBase64(undefined as unknown as string),
-            ).toThrow('Search cursor must be a non-empty string');
+            ).toThrow('search cursor must be a non-empty string');
         });
 
         it('throws for invalid base64url with message including encoding error', () => {
@@ -95,13 +107,18 @@ describe('SearchCursor', () => {
                 'base64url',
             );
             expect(() => SearchCursor.decodeBase64(encoded)).toThrow(
-                'Search cursor must be an object with sortKey, type, and id',
+                'search cursor must be an object',
             );
         });
 
         it('throws when type is not "page" or "region"', () => {
             const encoded = Buffer.from(
-                JSON.stringify({ sortKey: 0, type: 'invalid', id: 'x' }),
+                JSON.stringify({
+                    cursorType: CursorType.Search,
+                    sortKey: 0,
+                    type: 'invalid',
+                    id: 'x',
+                }),
                 'utf8',
             ).toString('base64url');
             expect(() => SearchCursor.decodeBase64(encoded)).toThrow(
@@ -111,7 +128,12 @@ describe('SearchCursor', () => {
 
         it('throws when id is not a string', () => {
             const encoded = Buffer.from(
-                JSON.stringify({ sortKey: 0, type: 'page', id: 123 }),
+                JSON.stringify({
+                    cursorType: CursorType.Search,
+                    sortKey: 0,
+                    type: 'page',
+                    id: 123,
+                }),
                 'utf8',
             ).toString('base64url');
             expect(() => SearchCursor.decodeBase64(encoded)).toThrow(
@@ -121,7 +143,12 @@ describe('SearchCursor', () => {
 
         it('throws when sortKey is not a number', () => {
             const encoded = Buffer.from(
-                JSON.stringify({ sortKey: 'high', type: 'page', id: 'x' }),
+                JSON.stringify({
+                    cursorType: CursorType.Search,
+                    sortKey: 'high',
+                    type: 'page',
+                    id: 'x',
+                }),
                 'utf8',
             ).toString('base64url');
             expect(() => SearchCursor.decodeBase64(encoded)).toThrow(
@@ -131,7 +158,12 @@ describe('SearchCursor', () => {
 
         it('throws when sortKey is not a valid number (yields NaN)', () => {
             const encoded = Buffer.from(
-                JSON.stringify({ sortKey: 'not-a-number', type: 'page', id: 'x' }),
+                JSON.stringify({
+                    cursorType: CursorType.Search,
+                    sortKey: 'not-a-number',
+                    type: 'page',
+                    id: 'x',
+                }),
                 'utf8',
             ).toString('base64url');
             expect(() => SearchCursor.decodeBase64(encoded)).toThrow(
@@ -151,7 +183,7 @@ describe('SearchResults', () => {
 
         it('sets results and nextCursor from cursor.encodeBase64() when cursor provided', () => {
             const cursor = new SearchCursor(0.8, 'page', 'last-item-id');
-            const results: (PagePreview | RegionPreview)[] = [];
+            const results: Preview[] = [];
             const sr = new SearchResults(results, cursor);
             expect(sr.results).toBe(results);
             expect(sr.nextCursor).toBe(cursor.encodeBase64());

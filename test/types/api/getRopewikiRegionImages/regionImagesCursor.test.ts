@@ -1,5 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
-import { RegionImagesCursor } from '../../../../src/types/api/getRopewikiRegionImages/regionImagesCursor';
+import { CursorType } from '../../../../src/types/cursors/cursor';
+import { RegionImagesCursor } from '../../../../src/types/cursors/regionImagesCursor';
 
 describe('RegionImagesCursor', () => {
     describe('constructor', () => {
@@ -33,6 +34,7 @@ describe('RegionImagesCursor', () => {
         it('decodes valid cursor with sortKey, pageId, and imageId', () => {
             const encoded = Buffer.from(
                 JSON.stringify({
+                    cursorType: CursorType.RegionImages,
                     sortKey: 0.9,
                     pageId: 'page-uuid',
                     imageId: 'image-uuid',
@@ -48,7 +50,7 @@ describe('RegionImagesCursor', () => {
 
         it('throws for empty string', () => {
             expect(() => RegionImagesCursor.decodeBase64('')).toThrow(
-                'Region images cursor must be a non-empty string',
+                'region images cursor must be a non-empty string',
             );
         });
 
@@ -63,13 +65,17 @@ describe('RegionImagesCursor', () => {
                 'base64url',
             );
             expect(() => RegionImagesCursor.decodeBase64(encoded)).toThrow(
-                'Region images cursor must be an object with sortKey, pageId, and imageId',
+                'region images cursor must be an object',
             );
         });
 
         it('throws when sortKey is missing', () => {
             const encoded = Buffer.from(
-                JSON.stringify({ pageId: 'p', imageId: 'i' }),
+                JSON.stringify({
+                    cursorType: CursorType.RegionImages,
+                    pageId: 'p',
+                    imageId: 'i',
+                }),
                 'utf8',
             ).toString('base64url');
             expect(() => RegionImagesCursor.decodeBase64(encoded)).toThrow(
@@ -80,6 +86,7 @@ describe('RegionImagesCursor', () => {
         it('throws when sortKey is not a number', () => {
             const encoded = Buffer.from(
                 JSON.stringify({
+                    cursorType: CursorType.RegionImages,
                     sortKey: 'high',
                     pageId: 'p',
                     imageId: 'i',
@@ -94,6 +101,7 @@ describe('RegionImagesCursor', () => {
         it('throws when pageId is not a string', () => {
             const encoded = Buffer.from(
                 JSON.stringify({
+                    cursorType: CursorType.RegionImages,
                     sortKey: 0,
                     pageId: 123,
                     imageId: 'i',
@@ -108,6 +116,7 @@ describe('RegionImagesCursor', () => {
         it('throws when imageId is not a string', () => {
             const encoded = Buffer.from(
                 JSON.stringify({
+                    cursorType: CursorType.RegionImages,
                     sortKey: 0,
                     pageId: 'p',
                     imageId: 456,

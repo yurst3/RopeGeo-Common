@@ -1,5 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
-import { RegionPreviewsCursor } from '../../../../src/types/api/getRopewikiRegionPreviews/regionPreviewsCursor';
+import { CursorType } from '../../../../src/types/cursors/cursor';
+import { RegionPreviewsCursor } from '../../../../src/types/cursors/regionPreviewsCursor';
 
 describe('RegionPreviewsCursor', () => {
     describe('constructor', () => {
@@ -32,7 +33,12 @@ describe('RegionPreviewsCursor', () => {
     describe('decodeBase64', () => {
         it('decodes valid cursor with sortKey, type, and id', () => {
             const encoded = Buffer.from(
-                JSON.stringify({ sortKey: 0.9, type: 'page', id: 'item-id' }),
+                JSON.stringify({
+                    cursorType: CursorType.RegionPreviews,
+                    sortKey: 0.9,
+                    type: 'page',
+                    id: 'item-id',
+                }),
                 'utf8',
             ).toString('base64url');
             const c = RegionPreviewsCursor.decodeBase64(encoded);
@@ -44,7 +50,7 @@ describe('RegionPreviewsCursor', () => {
 
         it('throws for empty string', () => {
             expect(() => RegionPreviewsCursor.decodeBase64('')).toThrow(
-                'Region previews cursor must be a non-empty string',
+                'region previews cursor must be a non-empty string',
             );
         });
 
@@ -59,13 +65,17 @@ describe('RegionPreviewsCursor', () => {
                 'base64url',
             );
             expect(() => RegionPreviewsCursor.decodeBase64(encoded)).toThrow(
-                'Region previews cursor must be an object with sortKey, type, and id',
+                'region previews cursor must be an object',
             );
         });
 
         it('throws when sortKey is missing', () => {
             const encoded = Buffer.from(
-                JSON.stringify({ type: 'page', id: 'x' }),
+                JSON.stringify({
+                    cursorType: CursorType.RegionPreviews,
+                    type: 'page',
+                    id: 'x',
+                }),
                 'utf8',
             ).toString('base64url');
             expect(() => RegionPreviewsCursor.decodeBase64(encoded)).toThrow(
@@ -75,7 +85,12 @@ describe('RegionPreviewsCursor', () => {
 
         it('throws when sortKey is not a number', () => {
             const encoded = Buffer.from(
-                JSON.stringify({ sortKey: 'high', type: 'page', id: 'x' }),
+                JSON.stringify({
+                    cursorType: CursorType.RegionPreviews,
+                    sortKey: 'high',
+                    type: 'page',
+                    id: 'x',
+                }),
                 'utf8',
             ).toString('base64url');
             expect(() => RegionPreviewsCursor.decodeBase64(encoded)).toThrow(
@@ -85,7 +100,12 @@ describe('RegionPreviewsCursor', () => {
 
         it('throws when type is not a string', () => {
             const encoded = Buffer.from(
-                JSON.stringify({ sortKey: 0, type: 123, id: 'x' }),
+                JSON.stringify({
+                    cursorType: CursorType.RegionPreviews,
+                    sortKey: 0,
+                    type: 123,
+                    id: 'x',
+                }),
                 'utf8',
             ).toString('base64url');
             expect(() => RegionPreviewsCursor.decodeBase64(encoded)).toThrow(
@@ -95,7 +115,12 @@ describe('RegionPreviewsCursor', () => {
 
         it('throws when id is not a string', () => {
             const encoded = Buffer.from(
-                JSON.stringify({ sortKey: 0, type: 'page', id: 456 }),
+                JSON.stringify({
+                    cursorType: CursorType.RegionPreviews,
+                    sortKey: 0,
+                    type: 'page',
+                    id: 456,
+                }),
                 'utf8',
             ).toString('base64url');
             expect(() => RegionPreviewsCursor.decodeBase64(encoded)).toThrow(

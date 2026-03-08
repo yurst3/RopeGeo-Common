@@ -1,0 +1,85 @@
+import { describe, it, expect } from '@jest/globals';
+import { Preview, PreviewType } from '../../../src/types/previews/preview';
+import { PagePreview } from '../../../src/types/previews/pagePreview';
+import { RegionPreview } from '../../../src/types/previews/regionPreview';
+import { Difficulty } from '../../../src/types/difficulty';
+import { PageDataSource } from '../../../src/types/pageDataSource';
+
+function samplePagePreview(): PagePreview {
+    const difficulty = new Difficulty(null, null, null, null);
+    return new PagePreview(
+        'page-id',
+        PageDataSource.Ropewiki,
+        null,
+        null,
+        null,
+        'Page Title',
+        [],
+        [],
+        difficulty,
+        null,
+        null,
+        null,
+    );
+}
+
+function sampleRegionPreview(): RegionPreview {
+    return new RegionPreview('region-id', 'Region Name', [], 0, 0, null, PageDataSource.Ropewiki);
+}
+
+describe('Preview', () => {
+    describe('isPagePreview', () => {
+        it('returns true for PagePreview', () => {
+            const preview = samplePagePreview();
+            expect(Preview.isPagePreview(preview)).toBe(true);
+        });
+
+        it('returns false for RegionPreview', () => {
+            const preview = sampleRegionPreview();
+            expect(Preview.isPagePreview(preview)).toBe(false);
+        });
+
+        it('narrows type so PagePreview-specific properties are accessible', () => {
+            const preview: Preview = samplePagePreview();
+            if (Preview.isPagePreview(preview)) {
+                expect(preview.title).toBe('Page Title');
+                expect(preview.regions).toEqual([]);
+                expect(preview.difficulty).toBeInstanceOf(Difficulty);
+            }
+        });
+    });
+
+    describe('isRegionPreview', () => {
+        it('returns true for RegionPreview', () => {
+            const preview = sampleRegionPreview();
+            expect(Preview.isRegionPreview(preview)).toBe(true);
+        });
+
+        it('returns false for PagePreview', () => {
+            const preview = samplePagePreview();
+            expect(Preview.isRegionPreview(preview)).toBe(false);
+        });
+
+        it('narrows type so RegionPreview-specific properties are accessible', () => {
+            const preview: Preview = sampleRegionPreview();
+            if (Preview.isRegionPreview(preview)) {
+                expect(preview.name).toBe('Region Name');
+                expect(preview.parents).toEqual([]);
+                expect(preview.pageCount).toBe(0);
+                expect(preview.regionCount).toBe(0);
+            }
+        });
+    });
+
+    describe('previewType discrimination', () => {
+        it('PagePreview has previewType Page', () => {
+            const preview = samplePagePreview();
+            expect(preview.previewType).toBe(PreviewType.Page);
+        });
+
+        it('RegionPreview has previewType Region', () => {
+            const preview = sampleRegionPreview();
+            expect(preview.previewType).toBe(PreviewType.Region);
+        });
+    });
+});

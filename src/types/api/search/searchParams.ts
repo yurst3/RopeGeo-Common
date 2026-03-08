@@ -1,4 +1,4 @@
-import { SearchCursor } from './searchCursor';
+import { SearchCursor } from '../../cursors/searchCursor';
 
 export type SearchOrder = 'similarity' | 'quality';
 
