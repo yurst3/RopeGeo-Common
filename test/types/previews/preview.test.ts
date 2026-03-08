@@ -31,17 +31,17 @@ describe('Preview', () => {
     describe('isPagePreview', () => {
         it('returns true for PagePreview', () => {
             const preview = samplePagePreview();
-            expect(Preview.isPagePreview(preview)).toBe(true);
+            expect(preview.isPagePreview()).toBe(true);
         });
 
         it('returns false for RegionPreview', () => {
             const preview = sampleRegionPreview();
-            expect(Preview.isPagePreview(preview)).toBe(false);
+            expect(preview.isPagePreview()).toBe(false);
         });
 
         it('narrows type so PagePreview-specific properties are accessible', () => {
             const preview: Preview = samplePagePreview();
-            if (Preview.isPagePreview(preview)) {
+            if (preview.isPagePreview()) {
                 expect(preview.title).toBe('Page Title');
                 expect(preview.regions).toEqual([]);
                 expect(preview.difficulty).toBeInstanceOf(Difficulty);
@@ -52,17 +52,17 @@ describe('Preview', () => {
     describe('isRegionPreview', () => {
         it('returns true for RegionPreview', () => {
             const preview = sampleRegionPreview();
-            expect(Preview.isRegionPreview(preview)).toBe(true);
+            expect(preview.isRegionPreview()).toBe(true);
         });
 
         it('returns false for PagePreview', () => {
             const preview = samplePagePreview();
-            expect(Preview.isRegionPreview(preview)).toBe(false);
+            expect(preview.isRegionPreview()).toBe(false);
         });
 
         it('narrows type so RegionPreview-specific properties are accessible', () => {
             const preview: Preview = sampleRegionPreview();
-            if (Preview.isRegionPreview(preview)) {
+            if (preview.isRegionPreview()) {
                 expect(preview.name).toBe('Region Name');
                 expect(preview.parents).toEqual([]);
                 expect(preview.pageCount).toBe(0);

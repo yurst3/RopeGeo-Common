@@ -12,13 +12,13 @@ export enum PreviewType {
 export abstract class Preview {
     abstract readonly previewType: PreviewType;
 
-    /** Type guard: narrows Preview to PagePreview. */
-    static isPagePreview(value: Preview): value is PagePreview {
-        return value.previewType === PreviewType.Page;
+    /** Type guard: narrows this to PagePreview. */
+    isPagePreview(): this is PagePreview {
+        return this.previewType === PreviewType.Page;
     }
 
-    /** Type guard: narrows Preview to RegionPreview. */
-    static isRegionPreview(value: Preview): value is RegionPreview {
-        return value.previewType === PreviewType.Region;
+    /** Type guard: narrows this to RegionPreview. */
+    isRegionPreview(): this is RegionPreview {
+        return this.previewType === PreviewType.Region;
     }
 }
