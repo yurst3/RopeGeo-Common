@@ -40,5 +40,28 @@ describe('RopewikiRegionImagesResult', () => {
             expect(decoded.pageId).toBe('page-2');
             expect(decoded.imageId).toBe('image-2');
         });
+
+        it('fromResponseBody validates body and applies RopewikiRegionImageView.prototype', () => {
+            const plain = {
+                id: 'img-1',
+                pageId: 'p1',
+                pageName: 'Page',
+                url: 'https://example.com/img.jpg',
+                externalLink: 'https://example.com',
+                caption: undefined,
+            };
+            const r = RopewikiRegionImagesResult.fromResponseBody({
+                results: [plain],
+                nextCursor: null,
+            });
+            expect(r.results[0]).toBe(plain);
+            expect(plain).toBeInstanceOf(RopewikiRegionImageView);
+        });
+
+        it('accepts nextCursor as string', () => {
+            const cursor = new RegionImagesCursor(0.5, 'page-1', 'img-1');
+            const r = new RopewikiRegionImagesResult([], cursor.encodeBase64());
+            expect(r.nextCursor).not.toBeNull();
+        });
     });
 });

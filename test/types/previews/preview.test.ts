@@ -82,4 +82,63 @@ describe('Preview', () => {
             expect(preview.previewType).toBe(PreviewType.Region);
         });
     });
+
+    describe('fromResult', () => {
+        it('validates and returns PagePreview for previewType page', () => {
+            const plain = {
+                previewType: 'page',
+                id: 'p1',
+                title: 'Page 1',
+                source: 'ropewiki',
+                regions: [],
+                aka: [],
+                difficulty: {},
+                mapData: null,
+                externalLink: null,
+                imageUrl: null,
+                rating: null,
+                ratingCount: null,
+                permit: null,
+            };
+            const preview = Preview.fromResult(plain);
+            expect(preview).toBe(plain);
+            expect(preview.isPagePreview()).toBe(true);
+            expect(preview.previewType).toBe(PreviewType.Page);
+        });
+
+        it('validates and returns RegionPreview for previewType region', () => {
+            const plain = {
+                previewType: 'region',
+                id: 'r1',
+                name: 'Region 1',
+                parents: [],
+                pageCount: 0,
+                regionCount: 0,
+                imageUrl: null,
+                source: 'ropewiki',
+            };
+            const preview = Preview.fromResult(plain);
+            expect(preview).toBe(plain);
+            expect(preview.isRegionPreview()).toBe(true);
+            expect(preview.previewType).toBe(PreviewType.Region);
+        });
+
+        it('throws if result is not an object', () => {
+            expect(() => Preview.fromResult(null)).toThrow(
+                'Preview result must be an object',
+            );
+            expect(() => Preview.fromResult('string')).toThrow(
+                'Preview result must be an object',
+            );
+        });
+
+        it('throws if previewType is missing or invalid', () => {
+            expect(() => Preview.fromResult({})).toThrow(
+                /previewType "page" or "region"/,
+            );
+            expect(() =>
+                Preview.fromResult({ previewType: 'other' }),
+            ).toThrow(/previewType "page" or "region"/);
+        });
+    });
 });

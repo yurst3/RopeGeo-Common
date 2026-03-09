@@ -30,4 +30,44 @@ export class RopewikiRegionImageView {
         this.externalLink = row.linkUrl;
         this.caption = row.caption ?? undefined;
     }
+
+    /**
+     * Validates result has image view fields and applies RopewikiRegionImageView.prototype.
+     */
+    static fromResult(result: unknown): RopewikiRegionImageView {
+        if (result == null || typeof result !== 'object') {
+            throw new Error('RopewikiRegionImageView result must be an object');
+        }
+        const r = result as Record<string, unknown>;
+        RopewikiRegionImageView.assertString(r, 'id');
+        RopewikiRegionImageView.assertString(r, 'pageId');
+        RopewikiRegionImageView.assertString(r, 'pageName');
+        RopewikiRegionImageView.assertString(r, 'url');
+        RopewikiRegionImageView.assertString(r, 'externalLink');
+        RopewikiRegionImageView.assertOptionalString(r, 'caption');
+        Object.setPrototypeOf(r, RopewikiRegionImageView.prototype);
+        return r as unknown as RopewikiRegionImageView;
+    }
+
+    private static assertString(obj: Record<string, unknown>, key: string): void {
+        const v = obj[key];
+        if (typeof v !== 'string') {
+            throw new Error(
+                `RopewikiRegionImageView.${key} must be a string, got: ${typeof v}`,
+            );
+        }
+    }
+
+    private static assertOptionalString(obj: Record<string, unknown>, key: string): void {
+        const v = obj[key];
+        if (
+            v !== null &&
+            v !== undefined &&
+            typeof v !== 'string'
+        ) {
+            throw new Error(
+                `RopewikiRegionImageView.${key} must be string or undefined, got: ${typeof v}`,
+            );
+        }
+    }
 }

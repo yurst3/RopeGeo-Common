@@ -1,6 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 import type { PagePreview } from '../../../../src/types/previews/pagePreview';
-import type { Preview } from '../../../../src/types/previews/preview';
+import { Preview } from '../../../../src/types/previews/preview';
 import type { RegionPreview } from '../../../../src/types/previews/regionPreview';
 import { RegionPreviewsCursor } from '../../../../src/types/cursors/regionPreviewsCursor';
 import { RopewikiRegionPreviewsResult } from '../../../../src/types/api/getRopewikiRegionPreviews/ropewikiRegionPreviewsResult';
@@ -29,6 +29,32 @@ describe('RopewikiRegionPreviewsResult', () => {
             expect(decoded.sortKey).toBe(0.75);
             expect(decoded.type).toBe('region');
             expect(decoded.id).toBe('page-2');
+        });
+
+        it('fromResponseBody validates body and applies Preview.prototype', () => {
+            const plain = {
+                previewType: 'region',
+                id: 'r1',
+                name: 'Region 1',
+                parents: [],
+                pageCount: 0,
+                regionCount: 0,
+                imageUrl: null,
+                source: 'ropewiki',
+            };
+            const r = RopewikiRegionPreviewsResult.fromResponseBody({
+                results: [plain],
+                nextCursor: null,
+            });
+            expect(r.results[0]).toBe(plain);
+            expect(plain).toBeInstanceOf(Preview);
+            expect((plain as unknown as Preview).isRegionPreview()).toBe(true);
+        });
+
+        it('accepts nextCursor as string', () => {
+            const cursor = new RegionPreviewsCursor(0.5, 'page', 'id');
+            const r = new RopewikiRegionPreviewsResult([], cursor.encodeBase64());
+            expect(r.nextCursor).not.toBeNull();
         });
     });
 });

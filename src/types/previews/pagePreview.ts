@@ -115,6 +115,126 @@ export class PagePreview extends Preview {
         );
     }
 
+    /**
+     * Validates result has page preview fields and applies PagePreview.prototype.
+     * Expects difficulty as plain object with technical, water, time, risk (optional).
+     */
+    static fromResult(result: unknown): PagePreview {
+        if (result == null || typeof result !== 'object') {
+            throw new Error('PagePreview result must be an object');
+        }
+        const r = result as Record<string, unknown>;
+        PagePreview.assertString(r, 'id');
+        PagePreview.assertString(r, 'title');
+        PagePreview.assertSource(r, 'source');
+        PagePreview.assertStringArray(r, 'regions');
+        PagePreview.assertStringArray(r, 'aka');
+        PagePreview.assertDifficulty(r, 'difficulty');
+        PagePreview.assertNullableString(r, 'mapData');
+        PagePreview.assertNullableString(r, 'externalLink');
+        PagePreview.assertNullableString(r, 'imageUrl');
+        PagePreview.assertNullableNumber(r, 'rating');
+        PagePreview.assertNullableNumber(r, 'ratingCount');
+        PagePreview.assertPermit(r, 'permit');
+        const diff = r.difficulty as Record<string, string | null | undefined>;
+        (r as Record<string, unknown>).difficulty = new Difficulty(
+            diff.technical,
+            diff.water,
+            diff.time,
+            diff.risk,
+        );
+        Object.setPrototypeOf(r, PagePreview.prototype);
+        return r as unknown as PagePreview;
+    }
+
+    private static assertString(obj: Record<string, unknown>, key: string): void {
+        const v = obj[key];
+        if (typeof v !== 'string') {
+            throw new Error(`PagePreview.${key} must be a string, got: ${typeof v}`);
+        }
+    }
+
+    private static assertNullableString(obj: Record<string, unknown>, key: string): void {
+        const v = obj[key];
+        if (v !== null && v !== undefined && typeof v !== 'string') {
+            throw new Error(`PagePreview.${key} must be string or null, got: ${typeof v}`);
+        }
+    }
+
+    private static assertNullableNumber(obj: Record<string, unknown>, key: string): void {
+        const v = obj[key];
+        if (v !== null && v !== undefined && (typeof v !== 'number' || Number.isNaN(v))) {
+            throw new Error(`PagePreview.${key} must be number or null, got: ${typeof v}`);
+        }
+    }
+
+    private static assertSource(obj: Record<string, unknown>, key: string): void {
+        const v = obj[key];
+        if (v !== PageDataSource.Ropewiki) {
+            throw new Error(
+                `PagePreview.${key} must be PageDataSource, got: ${JSON.stringify(v)}`,
+            );
+        }
+    }
+
+    private static assertStringArray(obj: Record<string, unknown>, key: string): void {
+        const v = obj[key];
+        if (!Array.isArray(v)) {
+            throw new Error(`PagePreview.${key} must be an array, got: ${typeof v}`);
+        }
+        for (let i = 0; i < v.length; i++) {
+            if (typeof v[i] !== 'string') {
+                throw new Error(`PagePreview.${key}[${i}] must be a string`);
+            }
+        }
+    }
+
+    private static assertDifficulty(obj: Record<string, unknown>, key: string): void {
+        const v = obj[key];
+        if (v == null || typeof v !== 'object') {
+            throw new Error(`PagePreview.${key} must be an object`);
+        }
+        const d = v as Record<string, unknown>;
+        if (
+            d.technical !== undefined &&
+            d.technical !== null &&
+            typeof d.technical !== 'string'
+        ) {
+            throw new Error('PagePreview.difficulty.technical must be string or null');
+        }
+        if (
+            d.water !== undefined &&
+            d.water !== null &&
+            typeof d.water !== 'string'
+        ) {
+            throw new Error('PagePreview.difficulty.water must be string or null');
+        }
+        if (
+            d.time !== undefined &&
+            d.time !== null &&
+            typeof d.time !== 'string'
+        ) {
+            throw new Error('PagePreview.difficulty.time must be string or null');
+        }
+        if (
+            d.risk !== undefined &&
+            d.risk !== null &&
+            typeof d.risk !== 'string'
+        ) {
+            throw new Error('PagePreview.difficulty.risk must be string or null');
+        }
+    }
+
+    private static assertPermit(obj: Record<string, unknown>, key: string): void {
+        const v = obj[key];
+        if (v !== null && v !== undefined && typeof v !== 'string') {
+            throw new Error(`PagePreview.${key} must be string or null, got: ${typeof v}`);
+        }
+        if (v != null && !Object.values(PermitStatus).includes(v as PermitStatus)) {
+            throw new Error(`PagePreview.${key} must be PermitStatus or null, got: ${JSON.stringify(v)}`);
+        }
+    }
+
     private static parsePermit(value: string | null | undefined): PermitStatus | null {
         if (value == null || value === '') return null;
         const trimmed = value.trim();

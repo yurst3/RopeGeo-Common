@@ -1,6 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 import type { PagePreview } from '../../../../src/types/previews/pagePreview';
-import type { Preview } from '../../../../src/types/previews/preview';
+import { Preview } from '../../../../src/types/previews/preview';
 import type { RegionPreview } from '../../../../src/types/previews/regionPreview';
 import { CursorType } from '../../../../src/types/cursors/cursor';
 import { SearchCursor } from '../../../../src/types/cursors/searchCursor';
@@ -197,6 +197,55 @@ describe('SearchResults', () => {
             expect(decoded.sortKey).toBe(0.75);
             expect(decoded.type).toBe('region');
             expect(decoded.id).toBe('region-1');
+        });
+
+        it('fromResponseBody validates body and applies Preview.prototype', () => {
+            const plain = {
+                previewType: 'page',
+                id: 'p1',
+                title: 'Page 1',
+                source: 'ropewiki',
+                regions: [],
+                aka: [],
+                difficulty: {},
+                mapData: null,
+                externalLink: null,
+                imageUrl: null,
+                rating: null,
+                ratingCount: null,
+                permit: null,
+            };
+            const sr = SearchResults.fromResponseBody({
+                results: [plain],
+                nextCursor: null,
+            });
+            expect(sr.results).toHaveLength(1);
+            expect(sr.results[0]).toBe(plain);
+            expect(plain).toBeInstanceOf(Preview);
+            expect((plain as unknown as Preview).isPagePreview()).toBe(true);
+        });
+
+        it('fromResponseBody validates nextCursor by decoding', () => {
+            const cursor = new SearchCursor(0.5, 'page', 'id');
+            const encoded = cursor.encodeBase64();
+            const sr = SearchResults.fromResponseBody({
+                results: [],
+                nextCursor: encoded,
+            });
+            expect(sr.nextCursor).toBe(encoded);
+            expect(() =>
+                SearchResults.fromResponseBody({
+                    results: [],
+                    nextCursor: 'not-valid-base64-cursor',
+                }),
+            ).toThrow();
+        });
+
+        it('accepts nextCursor as string (e.g. from API payload)', () => {
+            const cursor = new SearchCursor(0.5, 'page', 'id');
+            const encoded = cursor.encodeBase64();
+            const sr = new SearchResults([], encoded);
+            expect(sr.nextCursor).toBe(encoded);
         });
     });
 });
