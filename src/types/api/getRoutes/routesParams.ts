@@ -26,16 +26,16 @@ export class RoutesParams {
     }
 
     /**
-     * Returns an object suitable for use as query string parameters.
+     * Returns a URL-encoded query string.
      */
-    toQueryStringParams(): Record<string, string> {
+    toQueryString(): string {
         if (this.region === null) {
-            return {};
+            return '';
         }
-        return {
+        return new URLSearchParams({
             source: this.region.source,
             region: this.region.id,
-        };
+        }).toString();
     }
 
     /**

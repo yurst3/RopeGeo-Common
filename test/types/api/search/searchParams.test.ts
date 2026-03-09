@@ -16,7 +16,7 @@ function validConstructorArgs(overrides: Partial<{
     regionId: string | null;
     order: 'similarity' | 'quality';
     limit: number;
-    cursorEncoded: string | null;
+    cursorEncoded: string | undefined;
 }> = {}) {
     return {
         name: 'Imlay',
@@ -27,7 +27,7 @@ function validConstructorArgs(overrides: Partial<{
         regionId: null as string | null,
         order: 'similarity' as const,
         limit: 20,
-        cursorEncoded: null as string | null,
+        cursorEncoded: undefined as string | undefined,
         ...overrides,
     };
 }
@@ -337,7 +337,6 @@ describe('SearchParams', () => {
                 null,
                 'similarity',
                 1,
-                null,
             );
             expect(p.regionId).toBeNull();
         });
@@ -352,7 +351,6 @@ describe('SearchParams', () => {
                 '',
                 'similarity',
                 1,
-                null,
             );
             expect(p.regionId).toBeNull();
         });
@@ -371,7 +369,7 @@ describe('SearchParams', () => {
                     args.limit,
                     args.cursorEncoded,
                 ),
-            ).toThrow('Invalid or malformed query parameter: cursor');
+            ).toThrow(/Invalid search cursor encoding/);
         });
     });
 
@@ -567,7 +565,7 @@ describe('SearchParams', () => {
                     name: 'x',
                     cursor: '!!!invalid!!!',
                 }),
-            ).toThrow('Invalid or malformed query parameter: cursor');
+            ).toThrow(/Invalid search cursor encoding/);
         });
 
         it('accepts similarity 0 and 1', () => {
@@ -615,8 +613,8 @@ describe('SearchParams', () => {
         });
     });
 
-    describe('toQueryStringParams', () => {
-        it('returns all params with cursor encoded', () => {
+    describe('toQueryString', () => {
+        it('returns URL-encoded string with all params and cursor', () => {
             const p = new SearchParams(
                 'Test',
                 0.4,
@@ -628,16 +626,18 @@ describe('SearchParams', () => {
                 15,
                 validCursorEncoded,
             );
-            const q = p.toQueryStringParams();
-            expect(q.name).toBe('Test');
-            expect(q.similarity).toBe('0.4');
-            expect(q['include-pages']).toBe('true');
-            expect(q['include-regions']).toBe('false');
-            expect(q['include-aka']).toBe('true');
-            expect(q.region).toBe(validUuid);
-            expect(q.order).toBe('quality');
-            expect(q.limit).toBe('15');
-            expect(q.cursor).toBe(validCursorEncoded);
+            const q = p.toQueryString();
+            expect(typeof q).toBe('string');
+            const params = new URLSearchParams(q);
+            expect(params.get('name')).toBe('Test');
+            expect(params.get('similarity')).toBe('0.4');
+            expect(params.get('include-pages')).toBe('true');
+            expect(params.get('include-regions')).toBe('false');
+            expect(params.get('include-aka')).toBe('true');
+            expect(params.get('region')).toBe(validUuid);
+            expect(params.get('order')).toBe('quality');
+            expect(params.get('limit')).toBe('15');
+            expect(params.get('cursor')).toBe(validCursorEncoded);
         });
 
         it('omits region when regionId is null', () => {
@@ -650,13 +650,13 @@ describe('SearchParams', () => {
                 null,
                 'similarity',
                 20,
-                null,
             );
-            const q = p.toQueryStringParams();
-            expect('region' in q).toBe(false);
+            const q = p.toQueryString();
+            const params = new URLSearchParams(q);
+            expect(params.has('region')).toBe(false);
         });
 
-        it('omits cursor when cursor is null', () => {
+        it('omits cursor when cursor is omitted', () => {
             const p = new SearchParams(
                 'x',
                 0.5,
@@ -666,10 +666,10 @@ describe('SearchParams', () => {
                 null,
                 'similarity',
                 20,
-                null,
             );
-            const q = p.toQueryStringParams();
-            expect('cursor' in q).toBe(false);
+            const q = p.toQueryString();
+            const params = new URLSearchParams(q);
+            expect(params.has('cursor')).toBe(false);
         });
 
         it('round-trips with fromQueryStringParams', () => {
@@ -684,15 +684,53 @@ describe('SearchParams', () => {
                 limit: '5',
             };
             const p = SearchParams.fromQueryStringParams(input);
-            const q = p.toQueryStringParams();
-            expect(q.name).toBe(input.name);
-            expect(q.similarity).toBe(input.similarity);
-            expect(q['include-pages']).toBe(input['include-pages']);
-            expect(q['include-regions']).toBe(input['include-regions']);
-            expect(q['include-aka']).toBe(input['include-aka']);
-            expect(q.region).toBe(input.region);
-            expect(q.order).toBe(input.order);
-            expect(q.limit).toBe(input.limit);
+            const q = p.toQueryString();
+            const params = new URLSearchParams(q);
+            expect(params.get('name')).toBe(input.name);
+            expect(params.get('similarity')).toBe(input.similarity);
+            expect(params.get('include-pages')).toBe(input['include-pages']);
+            expect(params.get('include-regions')).toBe(input['include-regions']);
+            expect(params.get('include-aka')).toBe(input['include-aka']);
+            expect(params.get('region')).toBe(input.region);
+            expect(params.get('order')).toBe(input.order);
+            expect(params.get('limit')).toBe(input.limit);
+        });
+    });
+
+    describe('withCursor', () => {
+        it('returns new instance with null cursor when passed null', () => {
+            const p = new SearchParams(
+                'q',
+                0.5,
+                true,
+                true,
+                true,
+                null,
+                'quality',
+                10,
+            );
+            const next = p.withCursor(null);
+            expect(next).not.toBe(p);
+            expect(next.cursor).toBeNull();
+            expect(next.name).toBe(p.name);
+            expect(next.limit).toBe(p.limit);
+        });
+
+        it('returns new instance with encoded cursor for next page', () => {
+            const p = new SearchParams(
+                'q',
+                0.5,
+                true,
+                true,
+                true,
+                null,
+                'quality',
+                10,
+            );
+            const next = p.withCursor(validCursorEncoded);
+            expect(next).not.toBe(p);
+            expect(next.cursor).toBeInstanceOf(SearchCursor);
+            expect(next.cursor!.encodeBase64()).toBe(validCursorEncoded);
         });
     });
 });

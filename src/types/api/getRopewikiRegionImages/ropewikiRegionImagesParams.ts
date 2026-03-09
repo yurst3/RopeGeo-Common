@@ -1,3 +1,4 @@
+import { CursorPaginationParams } from '../../params/cursorPaginationParams';
 import { RegionImagesCursor } from '../../cursors/regionImagesCursor';
 
 const DEFAULT_LIMIT = 20;
@@ -7,11 +8,8 @@ const DEFAULT_LIMIT = 20;
  * Cursor is stored decoded (RegionImagesCursor | null).
  * The constructor accepts an encoded cursor string and decodes it.
  */
-export class RopewikiRegionImagesParams {
-    public readonly limit: number;
-    public readonly cursor: RegionImagesCursor | null;
-
-    constructor(limit: number, cursorEncoded: string | null) {
+export class RopewikiRegionImagesParams extends CursorPaginationParams<RegionImagesCursor> {
+    constructor(limit: number, cursorEncoded?: string) {
         const limitNum = Number(limit);
         if (
             Number.isNaN(limitNum) ||
@@ -22,33 +20,22 @@ export class RopewikiRegionImagesParams {
                 'Query parameter "limit" must be a whole number greater than 0',
             );
         }
-
-        this.limit = limit;
-        if (cursorEncoded === null || cursorEncoded === '') {
-            this.cursor = null;
-        } else {
-            try {
-                this.cursor = RegionImagesCursor.decodeBase64(cursorEncoded);
-            } catch {
-                throw new Error(
-                    'Invalid or malformed query parameter: cursor',
-                );
-            }
+        const cursorNorm =
+            cursorEncoded === undefined || cursorEncoded === null || cursorEncoded === ''
+                ? null
+                : cursorEncoded;
+        let cursor: RegionImagesCursor | null = null;
+        if (cursorNorm !== null) {
+            cursor = RegionImagesCursor.decodeBase64(cursorNorm);
         }
+        super(limitNum, cursor);
     }
 
-    /**
-     * Returns an object suitable for use as query string parameters.
-     * Cursor is encoded for the query string.
-     */
-    toQueryStringParams(): Record<string, string> {
-        const params: Record<string, string> = {
-            limit: String(this.limit),
-        };
-        if (this.cursor !== null) {
-            params.cursor = this.cursor.encodeBase64();
-        }
-        return params;
+    withCursor(cursorEncoded: string | null): RopewikiRegionImagesParams {
+        return new RopewikiRegionImagesParams(
+            this.limit,
+            cursorEncoded === null || cursorEncoded === '' ? undefined : cursorEncoded,
+        );
     }
 
     /**
@@ -61,7 +48,7 @@ export class RopewikiRegionImagesParams {
         const limitParam = q.limit ?? q.Limit ?? '';
         const limit = limitParam === '' ? DEFAULT_LIMIT : Number(limitParam);
         const cursorRaw = (q.cursor ?? q.Cursor ?? '').trim();
-        const cursorEncoded = cursorRaw === '' ? null : cursorRaw;
+        const cursorEncoded = cursorRaw === '' ? undefined : cursorRaw;
         return new RopewikiRegionImagesParams(limit, cursorEncoded);
     }
 }

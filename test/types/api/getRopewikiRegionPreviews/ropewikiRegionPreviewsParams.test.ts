@@ -7,8 +7,14 @@ const validCursorEncoded = new RegionPreviewsCursor(0.5, 'page', 'v').encodeBase
 
 describe('RopewikiRegionPreviewsParams', () => {
     describe('constructor', () => {
+        it('accepts valid limit without cursor (cursor omitted)', () => {
+            const p = new RopewikiRegionPreviewsParams(20);
+            expect(p.limit).toBe(20);
+            expect(p.cursor).toBeNull();
+        });
+
         it('accepts valid limit and null cursor', () => {
-            const p = new RopewikiRegionPreviewsParams(20, null);
+            const p = new RopewikiRegionPreviewsParams(20, undefined);
             expect(p.limit).toBe(20);
             expect(p.cursor).toBeNull();
         });
@@ -29,7 +35,7 @@ describe('RopewikiRegionPreviewsParams', () => {
 
         it('throws when limit is less than 1', () => {
             expect(
-                () => new RopewikiRegionPreviewsParams(0, null),
+                () => new RopewikiRegionPreviewsParams(0),
             ).toThrow(
                 'Query parameter "limit" must be a whole number greater than 0',
             );
@@ -37,7 +43,7 @@ describe('RopewikiRegionPreviewsParams', () => {
 
         it('throws when limit is not an integer', () => {
             expect(
-                () => new RopewikiRegionPreviewsParams(20.5, null),
+                () => new RopewikiRegionPreviewsParams(20.5),
             ).toThrow(
                 'Query parameter "limit" must be a whole number greater than 0',
             );
@@ -46,21 +52,44 @@ describe('RopewikiRegionPreviewsParams', () => {
         it('throws when cursor is invalid', () => {
             expect(
                 () => new RopewikiRegionPreviewsParams(20, '!!!invalid!!!'),
-            ).toThrow('Invalid or malformed query parameter: cursor');
+            ).toThrow(/Invalid region previews cursor encoding/);
         });
     });
 
-    describe('toQueryStringParams', () => {
-        it('returns limit and omits cursor when cursor is null', () => {
-            const p = new RopewikiRegionPreviewsParams(15, null);
-            expect(p.toQueryStringParams()).toEqual({ limit: '15' });
+    describe('toQueryString', () => {
+        it('returns URL-encoded string with limit when cursor is null', () => {
+            const p = new RopewikiRegionPreviewsParams(15);
+            const q = p.toQueryString();
+            expect(typeof q).toBe('string');
+            const params = new URLSearchParams(q);
+            expect(params.get('limit')).toBe('15');
+            expect(params.has('cursor')).toBe(false);
         });
 
-        it('includes cursor when set', () => {
+        it('includes cursor in URL-encoded string when set', () => {
             const p = new RopewikiRegionPreviewsParams(15, validCursorEncoded);
-            const params = p.toQueryStringParams();
-            expect(params.limit).toBe('15');
-            expect(params.cursor).toBe(validCursorEncoded);
+            const q = p.toQueryString();
+            const params = new URLSearchParams(q);
+            expect(params.get('limit')).toBe('15');
+            expect(params.get('cursor')).toBe(validCursorEncoded);
+        });
+    });
+
+    describe('withCursor', () => {
+        it('returns new instance with null cursor when passed null', () => {
+            const p = new RopewikiRegionPreviewsParams(10);
+            const next = p.withCursor(null);
+            expect(next).not.toBe(p);
+            expect(next.cursor).toBeNull();
+            expect(next.limit).toBe(p.limit);
+        });
+
+        it('returns new instance with encoded cursor for next page', () => {
+            const p = new RopewikiRegionPreviewsParams(10);
+            const next = p.withCursor(validCursorEncoded);
+            expect(next).not.toBe(p);
+            expect(next.cursor).toBeInstanceOf(RegionPreviewsCursor);
+            expect(next.cursor!.encodeBase64()).toBe(validCursorEncoded);
         });
     });
 

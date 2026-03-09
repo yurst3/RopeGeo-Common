@@ -45,21 +45,21 @@ describe('RoutesParams', () => {
         });
     });
 
-    describe('toQueryStringParams', () => {
-        it('returns empty object when region is null', () => {
+    describe('toQueryString', () => {
+        it('returns empty string when region is null', () => {
             const p = new RoutesParams(undefined, undefined);
-            expect(p.toQueryStringParams()).toEqual({});
+            expect(p.toQueryString()).toBe('');
         });
 
-        it('returns source and region from region.id when set', () => {
+        it('returns URL-encoded string with source and region when set', () => {
             const p = new RoutesParams(
                 PageDataSource.Ropewiki,
                 'region-uuid',
             );
-            expect(p.toQueryStringParams()).toEqual({
-                source: 'ropewiki',
-                region: 'region-uuid',
-            });
+            const q = p.toQueryString();
+            const params = new URLSearchParams(q);
+            expect(params.get('source')).toBe('ropewiki');
+            expect(params.get('region')).toBe('region-uuid');
         });
     });
 

@@ -11,6 +11,7 @@ export type { RopewikiImageView } from './types/api/getRopewikiPageView/ropewiki
 export type { RopewikiBetaSectionView } from './types/api/getRopewikiPageView/ropewikiBetaSectionView';
 export type { RopewikiPageView } from './types/api/getRopewikiPageView/ropewikiPageView';
 export { Cursor, CursorType } from './types/cursors/cursor';
+export { CursorPaginationParams } from './types/params/cursorPaginationParams';
 export { SearchCursor } from './types/cursors/searchCursor';
 export type { SearchCursorType } from './types/cursors/searchCursor';
 export { SearchParams } from './types/api/search/searchParams';

@@ -1,3 +1,4 @@
+import { CursorPaginationParams } from '../../params/cursorPaginationParams';
 import { SearchCursor } from '../../cursors/searchCursor';
 
 export type SearchOrder = 'similarity' | 'quality';
@@ -11,7 +12,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
  * Validated search parameters. Cursor is stored decoded (SearchCursor | null).
  * The constructor accepts an encoded cursor string and decodes it.
  */
-export class SearchParams {
+export class SearchParams extends CursorPaginationParams<SearchCursor> {
     public readonly name: string;
     public readonly similarityThreshold: number;
     public readonly includePages: boolean;
@@ -19,8 +20,6 @@ export class SearchParams {
     public readonly includeAka: boolean;
     public readonly regionId: string | null;
     public readonly order: SearchOrder;
-    public readonly limit: number;
-    public readonly cursor: SearchCursor | null;
 
     constructor(
         name: string,
@@ -31,7 +30,7 @@ export class SearchParams {
         regionId: string | null,
         order: SearchOrder,
         limit: number,
-        cursorEncoded: string | null,
+        cursorEncoded?: string,
     ) {
         if (typeof name !== 'string' || name.trim() === '') {
             throw new Error('Missing or empty required query parameter: name');
@@ -78,7 +77,16 @@ export class SearchParams {
                 'Query parameter "region" must be a valid UUID',
             );
         }
+        const cursorNorm =
+            cursorEncoded === undefined || cursorEncoded === null || cursorEncoded === ''
+                ? null
+                : cursorEncoded;
+        let cursor: SearchCursor | null = null;
+        if (cursorNorm !== null) {
+            cursor = SearchCursor.decodeBase64(cursorNorm);
+        }
 
+        super(limitNum, cursor);
         this.name = name;
         this.similarityThreshold = similarityThreshold;
         this.includePages = includePages;
@@ -86,25 +94,12 @@ export class SearchParams {
         this.includeAka = includeAka;
         this.regionId = trimmedRegionId;
         this.order = order;
-        this.limit = limit;
-        if (cursorEncoded === null || cursorEncoded === '') {
-            this.cursor = null;
-        } else {
-            try {
-                this.cursor = SearchCursor.decodeBase64(cursorEncoded);
-            } catch {
-                throw new Error(
-                    'Invalid or malformed query parameter: cursor',
-                );
-            }
-        }
     }
 
     /**
-     * Returns an object suitable for use as query string parameters.
-     * Cursor is encoded for the query string.
+     * Returns a URL-encoded query string. Cursor is encoded for the query string.
      */
-    toQueryStringParams(): Record<string, string> {
+    toQueryString(): string {
         const params: Record<string, string> = {
             name: this.name,
             similarity: String(this.similarityThreshold),
@@ -120,7 +115,21 @@ export class SearchParams {
         if (this.cursor !== null) {
             params.cursor = this.cursor.encodeBase64();
         }
-        return params;
+        return new URLSearchParams(params).toString();
+    }
+
+    withCursor(cursorEncoded: string | null): SearchParams {
+        return new SearchParams(
+            this.name,
+            this.similarityThreshold,
+            this.includePages,
+            this.includeRegions,
+            this.includeAka,
+            this.regionId,
+            this.order,
+            this.limit,
+            cursorEncoded === null || cursorEncoded === '' ? undefined : cursorEncoded,
+        );
     }
 
     /**
@@ -134,7 +143,7 @@ export class SearchParams {
         const limitParam = q.limit ?? q.Limit ?? '';
         const limit = limitParam === '' ? DEFAULT_LIMIT : Number(limitParam);
         const cursorRaw = (q.cursor ?? q.Cursor ?? '').trim();
-        const cursorEncoded = cursorRaw === '' ? null : cursorRaw;
+        const cursorEncoded = cursorRaw === '' ? undefined : cursorRaw;
         const similarityParam = q.similarity ?? q.Similarity ?? '';
         const similarity =
             similarityParam === '' ? 0.5 : Number(similarityParam);
