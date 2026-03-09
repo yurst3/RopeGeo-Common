@@ -5,13 +5,11 @@ export enum CursorType {
 }
 
 /**
- * Base64url encode/decode that works in Node (Buffer) and in React Native/browser (atob/btoa + TextEncoder/TextDecoder).
- * Avoids relying on Node's Buffer so cursor parsing works in RN.
+ * Base64url encode/decode using only atob/btoa and TextEncoder/TextDecoder so it works in
+ * Node, React Native (Hermes), and browser without ever referencing Buffer (which is not
+ * available in RN and can cause "Property 'Buffer' doesn't exist" when bundlers inline code).
  */
 function base64UrlEncode(utf8: string): string {
-    if (typeof Buffer !== 'undefined') {
-        return Buffer.from(utf8, 'utf8').toString('base64url');
-    }
     const bytes = new TextEncoder().encode(utf8);
     let binary = '';
     for (let i = 0; i < bytes.length; i++) {
@@ -23,9 +21,6 @@ function base64UrlEncode(utf8: string): string {
 
 function base64UrlDecode(encoded: string): string {
     const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (encoded.length % 4)) % 4);
-    if (typeof Buffer !== 'undefined') {
-        return Buffer.from(base64, 'base64').toString('utf8');
-    }
     const binary = atob(base64);
     return new TextDecoder().decode(Uint8Array.from(binary, (c) => (c as string).charCodeAt(0)));
 }
