@@ -7,9 +7,11 @@ export { RegionPreview } from './types/previews/regionPreview';
 export { Route, RouteGeoJsonFeature, RouteType } from './types/route';
 export { RoutesGeojson } from './types/api/getRoutes/routeGeojson';
 export { RoutesParams } from './types/api/getRoutes/routesParams';
-export type { RopewikiImageView } from './types/api/getRopewikiPageView/ropewikiImageView';
-export type { RopewikiBetaSectionView } from './types/api/getRopewikiPageView/ropewikiBetaSectionView';
-export type { RopewikiPageView } from './types/api/getRopewikiPageView/ropewikiPageView';
+export { BetaSectionImage } from './types/betaSections/betaSectionImage';
+export { BetaSection } from './types/betaSections/betaSection';
+export { RopewikiPageView } from './types/api/getRopewikiPageView/ropewikiPageView';
+export type RopewikiImageView = import('./types/betaSections/betaSectionImage').BetaSectionImage;
+export type RopewikiBetaSectionView = import('./types/betaSections/betaSection').BetaSection;
 export { Cursor, CursorType } from './types/cursors/cursor';
 export { CursorPaginationParams } from './types/params/cursorPaginationParams';
 export {

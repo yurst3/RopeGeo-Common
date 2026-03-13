@@ -1,5 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 import { RopewikiRegionView } from '../../../../src/types/api/getRopewikiRegionView/ropewikiRegionView';
+import { BetaSection } from '../../../../src/types/betaSections/betaSection';
 
 interface ConstructorArgs {
     name: string;
@@ -53,7 +54,12 @@ describe('RopewikiRegionView', () => {
                 }),
             );
             expect(view.name).toBe('North America');
-            expect(view.overview).toBe('Overview text');
+            expect(view.overview).not.toBeNull();
+            expect(view.overview!.title).toBe('Overview');
+            expect(view.overview!.text).toBe('Overview text');
+            expect(view.overview!.order).toBe(1);
+            expect(view.overview!.images).toEqual([]);
+            expect(view.overview!.latestRevisionDate).toEqual(new Date('2024-01-15T12:00:00Z'));
             expect(view.bestMonths).toEqual(['May', 'June']);
             expect(view.isMajorRegion).toBe(true);
             expect(view.latestRevisionDate).toEqual(new Date('2024-01-15T12:00:00Z'));
@@ -164,7 +170,13 @@ describe('RopewikiRegionView', () => {
                 topLevelPageCount: 45,
                 pageCount: 120,
                 totalPageCount: 380,
-                overview: 'Canyoneering regions.',
+                overview: {
+                    order: 1,
+                    title: 'Overview',
+                    text: 'Canyoneering regions.',
+                    images: [],
+                    latestRevisionDate: '2025-01-15T00:00:00.000Z',
+                },
                 bestMonths: ['April', 'May'],
                 isMajorRegion: true,
                 latestRevisionDate: '2025-01-15T00:00:00.000Z',
@@ -184,7 +196,12 @@ describe('RopewikiRegionView', () => {
             expect(view.topLevelPageCount).toBe(45);
             expect(view.pageCount).toBe(120);
             expect(view.totalPageCount).toBe(380);
-            expect(view.overview).toBe('Canyoneering regions.');
+            expect(view.overview).not.toBeNull();
+            expect(view.overview).toBeInstanceOf(BetaSection);
+            expect(view.overview!.title).toBe('Overview');
+            expect(view.overview!.text).toBe('Canyoneering regions.');
+            expect(view.overview!.order).toBe(1);
+            expect(view.overview!.images).toEqual([]);
             expect(view.bestMonths).toEqual(['April', 'May']);
             expect(view.isMajorRegion).toBe(true);
             expect(view.latestRevisionDate).toBeInstanceOf(Date);
@@ -271,10 +288,20 @@ describe('RopewikiRegionView', () => {
             ).toThrow('RopewikiRegionView.pageCount must be a number >= 0');
         });
 
-        it('throws when overview is not string or null', () => {
+        it('throws when overview is not BetaSection or null', () => {
             expect(() =>
                 RopewikiRegionView.fromResponseBody({ ...getValidBody(), overview: 1 }),
-            ).toThrow('RopewikiRegionView.overview must be string or null');
+            ).toThrow('RopewikiRegionView.overview must be BetaSection or null');
+        });
+
+        it('throws when overview is an object but invalid BetaSection', () => {
+            expect(() =>
+                RopewikiRegionView.fromResponseBody({
+                    ...getValidBody(),
+                    overview: { order: 1, title: 'Overview', text: 'Text', images: [] },
+                    // missing latestRevisionDate
+                }),
+            ).toThrow('BetaSection.latestRevisionDate must be an ISO 8601 date string');
         });
 
         it('throws when bestMonths is not an array of strings', () => {

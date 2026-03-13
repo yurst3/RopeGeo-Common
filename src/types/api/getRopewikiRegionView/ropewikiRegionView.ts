@@ -1,3 +1,5 @@
+import { BetaSection } from '../../betaSections/betaSection';
+
 /**
  * Region view for getRopewikiRegionView (GET /ropewiki/region/{id}).
  * Contains all RopewikiRegion info for the region except the region's id.
@@ -14,7 +16,7 @@ export class RopewikiRegionView {
     pageCount: number;
     /** Pages in this region and all descendants (truePageCountWithDescendents). Default 0. */
     totalPageCount: number;
-    overview: string | null;
+    overview: BetaSection | null;
     bestMonths: string[];
     isMajorRegion: boolean;
     latestRevisionDate: Date;
@@ -42,10 +44,14 @@ export class RopewikiRegionView {
         this.topLevelPageCount = truePageCount ?? 0;
         this.pageCount = rawPageCount ?? 0;
         this.totalPageCount = truePageCountWithDescendents ?? 0;
-        this.overview = overview ?? null;
+        const revDate = new Date(latestRevisionDate);
+        this.overview =
+            overview != null && overview !== ''
+                ? new BetaSection(1, 'Overview', overview, revDate, [])
+                : null;
         this.bestMonths = Array.isArray(bestMonths) ? bestMonths : [];
         this.isMajorRegion = isMajorRegion ?? false;
-        this.latestRevisionDate = new Date(latestRevisionDate);
+        this.latestRevisionDate = revDate;
         this.syncDate = new Date(updatedAt);
         this.externalLink = url;
     }
@@ -65,7 +71,7 @@ export class RopewikiRegionView {
         RopewikiRegionView.assertNonNegativeNumber(r, 'topLevelPageCount');
         RopewikiRegionView.assertNonNegativeNumber(r, 'pageCount');
         RopewikiRegionView.assertNonNegativeNumber(r, 'totalPageCount');
-        RopewikiRegionView.assertNullableString(r, 'overview');
+        RopewikiRegionView.assertNullableOverview(r, 'overview');
         RopewikiRegionView.assertStringArray(r, 'bestMonths');
         RopewikiRegionView.assertBoolean(r, 'isMajorRegion');
         RopewikiRegionView.assertIso8601DateString(r, 'latestRevisionDate');
@@ -75,6 +81,10 @@ export class RopewikiRegionView {
             r.latestRevisionDate as string,
         );
         (r as Record<string, unknown>).syncDate = new Date(r.syncDate as string);
+        (r as Record<string, unknown>).overview =
+            r.overview == null || r.overview === undefined
+                ? null
+                : BetaSection.fromResponseBody(r.overview);
         Object.setPrototypeOf(r, RopewikiRegionView.prototype);
         return r as unknown as RopewikiRegionView;
     }
@@ -96,6 +106,19 @@ export class RopewikiRegionView {
         if (v !== null && v !== undefined && typeof v !== 'string') {
             throw new Error(
                 `RopewikiRegionView.${key} must be string or null, got: ${typeof v}`,
+            );
+        }
+    }
+
+    private static assertNullableOverview(
+        obj: Record<string, unknown>,
+        key: string,
+    ): void {
+        const v = obj[key];
+        if (v === null || v === undefined) return;
+        if (typeof v !== 'object') {
+            throw new Error(
+                `RopewikiRegionView.${key} must be BetaSection or null, got: ${typeof v}`,
             );
         }
     }
