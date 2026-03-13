@@ -23,7 +23,6 @@ export { SearchParams } from './types/api/search/searchParams';
 export type { SearchOrder } from './types/api/search/searchParams';
 export { SearchResults } from './types/api/search/searchResults';
 export { RopewikiRegionView } from './types/api/getRopewikiRegionView/ropewikiRegionView';
-export type { RopewikiRegionViewRow } from './types/api/getRopewikiRegionView/ropewikiRegionView';
 export { RegionPreviewsCursor } from './types/cursors/regionPreviewsCursor';
 export { RopewikiRegionPreviewsParams } from './types/api/getRopewikiRegionPreviews/ropewikiRegionPreviewsParams';
 export { RopewikiRegionPreviewsResult } from './types/api/getRopewikiRegionPreviews/ropewikiRegionPreviewsResult';
