@@ -161,7 +161,7 @@ describe('RopewikiRegionView', () => {
         });
     });
 
-    describe('fromResponseBody', () => {
+    describe('fromResult', () => {
         function getValidBody() {
             return {
                 name: 'North America',
@@ -186,7 +186,7 @@ describe('RopewikiRegionView', () => {
         }
 
         it('returns RopewikiRegionView instance for valid body', () => {
-            const view = RopewikiRegionView.fromResponseBody(getValidBody());
+            const view = RopewikiRegionView.fromResult(getValidBody());
             expect(view).toBeInstanceOf(RopewikiRegionView);
             expect(view.name).toBe('North America');
             expect(view.regions).toEqual([
@@ -226,7 +226,7 @@ describe('RopewikiRegionView', () => {
                 syncDate: '2024-01-01T00:00:00.000Z',
                 externalLink: 'https://example.com/region',
             };
-            const view = RopewikiRegionView.fromResponseBody(minimal);
+            const view = RopewikiRegionView.fromResult(minimal);
             expect(view.name).toBe('Root');
             expect(view.regions).toEqual([]);
             expect(view.overview).toBeNull();
@@ -235,44 +235,44 @@ describe('RopewikiRegionView', () => {
         });
 
         it('throws when body is null', () => {
-            expect(() => RopewikiRegionView.fromResponseBody(null)).toThrow(
-                'RopewikiRegionView body must be an object',
+            expect(() => RopewikiRegionView.fromResult(null)).toThrow(
+                'RopewikiRegionView result must be an object',
             );
         });
 
         it('throws when body is not an object', () => {
-            expect(() => RopewikiRegionView.fromResponseBody('string')).toThrow(
-                'RopewikiRegionView body must be an object',
+            expect(() => RopewikiRegionView.fromResult('string')).toThrow(
+                'RopewikiRegionView result must be an object',
             );
-            expect(() => RopewikiRegionView.fromResponseBody(42)).toThrow(
-                'RopewikiRegionView body must be an object',
+            expect(() => RopewikiRegionView.fromResult(42)).toThrow(
+                'RopewikiRegionView result must be an object',
             );
         });
 
         it('throws when name is missing or not a string', () => {
             expect(() =>
-                RopewikiRegionView.fromResponseBody({ ...getValidBody(), name: 1 }),
+                RopewikiRegionView.fromResult({ ...getValidBody(), name: 1 }),
             ).toThrow('RopewikiRegionView.name must be a string');
             expect(() =>
-                RopewikiRegionView.fromResponseBody({ ...getValidBody(), name: undefined }),
+                RopewikiRegionView.fromResult({ ...getValidBody(), name: undefined }),
             ).toThrow('RopewikiRegionView.name must be a string');
         });
 
         it('throws when regions is not an array', () => {
             expect(() =>
-                RopewikiRegionView.fromResponseBody({ ...getValidBody(), regions: 'not-array' }),
+                RopewikiRegionView.fromResult({ ...getValidBody(), regions: 'not-array' }),
             ).toThrow('RopewikiRegionView.regions must be an array');
         });
 
         it('throws when regions item has wrong shape', () => {
             expect(() =>
-                RopewikiRegionView.fromResponseBody({
+                RopewikiRegionView.fromResult({
                     ...getValidBody(),
                     regions: [{ id: 'x', name: 123 }],
                 }),
             ).toThrow('RopewikiRegionView.regions[0].name must be a string');
             expect(() =>
-                RopewikiRegionView.fromResponseBody({
+                RopewikiRegionView.fromResult({
                     ...getValidBody(),
                     regions: [{ id: 1, name: 'World' }],
                 }),
@@ -281,22 +281,22 @@ describe('RopewikiRegionView', () => {
 
         it('throws when count fields are not non-negative numbers', () => {
             expect(() =>
-                RopewikiRegionView.fromResponseBody({ ...getValidBody(), regionCount: -1 }),
+                RopewikiRegionView.fromResult({ ...getValidBody(), regionCount: -1 }),
             ).toThrow('RopewikiRegionView.regionCount must be a number >= 0');
             expect(() =>
-                RopewikiRegionView.fromResponseBody({ ...getValidBody(), pageCount: '10' }),
+                RopewikiRegionView.fromResult({ ...getValidBody(), pageCount: '10' }),
             ).toThrow('RopewikiRegionView.pageCount must be a number >= 0');
         });
 
         it('throws when overview is not BetaSection or null', () => {
             expect(() =>
-                RopewikiRegionView.fromResponseBody({ ...getValidBody(), overview: 1 }),
+                RopewikiRegionView.fromResult({ ...getValidBody(), overview: 1 }),
             ).toThrow('RopewikiRegionView.overview must be BetaSection or null');
         });
 
         it('throws when overview is an object but invalid BetaSection', () => {
             expect(() =>
-                RopewikiRegionView.fromResponseBody({
+                RopewikiRegionView.fromResult({
                     ...getValidBody(),
                     overview: { order: 1, title: 'Overview', text: 'Text', images: [] },
                     // missing latestRevisionDate
@@ -306,25 +306,25 @@ describe('RopewikiRegionView', () => {
 
         it('throws when bestMonths is not an array of strings', () => {
             expect(() =>
-                RopewikiRegionView.fromResponseBody({ ...getValidBody(), bestMonths: [1, 2] }),
+                RopewikiRegionView.fromResult({ ...getValidBody(), bestMonths: [1, 2] }),
             ).toThrow('RopewikiRegionView.bestMonths[0] must be a string');
         });
 
         it('throws when isMajorRegion is not a boolean', () => {
             expect(() =>
-                RopewikiRegionView.fromResponseBody({ ...getValidBody(), isMajorRegion: 'yes' }),
+                RopewikiRegionView.fromResult({ ...getValidBody(), isMajorRegion: 'yes' }),
             ).toThrow('RopewikiRegionView.isMajorRegion must be a boolean');
         });
 
         it('throws when latestRevisionDate is not valid ISO 8601', () => {
             expect(() =>
-                RopewikiRegionView.fromResponseBody({
+                RopewikiRegionView.fromResult({
                     ...getValidBody(),
                     latestRevisionDate: 'not-a-date',
                 }),
             ).toThrow('RopewikiRegionView.latestRevisionDate must be a valid ISO 8601 date string');
             expect(() =>
-                RopewikiRegionView.fromResponseBody({
+                RopewikiRegionView.fromResult({
                     ...getValidBody(),
                     latestRevisionDate: 123,
                 }),
@@ -333,13 +333,13 @@ describe('RopewikiRegionView', () => {
 
         it('throws when externalLink is not a valid URL', () => {
             expect(() =>
-                RopewikiRegionView.fromResponseBody({
+                RopewikiRegionView.fromResult({
                     ...getValidBody(),
                     externalLink: 'not-a-url',
                 }),
             ).toThrow('RopewikiRegionView.externalLink must be a valid URL');
             expect(() =>
-                RopewikiRegionView.fromResponseBody({
+                RopewikiRegionView.fromResult({
                     ...getValidBody(),
                     externalLink: 123,
                 }),
@@ -348,7 +348,7 @@ describe('RopewikiRegionView', () => {
 
         it('throws when syncDate is not valid ISO 8601', () => {
             expect(() =>
-                RopewikiRegionView.fromResponseBody({
+                RopewikiRegionView.fromResult({
                     ...getValidBody(),
                     syncDate: 'not-a-date',
                 }),

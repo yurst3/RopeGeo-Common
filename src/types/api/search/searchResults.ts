@@ -2,8 +2,8 @@ import { Preview } from '../../previews/preview';
 import { SearchCursor } from '../../cursors/searchCursor';
 import {
     CursorPaginationResults,
-    type CursorPaginationResponseParsed,
-    ResultType,
+    type ValidatedCursorPaginationResponse,
+    CursorPaginationResultType,
 } from '../../results/cursorPaginationResults';
 
 export class SearchResults extends CursorPaginationResults<Preview> {
@@ -12,14 +12,14 @@ export class SearchResults extends CursorPaginationResults<Preview> {
             nextCursor === null || typeof nextCursor === 'string'
                 ? nextCursor
                 : nextCursor.encodeBase64();
-        super(results, nextCursorStr, ResultType.Search);
+        super(results, nextCursorStr, CursorPaginationResultType.Search);
     }
 
     /**
      * Build from validated { results, nextCursor }. Decodes nextCursor to ensure valid.
      * Each result is validated via Preview.fromResult.
      */
-    static fromResponseBody(body: CursorPaginationResponseParsed): SearchResults {
+    static fromResponseBody(body: ValidatedCursorPaginationResponse): SearchResults {
         const { results: resultsRaw, nextCursor } = body;
         if (nextCursor != null) {
             SearchCursor.decodeBase64(nextCursor);

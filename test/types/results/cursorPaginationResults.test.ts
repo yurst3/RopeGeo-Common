@@ -1,7 +1,7 @@
 import { describe, it, expect } from '@jest/globals';
 import {
     CursorPaginationResults,
-    ResultType,
+    CursorPaginationResultType,
 } from '../../../src/types/results/cursorPaginationResults';
 import { SearchResults } from '../../../src/types/api/search/searchResults';
 import { RopewikiRegionPreviewsResult } from '../../../src/types/api/getRopewikiRegionPreviews/ropewikiRegionPreviewsResult';
@@ -129,7 +129,7 @@ describe('CursorPaginationResults', () => {
             it('throws if results is missing', () => {
                 expect(() =>
                     CursorPaginationResults.fromResponseBody({
-                        resultType: ResultType.Search,
+                        resultType: CursorPaginationResultType.Search,
                         nextCursor: null,
                     }),
                 ).toThrow('Response body must have results');
@@ -138,21 +138,21 @@ describe('CursorPaginationResults', () => {
             it('throws if results is not an array', () => {
                 expect(() =>
                     CursorPaginationResults.fromResponseBody({
-                        resultType: ResultType.Search,
+                        resultType: CursorPaginationResultType.Search,
                         results: 'not-array',
                         nextCursor: null,
                     }),
                 ).toThrow('Response body.results must be an array');
                 expect(() =>
                     CursorPaginationResults.fromResponseBody({
-                        resultType: ResultType.Search,
+                        resultType: CursorPaginationResultType.Search,
                         results: null,
                         nextCursor: null,
                     }),
                 ).toThrow('Response body.results must be an array');
                 expect(() =>
                     CursorPaginationResults.fromResponseBody({
-                        resultType: ResultType.Search,
+                        resultType: CursorPaginationResultType.Search,
                         results: {},
                         nextCursor: null,
                     }),
@@ -162,21 +162,21 @@ describe('CursorPaginationResults', () => {
             it('throws if nextCursor is present but not a string or null', () => {
                 expect(() =>
                     CursorPaginationResults.fromResponseBody({
-                        resultType: ResultType.Search,
+                        resultType: CursorPaginationResultType.Search,
                         results: [],
                         nextCursor: 123,
                     }),
                 ).toThrow('Response body.nextCursor must be a string or null');
                 expect(() =>
                     CursorPaginationResults.fromResponseBody({
-                        resultType: ResultType.Search,
+                        resultType: CursorPaginationResultType.Search,
                         results: [],
                         nextCursor: true,
                     }),
                 ).toThrow('Response body.nextCursor must be a string or null');
                 expect(() =>
                     CursorPaginationResults.fromResponseBody({
-                        resultType: ResultType.Search,
+                        resultType: CursorPaginationResultType.Search,
                         results: [],
                         nextCursor: {},
                     }),
@@ -187,46 +187,46 @@ describe('CursorPaginationResults', () => {
         describe('valid body shape', () => {
             it('delegates to SearchResults when resultType is search', () => {
                 const body = {
-                    resultType: ResultType.Search,
+                    resultType: CursorPaginationResultType.Search,
                     results: [validPageItem],
                     nextCursor: null,
                 };
                 const result = CursorPaginationResults.fromResponseBody(body);
                 expect(result).toBeInstanceOf(SearchResults);
-                expect(result.resultType).toBe(ResultType.Search);
+                expect(result.resultType).toBe(CursorPaginationResultType.Search);
                 expect(result.results).toHaveLength(1);
                 expect(result.results[0]).toBeInstanceOf(Preview);
             });
 
             it('delegates to RopewikiRegionPreviewsResult when resultType is ropewikiRegionPreviews', () => {
                 const body = {
-                    resultType: ResultType.RopewikiRegionPreviews,
+                    resultType: CursorPaginationResultType.RopewikiRegionPreviews,
                     results: [validRegionItem],
                     nextCursor: null,
                 };
                 const result = CursorPaginationResults.fromResponseBody(body);
                 expect(result).toBeInstanceOf(RopewikiRegionPreviewsResult);
-                expect(result.resultType).toBe(ResultType.RopewikiRegionPreviews);
+                expect(result.resultType).toBe(CursorPaginationResultType.RopewikiRegionPreviews);
                 expect(result.results).toHaveLength(1);
                 expect(result.results[0]).toBeInstanceOf(Preview);
             });
 
             it('delegates to RopewikiRegionImagesResult when resultType is ropewikiRegionImages', () => {
                 const body = {
-                    resultType: ResultType.RopewikiRegionImages,
+                    resultType: CursorPaginationResultType.RopewikiRegionImages,
                     results: [validImageItem],
                     nextCursor: null,
                 };
                 const result = CursorPaginationResults.fromResponseBody(body);
                 expect(result).toBeInstanceOf(RopewikiRegionImagesResult);
-                expect(result.resultType).toBe(ResultType.RopewikiRegionImages);
+                expect(result.resultType).toBe(CursorPaginationResultType.RopewikiRegionImages);
                 expect(result.results).toHaveLength(1);
                 expect(result.results[0]).toBeInstanceOf(RopewikiRegionImageView);
             });
 
             it('treats omitted nextCursor as null', () => {
                 const body = {
-                    resultType: ResultType.Search,
+                    resultType: CursorPaginationResultType.Search,
                     results: [],
                 };
                 const result = CursorPaginationResults.fromResponseBody(body);
@@ -237,7 +237,7 @@ describe('CursorPaginationResults', () => {
                 const cursor = new SearchCursor(0.5, 'page', 'id');
                 const encoded = cursor.encodeBase64();
                 const body = {
-                    resultType: ResultType.Search,
+                    resultType: CursorPaginationResultType.Search,
                     results: [],
                     nextCursor: encoded,
                 };

@@ -2,7 +2,7 @@
  * Discriminator for cursor-paginated result types. Used in response body so
  * CursorPaginationResults.fromResponseBody can route to the correct parser.
  */
-export enum ResultType {
+export enum CursorPaginationResultType {
     Search = 'search',
     RopewikiRegionImages = 'ropewikiRegionImages',
     RopewikiRegionPreviews = 'ropewikiRegionPreviews',
@@ -12,7 +12,7 @@ export enum ResultType {
  * Validated shape (results + nextCursor) passed to specific Result class's fromResponseBody
  * after CursorPaginationResults.fromResponseBody has validated the full body.
  */
-export type CursorPaginationResponseParsed = {
+export type ValidatedCursorPaginationResponse = {
     results: unknown[];
     nextCursor: string | null;
 };
@@ -26,7 +26,7 @@ export abstract class CursorPaginationResults<R = unknown> {
     constructor(
         public readonly results: R[],
         public readonly nextCursor: string | null,
-        public readonly resultType: ResultType,
+        public readonly resultType: CursorPaginationResultType,
     ) {}
 
     /**
@@ -42,7 +42,7 @@ export abstract class CursorPaginationResults<R = unknown> {
             throw new Error('Response body must have resultType');
         }
         const resultType = b.resultType;
-        const valid = Object.values(ResultType) as string[];
+        const valid = Object.values(CursorPaginationResultType) as string[];
         if (typeof resultType !== 'string' || !valid.includes(resultType)) {
             throw new Error(
                 `Response body.resultType must be one of [${valid.join(', ')}], got: ${JSON.stringify(resultType)}`,
@@ -62,20 +62,20 @@ export abstract class CursorPaginationResults<R = unknown> {
             }
             nextCursor = b.nextCursor;
         }
-        const validated: CursorPaginationResponseParsed = {
+        const validated: ValidatedCursorPaginationResponse = {
             results: resultsRaw,
             nextCursor,
         };
-        switch (resultType as ResultType) {
-            case ResultType.Search: {
+        switch (resultType as CursorPaginationResultType) {
+            case CursorPaginationResultType.Search: {
                 const { SearchResults } = require('../api/search/searchResults');
                 return SearchResults.fromResponseBody(validated);
             }
-            case ResultType.RopewikiRegionPreviews: {
+            case CursorPaginationResultType.RopewikiRegionPreviews: {
                 const { RopewikiRegionPreviewsResult } = require('../api/getRopewikiRegionPreviews/ropewikiRegionPreviewsResult');
                 return RopewikiRegionPreviewsResult.fromResponseBody(validated);
             }
-            case ResultType.RopewikiRegionImages: {
+            case CursorPaginationResultType.RopewikiRegionImages: {
                 const { RopewikiRegionImagesResult } = require('../api/getRopewikiRegionImages/ropewikiRegionImagesResult');
                 return RopewikiRegionImagesResult.fromResponseBody(validated);
             }

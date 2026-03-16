@@ -57,14 +57,14 @@ export class RopewikiRegionView {
     }
 
     /**
-     * Validates response body has RopewikiRegionView fields and returns a RopewikiRegionView instance.
-     * Mutates the body (parses latestRevisionDate to Date) and sets RopewikiRegionView.prototype.
+     * Validates result has RopewikiRegionView fields and returns a RopewikiRegionView instance.
+     * Mutates the result (parses latestRevisionDate to Date) and sets RopewikiRegionView.prototype.
      */
-    static fromResponseBody(body: unknown): RopewikiRegionView {
-        if (body == null || typeof body !== 'object') {
-            throw new Error('RopewikiRegionView body must be an object');
+    static fromResult(result: unknown): RopewikiRegionView {
+        if (result == null || typeof result !== 'object') {
+            throw new Error('RopewikiRegionView result must be an object');
         }
-        const r = body as Record<string, unknown>;
+        const r = result as Record<string, unknown>;
         RopewikiRegionView.assertString(r, 'name');
         RopewikiRegionView.assertRegionsArray(r, 'regions');
         RopewikiRegionView.assertNonNegativeNumber(r, 'regionCount');

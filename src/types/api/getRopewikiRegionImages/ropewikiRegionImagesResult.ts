@@ -2,8 +2,8 @@ import { RopewikiRegionImageView } from './ropewikiRegionImageView';
 import { RegionImagesCursor } from '../../cursors/regionImagesCursor';
 import {
     CursorPaginationResults,
-    type CursorPaginationResponseParsed,
-    ResultType,
+    type ValidatedCursorPaginationResponse,
+    CursorPaginationResultType,
 } from '../../results/cursorPaginationResults';
 
 /**
@@ -20,7 +20,7 @@ export class RopewikiRegionImagesResult extends CursorPaginationResults<Ropewiki
                 : typeof nextCursor === 'string'
                   ? nextCursor
                   : nextCursor.encodeBase64();
-        super(results, nextCursorStr, ResultType.RopewikiRegionImages);
+        super(results, nextCursorStr, CursorPaginationResultType.RopewikiRegionImages);
     }
 
     /**
@@ -28,7 +28,7 @@ export class RopewikiRegionImagesResult extends CursorPaginationResults<Ropewiki
      * Each result is validated via RopewikiRegionImageView.fromResult.
      */
     static fromResponseBody(
-        body: CursorPaginationResponseParsed,
+        body: ValidatedCursorPaginationResponse,
     ): RopewikiRegionImagesResult {
         const { results: resultsRaw, nextCursor } = body;
         if (nextCursor != null) {

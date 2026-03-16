@@ -2,8 +2,8 @@ import { Preview } from '../../previews/preview';
 import { RegionPreviewsCursor } from '../../cursors/regionPreviewsCursor';
 import {
     CursorPaginationResults,
-    type CursorPaginationResponseParsed,
-    ResultType,
+    type ValidatedCursorPaginationResponse,
+    CursorPaginationResultType,
 } from '../../results/cursorPaginationResults';
 
 /**
@@ -20,7 +20,7 @@ export class RopewikiRegionPreviewsResult extends CursorPaginationResults<Previe
                 : typeof nextCursor === 'string'
                   ? nextCursor
                   : nextCursor.encodeBase64();
-        super(results, nextCursorStr, ResultType.RopewikiRegionPreviews);
+        super(results, nextCursorStr, CursorPaginationResultType.RopewikiRegionPreviews);
     }
 
     /**
@@ -28,7 +28,7 @@ export class RopewikiRegionPreviewsResult extends CursorPaginationResults<Previe
      * Each result is validated via Preview.fromResult.
      */
     static fromResponseBody(
-        body: CursorPaginationResponseParsed,
+        body: ValidatedCursorPaginationResponse,
     ): RopewikiRegionPreviewsResult {
         const { results: resultsRaw, nextCursor } = body;
         if (nextCursor != null) {

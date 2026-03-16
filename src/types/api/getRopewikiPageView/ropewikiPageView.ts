@@ -102,13 +102,13 @@ export class RopewikiPageView {
     }
 
     /**
-     * Validates response body has RopewikiPageView fields and returns a RopewikiPageView instance.
+     * Validates result has RopewikiPageView fields and returns a RopewikiPageView instance.
      */
-    static fromResponseBody(body: unknown): RopewikiPageView {
-        if (body == null || typeof body !== 'object') {
-            throw new Error('RopewikiPageView body must be an object');
+    static fromResult(result: unknown): RopewikiPageView {
+        if (result == null || typeof result !== 'object') {
+            throw new Error('RopewikiPageView result must be an object');
         }
-        const r = body as Record<string, unknown>;
+        const r = result as Record<string, unknown>;
         RopewikiPageView.assertString(r, 'pageId');
         RopewikiPageView.assertString(r, 'name');
         RopewikiPageView.assertStringArray(r, 'aka');
