@@ -55,4 +55,61 @@ describe('Bounds', () => {
             ).toThrow(/Bounds\.north must be a number/);
         });
     });
+
+    describe('update', () => {
+        it('expands north when lat is greater than north', () => {
+            const b = new Bounds(40, 38, -108, -111);
+            b.update(-109.5, 41);
+            expect(b.north).toBe(41);
+            expect(b.south).toBe(38);
+            expect(b.east).toBe(-108);
+            expect(b.west).toBe(-111);
+        });
+
+        it('expands south when lat is less than south', () => {
+            const b = new Bounds(40, 38, -108, -111);
+            b.update(-109.5, 37);
+            expect(b.north).toBe(40);
+            expect(b.south).toBe(37);
+            expect(b.east).toBe(-108);
+            expect(b.west).toBe(-111);
+        });
+
+        it('expands east when lon is greater than east', () => {
+            const b = new Bounds(40, 38, -108, -111);
+            b.update(-107, 39);
+            expect(b.north).toBe(40);
+            expect(b.south).toBe(38);
+            expect(b.east).toBe(-107);
+            expect(b.west).toBe(-111);
+        });
+
+        it('expands west when lon is less than west', () => {
+            const b = new Bounds(40, 38, -108, -111);
+            b.update(-112, 39);
+            expect(b.north).toBe(40);
+            expect(b.south).toBe(38);
+            expect(b.east).toBe(-108);
+            expect(b.west).toBe(-112);
+        });
+
+        it('does not change bounds when point is inside', () => {
+            const b = new Bounds(40, 38, -108, -111);
+            b.update(-109.5, 39);
+            expect(b.north).toBe(40);
+            expect(b.south).toBe(38);
+            expect(b.east).toBe(-108);
+            expect(b.west).toBe(-111);
+        });
+
+        it('can expand multiple directions with multiple updates', () => {
+            const b = new Bounds(40, 38, -108, -111);
+            b.update(-112, 37);
+            b.update(-107, 41);
+            expect(b.north).toBe(41);
+            expect(b.south).toBe(37);
+            expect(b.east).toBe(-107);
+            expect(b.west).toBe(-112);
+        });
+    });
 });

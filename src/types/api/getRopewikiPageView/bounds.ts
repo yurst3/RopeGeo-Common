@@ -15,6 +15,18 @@ export class Bounds {
     }
 
     /**
+     * Expands this bounds to include the given coordinate (lon, lat).
+     * If lat is greater than north, north is updated; if lat is less than south, south is updated;
+     * if lon is greater than east, east is updated; if lon is less than west, west is updated.
+     */
+    update(lon: number, lat: number): void {
+        if (lat > this.north) this.north = lat;
+        if (lat < this.south) this.south = lat;
+        if (lon > this.east) this.east = lon;
+        if (lon < this.west) this.west = lon;
+    }
+
+    /**
      * Validates result has Bounds fields (north, south, east, west as numbers) and returns a Bounds instance.
      */
     static fromResult(result: unknown): Bounds {
