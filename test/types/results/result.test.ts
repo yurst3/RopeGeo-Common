@@ -41,6 +41,7 @@ const validRopewikiPageViewResult = {
     bannerImage: null,
     betaSections: [],
     tilesTemplate: null,
+    bounds: null,
 };
 
 const validRopewikiRegionViewResult = {

@@ -35,6 +35,7 @@ function validResult(): Record<string, unknown> {
         bannerImage: null,
         betaSections: [],
         tilesTemplate: null,
+        bounds: null,
     };
 }
 
@@ -119,6 +120,47 @@ describe('RopewikiPageViewResult', () => {
                     tilesTemplate: 'https://example.com/tiles/',
                 }),
             ).toThrow(/tilesTemplate must contain \{z\}, \{x\}, and \{y\} placeholders/);
+        });
+
+        it('parses bounds when null', () => {
+            const result = validResult();
+            const parsed = RopewikiPageViewResult.fromResult(result);
+            expect(parsed.result.bounds).toBeNull();
+        });
+
+        it('parses valid bounds with north, south, east, west', () => {
+            const bounds = { north: 39.5, south: 38.1, east: -108.2, west: -110.0 };
+            const result = { ...validResult(), bounds };
+            const parsed = RopewikiPageViewResult.fromResult(result);
+            expect(parsed.result.bounds).not.toBeNull();
+            expect(parsed.result.bounds!.north).toBe(39.5);
+            expect(parsed.result.bounds!.south).toBe(38.1);
+            expect(parsed.result.bounds!.east).toBe(-108.2);
+            expect(parsed.result.bounds!.west).toBe(-110.0);
+        });
+
+        it('throws when bounds is not object or null', () => {
+            expect(() =>
+                RopewikiPageViewResult.fromResult({ ...validResult(), bounds: 'invalid' }),
+            ).toThrow(/RopewikiPageView\.bounds must be Bounds or null/);
+        });
+
+        it('throws when bounds object is missing required number property', () => {
+            expect(() =>
+                RopewikiPageViewResult.fromResult({
+                    ...validResult(),
+                    bounds: { north: 39, south: 38, east: -108 },
+                }),
+            ).toThrow(/Bounds\.west must be a number/);
+        });
+
+        it('throws when bounds property is not a number', () => {
+            expect(() =>
+                RopewikiPageViewResult.fromResult({
+                    ...validResult(),
+                    bounds: { north: '39', south: 38, east: -108, west: -110 },
+                }),
+            ).toThrow(/Bounds\.north must be a number/);
         });
     });
 });

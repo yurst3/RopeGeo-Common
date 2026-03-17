@@ -10,6 +10,7 @@ export { RoutesGeojsonResult } from './types/api/getRoutes/routesGeojsonResult';
 export { RoutesParams } from './types/api/getRoutes/routesParams';
 export { BetaSectionImage } from './types/betaSections/betaSectionImage';
 export { BetaSection } from './types/betaSections/betaSection';
+export { Bounds } from './types/api/getRopewikiPageView/bounds';
 export { RopewikiPageView } from './types/api/getRopewikiPageView/ropewikiPageView';
 export { RopewikiPageViewResult } from './types/api/getRopewikiPageView/ropewikiPageViewResult';
 export type RopewikiImageView = import('./types/betaSections/betaSectionImage').BetaSectionImage;

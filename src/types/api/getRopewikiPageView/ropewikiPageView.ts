@@ -2,6 +2,7 @@ import { Difficulty } from '../../difficulty';
 import { PermitStatus } from '../../permitStatus';
 import { BetaSection } from '../../betaSections/betaSection';
 import { BetaSectionImage } from '../../betaSections/betaSectionImage';
+import { Bounds } from './bounds';
 
 type MinMax = { min: number; max: number };
 
@@ -40,6 +41,8 @@ export class RopewikiPageView {
     betaSections: BetaSection[];
     /** Map tile URL template with {z}, {x}, {y} placeholders, or null. */
     tilesTemplate: string | null;
+    /** Bounding box of the map tile content (north, south, east, west), or null. */
+    bounds: Bounds | null;
 
     constructor(
         pageId: string,
@@ -72,6 +75,7 @@ export class RopewikiPageView {
         bannerImage: BetaSectionImage | null,
         betaSections: BetaSection[],
         tilesTemplate: string | null,
+        bounds: Bounds | null,
     ) {
         this.pageId = pageId;
         this.name = name;
@@ -103,6 +107,7 @@ export class RopewikiPageView {
         this.bannerImage = bannerImage;
         this.betaSections = Array.isArray(betaSections) ? betaSections : [];
         this.tilesTemplate = tilesTemplate;
+        this.bounds = bounds;
     }
 
     /**
@@ -143,6 +148,7 @@ export class RopewikiPageView {
         RopewikiPageView.assertNullableBannerImage(r, 'bannerImage');
         RopewikiPageView.assertBetaSectionsArray(r, 'betaSections');
         RopewikiPageView.assertNullableTilesTemplate(r, 'tilesTemplate');
+        RopewikiPageView.assertNullableBounds(r, 'bounds');
 
         (r as Record<string, unknown>).latestRevisionDate = new Date(
             r.latestRevisionDate as string,
@@ -153,6 +159,9 @@ export class RopewikiPageView {
             (r.difficulty as Record<string, unknown>).time as string | null,
             (r.difficulty as Record<string, unknown>).risk as string | null,
         );
+        if (r.bounds != null) {
+            (r as Record<string, unknown>).bounds = Bounds.fromResult(r.bounds);
+        }
         Object.setPrototypeOf(r, RopewikiPageView.prototype);
         return r as unknown as RopewikiPageView;
     }
@@ -194,6 +203,20 @@ export class RopewikiPageView {
                 `RopewikiPageView.${key} must contain {z}, {x}, and {y} placeholders when present, got: ${v}`,
             );
         }
+    }
+
+    private static assertNullableBounds(
+        obj: Record<string, unknown>,
+        key: string,
+    ): void {
+        const v = obj[key];
+        if (v === null || v === undefined) return;
+        if (typeof v !== 'object') {
+            throw new Error(
+                `RopewikiPageView.${key} must be Bounds or null, got: ${typeof v}`,
+            );
+        }
+        // Full validation and conversion happen later via Bounds.fromResult
     }
 
     private static assertNumber(obj: Record<string, unknown>, key: string): void {
