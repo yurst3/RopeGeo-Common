@@ -96,7 +96,8 @@ describe('RopewikiPageViewResult', () => {
         it('parses valid tilesTemplate with {z}/{x}/{y} placeholders', () => {
             const template =
                 'https://api.webscraper.ropegeo.com/mapdata/tiles/38f5c3fa-7248-41ed-815e-8b9e6aae5d61/{z}/{x}/{y}.pbf';
-            const result = { ...validResult(), tilesTemplate: template };
+            const bounds = { north: 39.5, south: 38.1, east: -108.2, west: -110.0 };
+            const result = { ...validResult(), tilesTemplate: template, bounds };
             const parsed = RopewikiPageViewResult.fromResult(result);
             expect(parsed.result.tilesTemplate).toBe(template);
         });
@@ -129,8 +130,10 @@ describe('RopewikiPageViewResult', () => {
         });
 
         it('parses valid bounds with north, south, east, west', () => {
+            const template =
+                'https://api.webscraper.ropegeo.com/mapdata/tiles/38f5c3fa-7248-41ed-815e-8b9e6aae5d61/{z}/{x}/{y}.pbf';
             const bounds = { north: 39.5, south: 38.1, east: -108.2, west: -110.0 };
-            const result = { ...validResult(), bounds };
+            const result = { ...validResult(), tilesTemplate: template, bounds };
             const parsed = RopewikiPageViewResult.fromResult(result);
             expect(parsed.result.bounds).not.toBeNull();
             expect(parsed.result.bounds!.north).toBe(39.5);
@@ -149,6 +152,8 @@ describe('RopewikiPageViewResult', () => {
             expect(() =>
                 RopewikiPageViewResult.fromResult({
                     ...validResult(),
+                    tilesTemplate:
+                        'https://api.webscraper.ropegeo.com/mapdata/tiles/38f5c3fa-7248-41ed-815e-8b9e6aae5d61/{z}/{x}/{y}.pbf',
                     bounds: { north: 39, south: 38, east: -108 },
                 }),
             ).toThrow(/Bounds\.west must be a number/);
@@ -158,9 +163,34 @@ describe('RopewikiPageViewResult', () => {
             expect(() =>
                 RopewikiPageViewResult.fromResult({
                     ...validResult(),
+                    tilesTemplate:
+                        'https://api.webscraper.ropegeo.com/mapdata/tiles/38f5c3fa-7248-41ed-815e-8b9e6aae5d61/{z}/{x}/{y}.pbf',
                     bounds: { north: '39', south: 38, east: -108, west: -110 },
                 }),
             ).toThrow(/Bounds\.north must be a number/);
+        });
+
+        it('throws when tilesTemplate is null but bounds is set', () => {
+            const bounds = { north: 39.5, south: 38.1, east: -108.2, west: -110.0 };
+            expect(() =>
+                RopewikiPageViewResult.fromResult({
+                    ...validResult(),
+                    tilesTemplate: null,
+                    bounds,
+                }),
+            ).toThrow(/RopewikiPageView\.tilesTemplate and bounds must be both null\/undefined or both non-null/);
+        });
+
+        it('throws when tilesTemplate is set but bounds is null', () => {
+            const template =
+                'https://api.webscraper.ropegeo.com/mapdata/tiles/38f5c3fa-7248-41ed-815e-8b9e6aae5d61/{z}/{x}/{y}.pbf';
+            expect(() =>
+                RopewikiPageViewResult.fromResult({
+                    ...validResult(),
+                    tilesTemplate: template,
+                    bounds: null,
+                }),
+            ).toThrow(/RopewikiPageView\.tilesTemplate and bounds must be both null\/undefined or both non-null/);
         });
     });
 });

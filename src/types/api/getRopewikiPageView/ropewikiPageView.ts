@@ -150,6 +150,14 @@ export class RopewikiPageView {
         RopewikiPageView.assertNullableTilesTemplate(r, 'tilesTemplate');
         RopewikiPageView.assertNullableBounds(r, 'bounds');
 
+        const tilesTemplateNullish = (r as Record<string, unknown>).tilesTemplate == null; // null or undefined
+        const boundsNullish = (r as Record<string, unknown>).bounds == null; // null or undefined
+        if (tilesTemplateNullish !== boundsNullish) {
+            throw new Error(
+                'RopewikiPageView.tilesTemplate and bounds must be both null/undefined or both non-null',
+            );
+        }
+
         (r as Record<string, unknown>).latestRevisionDate = new Date(
             r.latestRevisionDate as string,
         );
@@ -159,7 +167,7 @@ export class RopewikiPageView {
             (r.difficulty as Record<string, unknown>).time as string | null,
             (r.difficulty as Record<string, unknown>).risk as string | null,
         );
-        if (r.bounds != null) {
+        if (!boundsNullish) {
             (r as Record<string, unknown>).bounds = Bounds.fromResult(r.bounds);
         }
         Object.setPrototypeOf(r, RopewikiPageView.prototype);
