@@ -34,6 +34,7 @@ function validResult(): Record<string, unknown> {
         latestRevisionDate: '2024-01-01T00:00:00.000Z',
         bannerImage: null,
         betaSections: [],
+        tilesTemplate: null,
     };
 }
 
@@ -83,6 +84,41 @@ describe('RopewikiPageViewResult', () => {
             expect(() =>
                 RopewikiPageViewResult.fromResult({ ...validResult(), name: undefined }),
             ).toThrow(/RopewikiPageView\.name must be a string/);
+        });
+
+        it('parses tilesTemplate when null', () => {
+            const result = validResult();
+            const parsed = RopewikiPageViewResult.fromResult(result);
+            expect(parsed.result.tilesTemplate).toBeNull();
+        });
+
+        it('parses valid tilesTemplate with {z}/{x}/{y} placeholders', () => {
+            const template =
+                'https://api.webscraper.ropegeo.com/mapdata/tiles/38f5c3fa-7248-41ed-815e-8b9e6aae5d61/{z}/{x}/{y}.pbf';
+            const result = { ...validResult(), tilesTemplate: template };
+            const parsed = RopewikiPageViewResult.fromResult(result);
+            expect(parsed.result.tilesTemplate).toBe(template);
+        });
+
+        it('throws when tilesTemplate is not string or null', () => {
+            expect(() =>
+                RopewikiPageViewResult.fromResult({ ...validResult(), tilesTemplate: 42 }),
+            ).toThrow(/RopewikiPageView\.tilesTemplate must be string or null/);
+        });
+
+        it('throws when tilesTemplate string is missing {z}, {x}, or {y} placeholders', () => {
+            expect(() =>
+                RopewikiPageViewResult.fromResult({
+                    ...validResult(),
+                    tilesTemplate: 'https://example.com/tiles/{z}/{x}.pbf',
+                }),
+            ).toThrow(/tilesTemplate must contain \{z\}, \{x\}, and \{y\} placeholders/);
+            expect(() =>
+                RopewikiPageViewResult.fromResult({
+                    ...validResult(),
+                    tilesTemplate: 'https://example.com/tiles/',
+                }),
+            ).toThrow(/tilesTemplate must contain \{z\}, \{x\}, and \{y\} placeholders/);
         });
     });
 });

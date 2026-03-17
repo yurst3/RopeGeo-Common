@@ -40,6 +40,7 @@ const validRopewikiPageViewResult = {
     latestRevisionDate: '2024-01-01T00:00:00.000Z',
     bannerImage: null,
     betaSections: [],
+    tilesTemplate: null,
 };
 
 const validRopewikiRegionViewResult = {

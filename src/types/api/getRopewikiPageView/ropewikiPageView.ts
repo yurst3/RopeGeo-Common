@@ -38,6 +38,8 @@ export class RopewikiPageView {
     latestRevisionDate: Date;
     bannerImage: BetaSectionImage | null;
     betaSections: BetaSection[];
+    /** Map tile URL template with {z}, {x}, {y} placeholders, or null. */
+    tilesTemplate: string | null;
 
     constructor(
         pageId: string,
@@ -69,6 +71,7 @@ export class RopewikiPageView {
         latestRevisionDate: Date,
         bannerImage: BetaSectionImage | null,
         betaSections: BetaSection[],
+        tilesTemplate: string | null,
     ) {
         this.pageId = pageId;
         this.name = name;
@@ -99,6 +102,7 @@ export class RopewikiPageView {
         this.latestRevisionDate = new Date(latestRevisionDate);
         this.bannerImage = bannerImage;
         this.betaSections = Array.isArray(betaSections) ? betaSections : [];
+        this.tilesTemplate = tilesTemplate;
     }
 
     /**
@@ -138,6 +142,7 @@ export class RopewikiPageView {
         RopewikiPageView.assertIso8601DateString(r, 'latestRevisionDate');
         RopewikiPageView.assertNullableBannerImage(r, 'bannerImage');
         RopewikiPageView.assertBetaSectionsArray(r, 'betaSections');
+        RopewikiPageView.assertNullableTilesTemplate(r, 'tilesTemplate');
 
         (r as Record<string, unknown>).latestRevisionDate = new Date(
             r.latestRevisionDate as string,
@@ -169,6 +174,24 @@ export class RopewikiPageView {
         if (v !== null && v !== undefined && typeof v !== 'string') {
             throw new Error(
                 `RopewikiPageView.${key} must be string or null, got: ${typeof v}`,
+            );
+        }
+    }
+
+    private static assertNullableTilesTemplate(
+        obj: Record<string, unknown>,
+        key: string,
+    ): void {
+        const v = obj[key];
+        if (v === null || v === undefined) return;
+        if (typeof v !== 'string') {
+            throw new Error(
+                `RopewikiPageView.${key} must be string or null, got: ${typeof v}`,
+            );
+        }
+        if (!v.includes('{z}') || !v.includes('{x}') || !v.includes('{y}')) {
+            throw new Error(
+                `RopewikiPageView.${key} must contain {z}, {x}, and {y} placeholders when present, got: ${v}`,
             );
         }
     }
