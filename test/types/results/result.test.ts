@@ -59,7 +59,9 @@ const validRopewikiRegionViewResult = {
     externalLink: 'https://example.com/region',
     miniMap: {
         miniMapType: MiniMapType.GeoJson,
-        routesParams: { source: 'ropewiki', region: 'example-region' },
+        routesParams: {
+            region: { source: 'ropewiki', id: 'example-region' },
+        },
     },
 };
 

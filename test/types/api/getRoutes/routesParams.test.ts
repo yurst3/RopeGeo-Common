@@ -136,10 +136,14 @@ describe('RoutesParams', () => {
             expect(p.region).toBeNull();
         });
 
-        it('parses source and region when requiredRegion is false', () => {
+        it('parses region null explicitly', () => {
+            const p = RoutesParams.fromResult({ region: null });
+            expect(p.region).toBeNull();
+        });
+
+        it('parses nested region when requiredRegion is false', () => {
             const p = RoutesParams.fromResult({
-                source: 'ropewiki',
-                region: 'rid-1',
+                region: { source: 'ropewiki', id: 'rid-1' },
             });
             expect(p.region).toEqual({
                 source: PageDataSource.Ropewiki,
@@ -147,24 +151,40 @@ describe('RoutesParams', () => {
             });
         });
 
-        it('accepts Source and Region keys', () => {
+        it('accepts Region key and inner Source / Id', () => {
             const p = RoutesParams.fromResult({
-                Source: 'ropewiki',
-                Region: 'rid-2',
+                Region: { Source: 'ropewiki', Id: 'rid-2' },
             });
             expect(p.region!.id).toBe('rid-2');
         });
 
         it('throws when requiredRegion is true and object is empty', () => {
             expect(() => RoutesParams.fromResult({}, true)).toThrow(
-                /source and region must both be non-empty strings when requiredRegion is true/,
+                /region must be a non-null/,
             );
         });
 
         it('throws when requiredRegion is true and region missing', () => {
+            expect(() => RoutesParams.fromResult({ region: null }, true)).toThrow(
+                /region must be a non-null/,
+            );
+        });
+
+        it('throws when requiredRegion is true and id missing', () => {
             expect(() =>
-                RoutesParams.fromResult({ source: 'ropewiki' }, true),
-            ).toThrow(/source and region must both be non-empty/);
+                RoutesParams.fromResult(
+                    { region: { source: 'ropewiki' } },
+                    true,
+                ),
+            ).toThrow(/non-empty source and id/);
+        });
+
+        it('parses nested region when requiredRegion is true', () => {
+            const p = RoutesParams.fromResult(
+                { region: { source: 'ropewiki', id: 'rid' } },
+                true,
+            );
+            expect(p.region!.id).toBe('rid');
         });
 
         it('throws when result is not an object', () => {
@@ -173,15 +193,29 @@ describe('RoutesParams', () => {
             );
         });
 
-        it('throws when source is not a string', () => {
+        it('throws when region.source is not a string', () => {
             expect(() =>
-                RoutesParams.fromResult({ source: 1, region: 'x' }),
-            ).toThrow(/RoutesParams\.source must be a string/);
+                RoutesParams.fromResult({
+                    region: { source: 1, id: 'x' },
+                }),
+            ).toThrow(/RoutesParams\.region\.source must be a string/);
         });
 
-        it('throws when only source set and requiredRegion false', () => {
-            expect(() => RoutesParams.fromResult({ source: 'ropewiki' })).toThrow(
-                /Query parameters "source" and "region" must both be present/,
+        it('throws when region is a string (legacy flat shape)', () => {
+            expect(() =>
+                RoutesParams.fromResult({ region: 'uuid-here' }),
+            ).toThrow(/must be an object/);
+        });
+
+        it('throws when only source set on nested region', () => {
+            expect(() =>
+                RoutesParams.fromResult({ region: { source: 'ropewiki' } }),
+            ).toThrow(/non-empty source and id/);
+        });
+
+        it('throws when nested region is empty object', () => {
+            expect(() => RoutesParams.fromResult({ region: {} })).toThrow(
+                /non-empty source and id/,
             );
         });
     });

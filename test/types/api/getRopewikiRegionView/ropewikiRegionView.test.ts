@@ -7,7 +7,9 @@ import { MiniMapType } from '../../../../src/types/minimap/miniMapType';
 
 const defaultRegionMiniMap = RegionMiniMap.fromResult({
     miniMapType: MiniMapType.GeoJson,
-    routesParams: { source: 'ropewiki', region: 'default-region-id' },
+    routesParams: {
+        region: { source: 'ropewiki', id: 'default-region-id' },
+    },
 });
 
 interface ConstructorArgs {
@@ -210,8 +212,10 @@ describe('RopewikiRegionView', () => {
                 miniMap: {
                     miniMapType: MiniMapType.GeoJson,
                     routesParams: {
-                        source: 'ropewiki',
-                        region: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                        region: {
+                            source: 'ropewiki',
+                            id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                        },
                     },
                 },
             };
@@ -262,7 +266,9 @@ describe('RopewikiRegionView', () => {
                 externalLink: 'https://example.com/region',
                 miniMap: {
                     miniMapType: MiniMapType.GeoJson,
-                    routesParams: { source: 'ropewiki', region: 'example-region' },
+                    routesParams: {
+                        region: { source: 'ropewiki', id: 'example-region' },
+                    },
                 },
             };
             const view = RopewikiRegionView.fromResult(minimal);

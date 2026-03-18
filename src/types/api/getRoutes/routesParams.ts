@@ -56,29 +56,56 @@ export class RoutesParams {
     }
 
     /**
-     * Validates a JSON-like object with optional `source` / `region` (or `Source` / `Region`).
-     * @param requiredRegion - If true, both source and region must be non-empty; if false, both may be absent (region null), and the usual both-or-neither rule applies when partially set.
+     * Validates a JSON-like object shaped like this class: optional top-level `region` (or `Region`)
+     * is either `null`/`undefined` (no filter) or `{ source, id }` with {@link PageDataSource} source
+     * and region id string. Inner keys may use `Source` / `Id`.
+     *
+     * @param requiredRegion - If true, `region` must be a non-null object with both `source` and `id`.
      */
     static fromResult(result: unknown, requiredRegion = false): RoutesParams {
         if (result == null || typeof result !== 'object') {
             throw new Error('RoutesParams result must be an object');
         }
         const r = result as Record<string, unknown>;
-        const sourceRaw = r.source ?? r.Source;
-        const regionRaw = r.region ?? r.Region;
-        const sourceStr = RoutesParams.coerceTrimmedString(sourceRaw, 'source');
-        const regionStr = RoutesParams.coerceTrimmedString(regionRaw, 'region');
-        const source =
-            sourceStr === '' ? undefined : RoutesParams.parseSource(sourceStr);
-        const regionId = regionStr === '' ? undefined : regionStr;
-        if (requiredRegion) {
-            if (source === undefined || regionId === undefined) {
+        const raw = r.region ?? r.Region;
+
+        if (typeof raw === 'string') {
+            throw new Error(
+                'RoutesParams.region must be an object { source, id } or null, not a string',
+            );
+        }
+
+        if (raw === null || raw === undefined) {
+            if (requiredRegion) {
                 throw new Error(
-                    'RoutesParams: source and region must both be non-empty strings when requiredRegion is true',
+                    'RoutesParams: region must be a non-null { source, id } object when requiredRegion is true',
                 );
             }
+            return new RoutesParams(undefined, undefined);
         }
-        return new RoutesParams(source, regionId);
+
+        if (typeof raw !== 'object') {
+            throw new Error(
+                'RoutesParams.region must be an object or null, got: ' + typeof raw,
+            );
+        }
+
+        const reg = raw as Record<string, unknown>;
+        const sourceRaw = reg.source ?? reg.Source;
+        const idRaw = reg.id ?? reg.Id;
+        const sourceStr = RoutesParams.coerceTrimmedString(
+            sourceRaw,
+            'region.source',
+        );
+        const idStr = RoutesParams.coerceTrimmedString(idRaw, 'region.id');
+
+        if (sourceStr === '' || idStr === '') {
+            throw new Error(
+                'RoutesParams.region must include non-empty source and id',
+            );
+        }
+        const source = RoutesParams.parseSource(sourceStr);
+        return new RoutesParams(source, idStr);
     }
 
     private static coerceTrimmedString(

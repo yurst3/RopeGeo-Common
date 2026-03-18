@@ -10,7 +10,9 @@ describe('MiniMap', () => {
         it('delegates to RegionMiniMap', () => {
             const m = MiniMap.fromResult({
                 miniMapType: MiniMapType.GeoJson,
-                routesParams: { source: 'ropewiki', region: 'r1' },
+                routesParams: {
+                    region: { source: 'ropewiki', id: 'r1' },
+                },
             });
             expect(m).toBeInstanceOf(RegionMiniMap);
             expect(m.miniMapType).toBe(MiniMapType.GeoJson);
@@ -40,7 +42,9 @@ describe('MiniMap', () => {
 });
 
 describe('RegionMiniMap', () => {
-    const validRoutes = { source: 'ropewiki', region: 'region-uuid' };
+    const validRoutes = {
+        region: { source: 'ropewiki', id: 'region-uuid' },
+    };
 
     it('fromResult parses valid payload', () => {
         const m = RegionMiniMap.fromResult({
@@ -74,7 +78,7 @@ describe('RegionMiniMap', () => {
         expect(() =>
             RegionMiniMap.fromResult({
                 miniMapType: MiniMapType.GeoJson,
-                routesParams: { source: 'ropewiki' },
+                routesParams: { region: { source: 'ropewiki' } },
             }),
         ).toThrow();
     });
@@ -98,7 +102,9 @@ describe('PageMiniMap', () => {
         expect(() =>
             PageMiniMap.fromResult({
                 miniMapType: MiniMapType.GeoJson,
-                routesParams: { source: 'ropewiki', region: 'x' },
+                routesParams: {
+                    region: { source: 'ropewiki', id: 'x' },
+                },
             }),
         ).toThrow(/PageMiniMap\.miniMapType must be/);
     });

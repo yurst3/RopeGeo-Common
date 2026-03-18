@@ -21,7 +21,9 @@ function validResult(): Record<string, unknown> {
         externalLink: 'https://example.com/region',
         miniMap: {
             miniMapType: MiniMapType.GeoJson,
-            routesParams: { source: 'ropewiki', region: 'example-region' },
+            routesParams: {
+                region: { source: 'ropewiki', id: 'example-region' },
+            },
         },
     };
 }
@@ -44,7 +46,9 @@ describe('RopewikiRegionViewResult', () => {
                 externalLink: 'https://example.com',
                 miniMap: RegionMiniMap.fromResult({
                     miniMapType: MiniMapType.GeoJson,
-                    routesParams: { source: 'ropewiki', region: 'm-region' },
+                    routesParams: {
+                        region: { source: 'ropewiki', id: 'm-region' },
+                    },
                 }),
             } as unknown as RopewikiRegionView;
             const r = new RopewikiRegionViewResult(view);

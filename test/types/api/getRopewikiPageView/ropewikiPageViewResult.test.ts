@@ -126,7 +126,9 @@ describe('RopewikiPageViewResult', () => {
                     ...validResult(),
                     miniMap: {
                         miniMapType: MiniMapType.GeoJson,
-                        routesParams: { source: 'ropewiki', region: 'x' },
+                        routesParams: {
+                            region: { source: 'ropewiki', id: 'x' },
+                        },
                     },
                 }),
             ).toThrow(/PageMiniMap\.miniMapType must be/);
