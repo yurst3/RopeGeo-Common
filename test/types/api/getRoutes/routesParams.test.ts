@@ -129,4 +129,60 @@ describe('RoutesParams', () => {
             );
         });
     });
+
+    describe('fromResult', () => {
+        it('parses empty object as region null when requiredRegion is false', () => {
+            const p = RoutesParams.fromResult({});
+            expect(p.region).toBeNull();
+        });
+
+        it('parses source and region when requiredRegion is false', () => {
+            const p = RoutesParams.fromResult({
+                source: 'ropewiki',
+                region: 'rid-1',
+            });
+            expect(p.region).toEqual({
+                source: PageDataSource.Ropewiki,
+                id: 'rid-1',
+            });
+        });
+
+        it('accepts Source and Region keys', () => {
+            const p = RoutesParams.fromResult({
+                Source: 'ropewiki',
+                Region: 'rid-2',
+            });
+            expect(p.region!.id).toBe('rid-2');
+        });
+
+        it('throws when requiredRegion is true and object is empty', () => {
+            expect(() => RoutesParams.fromResult({}, true)).toThrow(
+                /source and region must both be non-empty strings when requiredRegion is true/,
+            );
+        });
+
+        it('throws when requiredRegion is true and region missing', () => {
+            expect(() =>
+                RoutesParams.fromResult({ source: 'ropewiki' }, true),
+            ).toThrow(/source and region must both be non-empty/);
+        });
+
+        it('throws when result is not an object', () => {
+            expect(() => RoutesParams.fromResult(null)).toThrow(
+                'RoutesParams result must be an object',
+            );
+        });
+
+        it('throws when source is not a string', () => {
+            expect(() =>
+                RoutesParams.fromResult({ source: 1, region: 'x' }),
+            ).toThrow(/RoutesParams\.source must be a string/);
+        });
+
+        it('throws when only source set and requiredRegion false', () => {
+            expect(() => RoutesParams.fromResult({ source: 'ropewiki' })).toThrow(
+                /Query parameters "source" and "region" must both be present/,
+            );
+        });
+    });
 });

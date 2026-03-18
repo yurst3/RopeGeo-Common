@@ -2,7 +2,8 @@ import { Difficulty } from '../../difficulty';
 import { PermitStatus } from '../../permitStatus';
 import { BetaSection } from '../../betaSections/betaSection';
 import { BetaSectionImage } from '../../betaSections/betaSectionImage';
-import { Bounds } from './bounds';
+import { MiniMap } from '../../minimap/miniMap';
+import { PageMiniMap } from '../../minimap/pageMiniMap';
 
 type MinMax = { min: number; max: number };
 
@@ -39,10 +40,8 @@ export class RopewikiPageView {
     latestRevisionDate: Date;
     bannerImage: BetaSectionImage | null;
     betaSections: BetaSection[];
-    /** Map tile URL template with {z}, {x}, {y} placeholders, or null. */
-    tilesTemplate: string | null;
-    /** Bounding box of the map tile content (north, south, east, west), or null. */
-    bounds: Bounds | null;
+    /** Minimap for the page route (tiles template + bounds when present), or null. */
+    miniMap: MiniMap | null;
 
     constructor(
         pageId: string,
@@ -74,8 +73,7 @@ export class RopewikiPageView {
         latestRevisionDate: Date,
         bannerImage: BetaSectionImage | null,
         betaSections: BetaSection[],
-        tilesTemplate: string | null,
-        bounds: Bounds | null,
+        miniMap: MiniMap | null,
     ) {
         this.pageId = pageId;
         this.name = name;
@@ -106,8 +104,7 @@ export class RopewikiPageView {
         this.latestRevisionDate = new Date(latestRevisionDate);
         this.bannerImage = bannerImage;
         this.betaSections = Array.isArray(betaSections) ? betaSections : [];
-        this.tilesTemplate = tilesTemplate;
-        this.bounds = bounds;
+        this.miniMap = miniMap;
     }
 
     /**
@@ -147,16 +144,7 @@ export class RopewikiPageView {
         RopewikiPageView.assertIso8601DateString(r, 'latestRevisionDate');
         RopewikiPageView.assertNullableBannerImage(r, 'bannerImage');
         RopewikiPageView.assertBetaSectionsArray(r, 'betaSections');
-        RopewikiPageView.assertNullableTilesTemplate(r, 'tilesTemplate');
-        RopewikiPageView.assertNullableBounds(r, 'bounds');
-
-        const tilesTemplateNullish = (r as Record<string, unknown>).tilesTemplate == null; // null or undefined
-        const boundsNullish = (r as Record<string, unknown>).bounds == null; // null or undefined
-        if (tilesTemplateNullish !== boundsNullish) {
-            throw new Error(
-                'RopewikiPageView.tilesTemplate and bounds must be both null/undefined or both non-null',
-            );
-        }
+        RopewikiPageView.assertNullableMiniMap(r, 'miniMap');
 
         (r as Record<string, unknown>).latestRevisionDate = new Date(
             r.latestRevisionDate as string,
@@ -167,8 +155,10 @@ export class RopewikiPageView {
             (r.difficulty as Record<string, unknown>).time as string | null,
             (r.difficulty as Record<string, unknown>).risk as string | null,
         );
-        if (!boundsNullish) {
-            (r as Record<string, unknown>).bounds = Bounds.fromResult(r.bounds);
+        if (r.miniMap != null && r.miniMap !== undefined) {
+            (r as Record<string, unknown>).miniMap = PageMiniMap.fromResult(r.miniMap);
+        } else {
+            (r as Record<string, unknown>).miniMap = null;
         }
         Object.setPrototypeOf(r, RopewikiPageView.prototype);
         return r as unknown as RopewikiPageView;
@@ -195,25 +185,7 @@ export class RopewikiPageView {
         }
     }
 
-    private static assertNullableTilesTemplate(
-        obj: Record<string, unknown>,
-        key: string,
-    ): void {
-        const v = obj[key];
-        if (v === null || v === undefined) return;
-        if (typeof v !== 'string') {
-            throw new Error(
-                `RopewikiPageView.${key} must be string or null, got: ${typeof v}`,
-            );
-        }
-        if (!v.includes('{z}') || !v.includes('{x}') || !v.includes('{y}')) {
-            throw new Error(
-                `RopewikiPageView.${key} must contain {z}, {x}, and {y} placeholders when present, got: ${v}`,
-            );
-        }
-    }
-
-    private static assertNullableBounds(
+    private static assertNullableMiniMap(
         obj: Record<string, unknown>,
         key: string,
     ): void {
@@ -221,10 +193,9 @@ export class RopewikiPageView {
         if (v === null || v === undefined) return;
         if (typeof v !== 'object') {
             throw new Error(
-                `RopewikiPageView.${key} must be Bounds or null, got: ${typeof v}`,
+                `RopewikiPageView.${key} must be a PageMiniMap object or null, got: ${typeof v}`,
             );
         }
-        // Full validation and conversion happen later via Bounds.fromResult
     }
 
     private static assertNumber(obj: Record<string, unknown>, key: string): void {

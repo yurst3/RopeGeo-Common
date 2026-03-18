@@ -9,6 +9,7 @@ import { RopewikiRegionView } from '../../../src/types/api/getRopewikiRegionView
 import { RoutesGeojson } from '../../../src/types/api/getRoutes/routeGeojson';
 import { PagePreview } from '../../../src/types/previews/pagePreview';
 import { RouteType } from '../../../src/types/routes/route';
+import { MiniMapType } from '../../../src/types/minimap/miniMapType';
 
 const validRopewikiPageViewResult = {
     pageId: 'page-1',
@@ -40,8 +41,7 @@ const validRopewikiPageViewResult = {
     latestRevisionDate: '2024-01-01T00:00:00.000Z',
     bannerImage: null,
     betaSections: [],
-    tilesTemplate: null,
-    bounds: null,
+    miniMap: null,
 };
 
 const validRopewikiRegionViewResult = {
@@ -57,6 +57,10 @@ const validRopewikiRegionViewResult = {
     latestRevisionDate: '2024-01-01T00:00:00.000Z',
     syncDate: '2024-01-01T00:00:00.000Z',
     externalLink: 'https://example.com/region',
+    miniMap: {
+        miniMapType: MiniMapType.GeoJson,
+        routesParams: { source: 'ropewiki', region: 'example-region' },
+    },
 };
 
 const validRoutesGeojsonResult = {

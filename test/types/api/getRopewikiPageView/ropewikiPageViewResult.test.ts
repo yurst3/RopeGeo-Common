@@ -2,6 +2,8 @@ import { describe, it, expect } from '@jest/globals';
 import { RopewikiPageViewResult } from '../../../../src/types/api/getRopewikiPageView/ropewikiPageViewResult';
 import { RopewikiPageView } from '../../../../src/types/api/getRopewikiPageView/ropewikiPageView';
 import { ResultType } from '../../../../src/types/results/result';
+import { MiniMapType } from '../../../../src/types/minimap/miniMapType';
+import type { PageMiniMap } from '../../../../src/types/minimap/pageMiniMap';
 
 function validResult(): Record<string, unknown> {
     return {
@@ -34,8 +36,17 @@ function validResult(): Record<string, unknown> {
         latestRevisionDate: '2024-01-01T00:00:00.000Z',
         bannerImage: null,
         betaSections: [],
-        tilesTemplate: null,
-        bounds: null,
+        miniMap: null,
+    };
+}
+
+function validTilesMiniMap() {
+    return {
+        miniMapType: MiniMapType.TilesTemplate,
+        layerId: '38f5c3fa-7248-41ed-815e-8b9e6aae5d61',
+        tilesTemplate:
+            'https://api.webscraper.ropegeo.com/mapdata/tiles/38f5c3fa-7248-41ed-815e-8b9e6aae5d61/{z}/{x}/{y}.pbf',
+        bounds: { north: 39.5, south: 38.1, east: -108.2, west: -110.0 },
     };
 }
 
@@ -87,110 +98,66 @@ describe('RopewikiPageViewResult', () => {
             ).toThrow(/RopewikiPageView\.name must be a string/);
         });
 
-        it('parses tilesTemplate when null', () => {
+        it('parses miniMap when null', () => {
             const result = validResult();
             const parsed = RopewikiPageViewResult.fromResult(result);
-            expect(parsed.result.tilesTemplate).toBeNull();
+            expect(parsed.result.miniMap).toBeNull();
         });
 
-        it('parses valid tilesTemplate with {z}/{x}/{y} placeholders', () => {
-            const template =
-                'https://api.webscraper.ropegeo.com/mapdata/tiles/38f5c3fa-7248-41ed-815e-8b9e6aae5d61/{z}/{x}/{y}.pbf';
-            const bounds = { north: 39.5, south: 38.1, east: -108.2, west: -110.0 };
-            const result = { ...validResult(), tilesTemplate: template, bounds };
+        it('parses valid PageMiniMap', () => {
+            const result = { ...validResult(), miniMap: validTilesMiniMap() };
             const parsed = RopewikiPageViewResult.fromResult(result);
-            expect(parsed.result.tilesTemplate).toBe(template);
+            expect(parsed.result.miniMap).not.toBeNull();
+            const mm = parsed.result.miniMap as PageMiniMap;
+            expect(mm.layerId).toBe('38f5c3fa-7248-41ed-815e-8b9e6aae5d61');
+            expect(mm.tilesTemplate).toContain('{z}');
+            expect(mm.bounds.north).toBe(39.5);
         });
 
-        it('throws when tilesTemplate is not string or null', () => {
+        it('throws when miniMap is not object or null', () => {
             expect(() =>
-                RopewikiPageViewResult.fromResult({ ...validResult(), tilesTemplate: 42 }),
-            ).toThrow(/RopewikiPageView\.tilesTemplate must be string or null/);
+                RopewikiPageViewResult.fromResult({ ...validResult(), miniMap: 'invalid' }),
+            ).toThrow(/RopewikiPageView\.miniMap must be a PageMiniMap object or null/);
         });
 
-        it('throws when tilesTemplate string is missing {z}, {x}, or {y} placeholders', () => {
+        it('throws when miniMap is region shape (wrong type for page)', () => {
             expect(() =>
                 RopewikiPageViewResult.fromResult({
                     ...validResult(),
-                    tilesTemplate: 'https://example.com/tiles/{z}/{x}.pbf',
+                    miniMap: {
+                        miniMapType: MiniMapType.GeoJson,
+                        routesParams: { source: 'ropewiki', region: 'x' },
+                    },
                 }),
-            ).toThrow(/tilesTemplate must contain \{z\}, \{x\}, and \{y\} placeholders/);
+            ).toThrow(/PageMiniMap\.miniMapType must be/);
+        });
+
+        it('throws when tilesTemplate string is missing {z}, {x}, or {y}', () => {
             expect(() =>
                 RopewikiPageViewResult.fromResult({
                     ...validResult(),
-                    tilesTemplate: 'https://example.com/tiles/',
+                    miniMap: {
+                        miniMapType: MiniMapType.TilesTemplate,
+                        layerId: 'id',
+                        tilesTemplate: 'https://example.com/tiles/{z}/{x}.pbf',
+                        bounds: { north: 39, south: 38, east: -108, west: -110 },
+                    },
                 }),
-            ).toThrow(/tilesTemplate must contain \{z\}, \{x\}, and \{y\} placeholders/);
+            ).toThrow(/PageMiniMap\.tilesTemplate must contain/);
         });
 
-        it('parses bounds when null', () => {
-            const result = validResult();
-            const parsed = RopewikiPageViewResult.fromResult(result);
-            expect(parsed.result.bounds).toBeNull();
-        });
-
-        it('parses valid bounds with north, south, east, west', () => {
-            const template =
-                'https://api.webscraper.ropegeo.com/mapdata/tiles/38f5c3fa-7248-41ed-815e-8b9e6aae5d61/{z}/{x}/{y}.pbf';
-            const bounds = { north: 39.5, south: 38.1, east: -108.2, west: -110.0 };
-            const result = { ...validResult(), tilesTemplate: template, bounds };
-            const parsed = RopewikiPageViewResult.fromResult(result);
-            expect(parsed.result.bounds).not.toBeNull();
-            expect(parsed.result.bounds!.north).toBe(39.5);
-            expect(parsed.result.bounds!.south).toBe(38.1);
-            expect(parsed.result.bounds!.east).toBe(-108.2);
-            expect(parsed.result.bounds!.west).toBe(-110.0);
-        });
-
-        it('throws when bounds is not object or null', () => {
-            expect(() =>
-                RopewikiPageViewResult.fromResult({ ...validResult(), bounds: 'invalid' }),
-            ).toThrow(/RopewikiPageView\.bounds must be Bounds or null/);
-        });
-
-        it('throws when bounds object is missing required number property', () => {
+        it('throws when bounds object is invalid inside miniMap', () => {
             expect(() =>
                 RopewikiPageViewResult.fromResult({
                     ...validResult(),
-                    tilesTemplate:
-                        'https://api.webscraper.ropegeo.com/mapdata/tiles/38f5c3fa-7248-41ed-815e-8b9e6aae5d61/{z}/{x}/{y}.pbf',
-                    bounds: { north: 39, south: 38, east: -108 },
+                    miniMap: {
+                        miniMapType: MiniMapType.TilesTemplate,
+                        layerId: 'id',
+                        tilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
+                        bounds: { north: 39, south: 38, east: -108 },
+                    },
                 }),
             ).toThrow(/Bounds\.west must be a number/);
-        });
-
-        it('throws when bounds property is not a number', () => {
-            expect(() =>
-                RopewikiPageViewResult.fromResult({
-                    ...validResult(),
-                    tilesTemplate:
-                        'https://api.webscraper.ropegeo.com/mapdata/tiles/38f5c3fa-7248-41ed-815e-8b9e6aae5d61/{z}/{x}/{y}.pbf',
-                    bounds: { north: '39', south: 38, east: -108, west: -110 },
-                }),
-            ).toThrow(/Bounds\.north must be a number/);
-        });
-
-        it('throws when tilesTemplate is null but bounds is set', () => {
-            const bounds = { north: 39.5, south: 38.1, east: -108.2, west: -110.0 };
-            expect(() =>
-                RopewikiPageViewResult.fromResult({
-                    ...validResult(),
-                    tilesTemplate: null,
-                    bounds,
-                }),
-            ).toThrow(/RopewikiPageView\.tilesTemplate and bounds must be both null\/undefined or both non-null/);
-        });
-
-        it('throws when tilesTemplate is set but bounds is null', () => {
-            const template =
-                'https://api.webscraper.ropegeo.com/mapdata/tiles/38f5c3fa-7248-41ed-815e-8b9e6aae5d61/{z}/{x}/{y}.pbf';
-            expect(() =>
-                RopewikiPageViewResult.fromResult({
-                    ...validResult(),
-                    tilesTemplate: template,
-                    bounds: null,
-                }),
-            ).toThrow(/RopewikiPageView\.tilesTemplate and bounds must be both null\/undefined or both non-null/);
         });
     });
 });

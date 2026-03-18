@@ -55,6 +55,47 @@ export class RoutesParams {
         return new RoutesParams(source, region);
     }
 
+    /**
+     * Validates a JSON-like object with optional `source` / `region` (or `Source` / `Region`).
+     * @param requiredRegion - If true, both source and region must be non-empty; if false, both may be absent (region null), and the usual both-or-neither rule applies when partially set.
+     */
+    static fromResult(result: unknown, requiredRegion = false): RoutesParams {
+        if (result == null || typeof result !== 'object') {
+            throw new Error('RoutesParams result must be an object');
+        }
+        const r = result as Record<string, unknown>;
+        const sourceRaw = r.source ?? r.Source;
+        const regionRaw = r.region ?? r.Region;
+        const sourceStr = RoutesParams.coerceTrimmedString(sourceRaw, 'source');
+        const regionStr = RoutesParams.coerceTrimmedString(regionRaw, 'region');
+        const source =
+            sourceStr === '' ? undefined : RoutesParams.parseSource(sourceStr);
+        const regionId = regionStr === '' ? undefined : regionStr;
+        if (requiredRegion) {
+            if (source === undefined || regionId === undefined) {
+                throw new Error(
+                    'RoutesParams: source and region must both be non-empty strings when requiredRegion is true',
+                );
+            }
+        }
+        return new RoutesParams(source, regionId);
+    }
+
+    private static coerceTrimmedString(
+        v: unknown,
+        key: string,
+    ): string {
+        if (v === null || v === undefined) {
+            return '';
+        }
+        if (typeof v !== 'string') {
+            throw new Error(
+                `RoutesParams.${key} must be a string, got: ${typeof v}`,
+            );
+        }
+        return v.trim();
+    }
+
     private static parseSource(value: string): PageDataSource {
         if (value === PageDataSource.Ropewiki) {
             return PageDataSource.Ropewiki;

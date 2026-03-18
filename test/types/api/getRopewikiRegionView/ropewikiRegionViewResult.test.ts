@@ -2,6 +2,8 @@ import { describe, it, expect } from '@jest/globals';
 import { RopewikiRegionViewResult } from '../../../../src/types/api/getRopewikiRegionView/ropewikiRegionViewResult';
 import { RopewikiRegionView } from '../../../../src/types/api/getRopewikiRegionView/ropewikiRegionView';
 import { ResultType } from '../../../../src/types/results/result';
+import { MiniMapType } from '../../../../src/types/minimap/miniMapType';
+import { RegionMiniMap } from '../../../../src/types/minimap/regionMiniMap';
 
 function validResult(): Record<string, unknown> {
     return {
@@ -17,6 +19,10 @@ function validResult(): Record<string, unknown> {
         latestRevisionDate: '2024-01-01T00:00:00.000Z',
         syncDate: '2024-01-01T00:00:00.000Z',
         externalLink: 'https://example.com/region',
+        miniMap: {
+            miniMapType: MiniMapType.GeoJson,
+            routesParams: { source: 'ropewiki', region: 'example-region' },
+        },
     };
 }
 
@@ -36,6 +42,10 @@ describe('RopewikiRegionViewResult', () => {
                 latestRevisionDate: new Date(),
                 syncDate: new Date(),
                 externalLink: 'https://example.com',
+                miniMap: RegionMiniMap.fromResult({
+                    miniMapType: MiniMapType.GeoJson,
+                    routesParams: { source: 'ropewiki', region: 'm-region' },
+                }),
             } as unknown as RopewikiRegionView;
             const r = new RopewikiRegionViewResult(view);
             expect(r.result).toBe(view);
@@ -56,6 +66,14 @@ describe('RopewikiRegionViewResult', () => {
             expect(parsed.result.overview).toBeNull();
             expect(parsed.result.bestMonths).toEqual([]);
             expect(parsed.result.isMajorRegion).toBe(false);
+        });
+
+        it('parses when miniMap is null', () => {
+            const parsed = RopewikiRegionViewResult.fromResult({
+                ...validResult(),
+                miniMap: null,
+            });
+            expect(parsed.result.miniMap).toBeNull();
         });
 
         it('parses result with regions and overview', () => {

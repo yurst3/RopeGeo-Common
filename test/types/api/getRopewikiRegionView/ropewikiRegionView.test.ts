@@ -1,12 +1,21 @@
 import { describe, it, expect } from '@jest/globals';
 import { RopewikiRegionView } from '../../../../src/types/api/getRopewikiRegionView/ropewikiRegionView';
 import { BetaSection } from '../../../../src/types/betaSections/betaSection';
+import { RegionMiniMap } from '../../../../src/types/minimap/regionMiniMap';
+import type { MiniMap } from '../../../../src/types/minimap/miniMap';
+import { MiniMapType } from '../../../../src/types/minimap/miniMapType';
+
+const defaultRegionMiniMap = RegionMiniMap.fromResult({
+    miniMapType: MiniMapType.GeoJson,
+    routesParams: { source: 'ropewiki', region: 'default-region-id' },
+});
 
 interface ConstructorArgs {
     name: string;
     latestRevisionDate: Date;
     url: string;
     updatedAt: Date;
+    miniMap?: MiniMap | null;
     regions?: { name: string; id: string }[];
     rawPageCount?: number | null;
     truePageCount?: number | null;
@@ -20,18 +29,25 @@ interface ConstructorArgs {
 function baseArgs(
     overrides: Partial<ConstructorArgs> = {},
 ): ConstructorParameters<typeof RopewikiRegionView> {
+    const miniMap: MiniMap | null = !('miniMap' in overrides)
+        ? defaultRegionMiniMap
+        : overrides.miniMap === undefined
+          ? defaultRegionMiniMap
+          : overrides.miniMap;
     const b: ConstructorArgs = {
         name: 'North America',
         latestRevisionDate: new Date('2024-01-15T12:00:00Z'),
         url: 'https://ropewiki.com/North_America',
         updatedAt: new Date('2024-01-10T08:00:00Z'),
         ...overrides,
+        miniMap,
     };
     return [
         b.name,
         b.latestRevisionDate,
         b.url,
         b.updatedAt,
+        miniMap,
         b.regions,
         b.rawPageCount,
         b.truePageCount,
@@ -64,6 +80,10 @@ describe('RopewikiRegionView', () => {
             expect(view.isMajorRegion).toBe(true);
             expect(view.latestRevisionDate).toEqual(new Date('2024-01-15T12:00:00Z'));
             expect(view.externalLink).toBe('https://ropewiki.com/North_America');
+            expect(view.miniMap).toBeInstanceOf(RegionMiniMap);
+            expect((view.miniMap as RegionMiniMap).routesParams.region!.id).toBe(
+                'default-region-id',
+            );
         });
 
         it('defaults regionCount, topLevelPageCount, pageCount, and totalPageCount to 0 when missing', () => {
@@ -72,6 +92,11 @@ describe('RopewikiRegionView', () => {
             expect(view.topLevelPageCount).toBe(0);
             expect(view.pageCount).toBe(0);
             expect(view.totalPageCount).toBe(0);
+        });
+
+        it('allows null miniMap in constructor', () => {
+            const view = new RopewikiRegionView(...baseArgs({ miniMap: null }));
+            expect(view.miniMap).toBeNull();
         });
 
         it('defaults regionCount, topLevelPageCount, pageCount, and totalPageCount to 0 when null', () => {
@@ -182,6 +207,13 @@ describe('RopewikiRegionView', () => {
                 latestRevisionDate: '2025-01-15T00:00:00.000Z',
                 syncDate: '2025-01-10T08:00:00.000Z',
                 externalLink: 'https://ropewiki.com/North_America',
+                miniMap: {
+                    miniMapType: MiniMapType.GeoJson,
+                    routesParams: {
+                        source: 'ropewiki',
+                        region: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                    },
+                },
             };
         }
 
@@ -209,6 +241,9 @@ describe('RopewikiRegionView', () => {
             expect(view.syncDate).toBeInstanceOf(Date);
             expect(view.syncDate.toISOString()).toBe('2025-01-10T08:00:00.000Z');
             expect(view.externalLink).toBe('https://ropewiki.com/North_America');
+            expect((view.miniMap as RegionMiniMap).routesParams.region!.id).toBe(
+                'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+            );
         });
 
         it('accepts minimal valid body (empty regions, null overview, zero counts)', () => {
@@ -225,6 +260,10 @@ describe('RopewikiRegionView', () => {
                 latestRevisionDate: '2024-01-01T00:00:00.000Z',
                 syncDate: '2024-01-01T00:00:00.000Z',
                 externalLink: 'https://example.com/region',
+                miniMap: {
+                    miniMapType: MiniMapType.GeoJson,
+                    routesParams: { source: 'ropewiki', region: 'example-region' },
+                },
             };
             const view = RopewikiRegionView.fromResult(minimal);
             expect(view.name).toBe('Root');
@@ -353,6 +392,26 @@ describe('RopewikiRegionView', () => {
                     syncDate: 'not-a-date',
                 }),
             ).toThrow('RopewikiRegionView.syncDate must be a valid ISO 8601 date string');
+        });
+
+        it('parses when miniMap is null or omitted', () => {
+            expect(
+                RopewikiRegionView.fromResult({ ...getValidBody(), miniMap: null }).miniMap,
+            ).toBeNull();
+            const { miniMap: _m, ...withoutMiniMap } = getValidBody();
+            expect(RopewikiRegionView.fromResult(withoutMiniMap).miniMap).toBeNull();
+        });
+
+        it('throws when miniMap is not object or null', () => {
+            expect(() =>
+                RopewikiRegionView.fromResult({ ...getValidBody(), miniMap: 'bad' }),
+            ).toThrow(/RopewikiRegionView\.miniMap must be a MiniMap object or null/);
+            expect(() =>
+                RopewikiRegionView.fromResult({
+                    ...getValidBody(),
+                    miniMap: { miniMapType: MiniMapType.TilesTemplate, layerId: 'x' },
+                }),
+            ).toThrow();
         });
     });
 });

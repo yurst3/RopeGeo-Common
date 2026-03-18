@@ -1,4 +1,6 @@
 import { BetaSection } from '../../betaSections/betaSection';
+import { RegionMiniMap } from '../../minimap/regionMiniMap';
+import { MiniMap } from '../../minimap/miniMap';
 
 /**
  * Region view for getRopewikiRegionView (GET /ropewiki/region/{id}).
@@ -23,12 +25,14 @@ export class RopewikiRegionView {
     /** When the region was last synced (from updatedAt). */
     syncDate: Date;
     externalLink: string;
+    miniMap: MiniMap | null;
 
     constructor(
         name: string,
         latestRevisionDate: Date,
         url: string,
         updatedAt: Date,
+        miniMap: MiniMap | null,
         regions?: { name: string; id: string }[],
         rawPageCount?: number | null,
         truePageCount?: number | null,
@@ -54,6 +58,7 @@ export class RopewikiRegionView {
         this.latestRevisionDate = revDate;
         this.syncDate = new Date(updatedAt);
         this.externalLink = url;
+        this.miniMap = miniMap;
     }
 
     /**
@@ -77,6 +82,7 @@ export class RopewikiRegionView {
         RopewikiRegionView.assertIso8601DateString(r, 'latestRevisionDate');
         RopewikiRegionView.assertIso8601DateString(r, 'syncDate');
         RopewikiRegionView.assertValidUrl(r, 'externalLink');
+        RopewikiRegionView.assertNullableMiniMap(r, 'miniMap');
         (r as Record<string, unknown>).latestRevisionDate = new Date(
             r.latestRevisionDate as string,
         );
@@ -85,6 +91,11 @@ export class RopewikiRegionView {
             r.overview == null || r.overview === undefined
                 ? null
                 : BetaSection.fromResponseBody(r.overview);
+        if (r.miniMap == null || r.miniMap === undefined) {
+            (r as Record<string, unknown>).miniMap = null;
+        } else {
+            (r as Record<string, unknown>).miniMap = RegionMiniMap.fromResult(r.miniMap);
+        }
         Object.setPrototypeOf(r, RopewikiRegionView.prototype);
         return r as unknown as RopewikiRegionView;
     }
@@ -211,6 +222,16 @@ export class RopewikiRegionView {
         if (Number.isNaN(date.getTime())) {
             throw new Error(
                 `RopewikiRegionView.${key} must be a valid ISO 8601 date string, got: ${v}`,
+            );
+        }
+    }
+
+    private static assertNullableMiniMap(obj: Record<string, unknown>, key: string): void {
+        const v = obj[key];
+        if (v === null || v === undefined) return;
+        if (typeof v !== 'object') {
+            throw new Error(
+                `RopewikiRegionView.${key} must be a MiniMap object or null, got: ${typeof v}`,
             );
         }
     }
