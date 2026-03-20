@@ -5,7 +5,8 @@ import { BetaSectionImage } from '../../../src/types/betaSections/betaSectionIma
 function validImageBody(): Record<string, unknown> {
     return {
         order: 0,
-        url: 'https://example.com/img.jpg',
+        bannerUrl: 'https://example.com/banner.jpg',
+        fullUrl: 'https://example.com/full.jpg',
         linkUrl: 'https://example.com/page',
         caption: 'Caption',
         latestRevisionDate: '2024-01-15T12:00:00Z',
@@ -27,7 +28,8 @@ describe('BetaSection', () => {
         it('sets all properties', () => {
             const img = new BetaSectionImage(
                 0,
-                'https://a.com/i.jpg',
+                'https://a.com/banner.jpg',
+                'https://a.com/full.jpg',
                 'https://a.com',
                 'Cap',
                 new Date('2024-01-01Z'),
@@ -74,7 +76,8 @@ describe('BetaSection', () => {
             expect(section.text).toBe('Beta text here.');
             expect(section.images).toHaveLength(1);
             expect(section.images[0]).toBeInstanceOf(BetaSectionImage);
-            expect(section.images[0].url).toBe('https://example.com/img.jpg');
+            expect(section.images[0].bannerUrl).toBe('https://example.com/banner.jpg');
+            expect(section.images[0].fullUrl).toBe('https://example.com/full.jpg');
             expect(section.latestRevisionDate).toEqual(new Date('2024-01-15T12:00:00Z'));
         });
 

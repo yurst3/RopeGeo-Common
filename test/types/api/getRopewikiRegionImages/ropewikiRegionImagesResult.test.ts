@@ -9,7 +9,8 @@ function sampleImageView(): RopewikiRegionImageView {
         id: 'img-1',
         ropewikiPage: 'page-1',
         pageName: 'Test Page',
-        fileUrl: 'https://example.com/img.jpg',
+        bannerUrl: 'https://example.com/banner.jpg',
+        fullUrl: 'https://example.com/full.jpg',
         linkUrl: 'https://ropewiki.com/Page',
     };
     return new RopewikiRegionImageView(row);
@@ -46,7 +47,8 @@ describe('RopewikiRegionImagesResult', () => {
                 id: 'img-1',
                 pageId: 'p1',
                 pageName: 'Page',
-                url: 'https://example.com/img.jpg',
+                bannerUrl: 'https://example.com/banner.jpg',
+                fullUrl: 'https://example.com/full.jpg',
                 externalLink: 'https://example.com',
                 caption: undefined,
             };

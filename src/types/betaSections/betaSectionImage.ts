@@ -1,39 +1,43 @@
 /**
- * Generic beta section image (e.g. order, url, linkUrl, caption, latestRevisionDate).
+ * Generic beta section image (e.g. order, bannerUrl, fullUrl, linkUrl, caption, latestRevisionDate).
  */
 export class BetaSectionImage {
     order: number;
-    url: string;
+    bannerUrl: string | null;
+    fullUrl: string | null;
     linkUrl: string;
-    caption: string;
+    caption: string | null;
     latestRevisionDate: Date;
 
     constructor(
         order: number,
-        url: string,
+        bannerUrl: string | null,
+        fullUrl: string | null,
         linkUrl: string,
-        caption: string,
+        caption: string | null,
         latestRevisionDate: Date,
     ) {
         this.order = order;
-        this.url = url;
+        this.bannerUrl = bannerUrl;
+        this.fullUrl = fullUrl;
         this.linkUrl = linkUrl;
         this.caption = caption;
         this.latestRevisionDate = new Date(latestRevisionDate);
     }
 
     /**
-     * Validates response body has BetaSectionImage fields and returns a BetaSectionImage instance.
+     * Validates result has BetaSectionImage fields and returns a BetaSectionImage instance.
      */
-    static fromResponseBody(body: unknown): BetaSectionImage {
-        if (body == null || typeof body !== 'object') {
-            throw new Error('BetaSectionImage body must be an object');
+    static fromResult(result: unknown): BetaSectionImage {
+        if (result == null || typeof result !== 'object') {
+            throw new Error('BetaSectionImage result must be an object');
         }
-        const r = body as Record<string, unknown>;
+        const r = result as Record<string, unknown>;
         BetaSectionImage.assertNumber(r, 'order');
-        BetaSectionImage.assertString(r, 'url');
+        BetaSectionImage.assertStringOrNull(r, 'bannerUrl');
+        BetaSectionImage.assertStringOrNull(r, 'fullUrl');
         BetaSectionImage.assertString(r, 'linkUrl');
-        BetaSectionImage.assertString(r, 'caption');
+        BetaSectionImage.assertStringOrNull(r, 'caption');
         BetaSectionImage.assertIso8601DateString(r, 'latestRevisionDate');
         (r as Record<string, unknown>).latestRevisionDate = new Date(
             r.latestRevisionDate as string,
@@ -56,6 +60,18 @@ export class BetaSectionImage {
         if (typeof v !== 'string') {
             throw new Error(
                 `BetaSectionImage.${key} must be a string, got: ${typeof v}`,
+            );
+        }
+    }
+
+    private static assertStringOrNull(
+        obj: Record<string, unknown>,
+        key: string,
+    ): void {
+        const v = obj[key];
+        if (v !== null && typeof v !== 'string') {
+            throw new Error(
+                `BetaSectionImage.${key} must be a string or null, got: ${typeof v}`,
             );
         }
     }

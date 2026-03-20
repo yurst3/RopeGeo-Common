@@ -373,7 +373,7 @@ export class RopewikiPageView {
                 `RopewikiPageView.${key} must be BetaSectionImage or null, got: ${typeof v}`,
             );
         }
-        const parsed = BetaSectionImage.fromResponseBody(v);
+        const parsed = BetaSectionImage.fromResult(v);
         (obj as Record<string, unknown>)[key] = parsed;
     }
 

@@ -6,7 +6,8 @@ export interface RopewikiRegionImageViewRow {
     id: string;
     ropewikiPage: string;
     pageName: string;
-    fileUrl: string;
+    bannerUrl: string;
+    fullUrl: string;
     linkUrl: string;
     caption?: string | null;
 }
@@ -18,7 +19,8 @@ export class RopewikiRegionImageView {
     id: string;
     pageId: string;
     pageName: string;
-    url: string;
+    bannerUrl: string;
+    fullUrl: string;
     externalLink: string;
     caption: string | undefined;
 
@@ -26,7 +28,8 @@ export class RopewikiRegionImageView {
         this.id = row.id;
         this.pageId = row.ropewikiPage;
         this.pageName = row.pageName;
-        this.url = row.fileUrl;
+        this.bannerUrl = row.bannerUrl;
+        this.fullUrl = row.fullUrl;
         this.externalLink = row.linkUrl;
         this.caption = row.caption ?? undefined;
     }
@@ -42,7 +45,8 @@ export class RopewikiRegionImageView {
         RopewikiRegionImageView.assertString(r, 'id');
         RopewikiRegionImageView.assertString(r, 'pageId');
         RopewikiRegionImageView.assertString(r, 'pageName');
-        RopewikiRegionImageView.assertString(r, 'url');
+        RopewikiRegionImageView.assertString(r, 'bannerUrl');
+        RopewikiRegionImageView.assertString(r, 'fullUrl');
         RopewikiRegionImageView.assertString(r, 'externalLink');
         RopewikiRegionImageView.assertOptionalString(r, 'caption');
         Object.setPrototypeOf(r, RopewikiRegionImageView.prototype);

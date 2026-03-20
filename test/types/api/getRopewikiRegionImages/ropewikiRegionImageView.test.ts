@@ -11,7 +11,8 @@ function baseRow(
         id: 'img-uuid',
         ropewikiPage: 'page-uuid',
         pageName: 'Example Page',
-        fileUrl: 'https://example.com/file.jpg',
+        bannerUrl: 'https://example.com/banner.jpg',
+        fullUrl: 'https://example.com/full.jpg',
         linkUrl: 'https://ropewiki.com/Example_Page',
         ...overrides,
     };
@@ -25,7 +26,8 @@ describe('RopewikiRegionImageView', () => {
             expect(view.id).toBe('img-uuid');
             expect(view.pageId).toBe('page-uuid');
             expect(view.pageName).toBe('Example Page');
-            expect(view.url).toBe('https://example.com/file.jpg');
+            expect(view.bannerUrl).toBe('https://example.com/banner.jpg');
+            expect(view.fullUrl).toBe('https://example.com/full.jpg');
             expect(view.externalLink).toBe('https://ropewiki.com/Example_Page');
             expect(view.caption).toBe('A caption');
         });
@@ -40,6 +42,42 @@ describe('RopewikiRegionImageView', () => {
                 baseRow({ caption: null }),
             );
             expect(view.caption).toBeUndefined();
+        });
+    });
+
+    describe('fromResult', () => {
+        function validResult(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+            return {
+                id: 'img-uuid',
+                pageId: 'page-uuid',
+                pageName: 'Example Page',
+                bannerUrl: 'https://example.com/banner.jpg',
+                fullUrl: 'https://example.com/full.jpg',
+                externalLink: 'https://ropewiki.com/Example_Page',
+                caption: 'A caption',
+                ...overrides,
+            };
+        }
+
+        it('validates and applies prototype', () => {
+            const raw = validResult();
+            const view = RopewikiRegionImageView.fromResult(raw);
+            expect(view).toBe(raw);
+            expect(view).toBeInstanceOf(RopewikiRegionImageView);
+            expect(view.bannerUrl).toBe('https://example.com/banner.jpg');
+            expect(view.fullUrl).toBe('https://example.com/full.jpg');
+        });
+
+        it('throws when bannerUrl is not a string', () => {
+            expect(() =>
+                RopewikiRegionImageView.fromResult(validResult({ bannerUrl: null })),
+            ).toThrow('RopewikiRegionImageView.bannerUrl must be a string');
+        });
+
+        it('throws when fullUrl is not a string', () => {
+            expect(() =>
+                RopewikiRegionImageView.fromResult(validResult({ fullUrl: 1 })),
+            ).toThrow('RopewikiRegionImageView.fullUrl must be a string');
         });
     });
 });

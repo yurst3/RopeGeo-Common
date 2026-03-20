@@ -73,7 +73,7 @@ export class BetaSection {
             );
         }
         (obj as Record<string, unknown>)[key] = v.map((item) =>
-            BetaSectionImage.fromResponseBody(item),
+            BetaSectionImage.fromResult(item),
         );
     }
 
