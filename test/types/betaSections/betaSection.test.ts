@@ -1,15 +1,18 @@
 import { describe, it, expect } from '@jest/globals';
 import { BetaSection } from '../../../src/types/betaSections/betaSection';
 import { BetaSectionImage } from '../../../src/types/betaSections/betaSectionImage';
+import { DownloadBytes } from '../../../src/types/betaSections/downloadBytes';
 
 function validImageBody(): Record<string, unknown> {
     return {
         order: 0,
+        id: '550e8400-e29b-41d4-a716-446655440001',
         bannerUrl: 'https://example.com/banner.jpg',
         fullUrl: 'https://example.com/full.jpg',
         linkUrl: 'https://example.com/page',
         caption: 'Caption',
         latestRevisionDate: '2024-01-15T12:00:00Z',
+        downloadBytes: { preview: 10, banner: 100, full: 1000 },
     };
 }
 
@@ -28,11 +31,13 @@ describe('BetaSection', () => {
         it('sets all properties', () => {
             const img = new BetaSectionImage(
                 0,
+                'img-local-id',
                 'https://a.com/banner.jpg',
                 'https://a.com/full.jpg',
                 'https://a.com',
                 'Cap',
                 new Date('2024-01-01Z'),
+                new DownloadBytes(0, 1, 2),
             );
             const section = new BetaSection(
                 1,

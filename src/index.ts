@@ -9,6 +9,7 @@ export { RoutesGeojson } from './types/api/getRoutes/routeGeojson';
 export { RoutesGeojsonResult } from './types/api/getRoutes/routesGeojsonResult';
 export { RoutesParams } from './types/api/getRoutes/routesParams';
 export { BetaSectionImage } from './types/betaSections/betaSectionImage';
+export { DownloadBytes } from './types/betaSections/downloadBytes';
 export { BetaSection } from './types/betaSections/betaSection';
 export { Bounds } from './types/minimap/bounds';
 export { MiniMapType } from './types/minimap/miniMapType';
@@ -27,6 +28,12 @@ export {
     type ValidatedCursorPaginationResponse,
     CursorPaginationResultType,
 } from './types/results/cursorPaginationResults';
+export {
+    PaginationResults,
+    type ValidatedPaginationResponse,
+    PaginationResultType,
+} from './types/results/paginationResults';
+export { MapDataTileKeysResults } from './types/api/listMapDataTileKeys/mapDataTileKeysResults';
 export { SearchCursor } from './types/cursors/searchCursor';
 export type { SearchCursorType } from './types/cursors/searchCursor';
 export { SearchParams } from './types/api/search/searchParams';

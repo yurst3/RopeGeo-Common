@@ -12,6 +12,7 @@ Every API endpoint must have its own **specific result class** that extends one 
 
 - **`Result<R>`** (`src/types/results/result.ts`) – for **single-result** responses (one `result` plus a `resultType` discriminator). The base class has `fromResponseBody(body: unknown)` which validates the wrapper and delegates to the correct specific result’s `fromResult(resultValue)`.
 - **`CursorPaginationResults<R>`** (`src/types/results/cursorPaginationResults.ts`) – for **cursor-paginated** responses (`results` array, `nextCursor`, and `resultType`). The base class has `fromResponseBody(body: unknown)` which validates the wrapper and delegates to the specific result’s `fromResponseBody(ValidatedCursorPaginationResponse)`.
+- **`PaginationResults<R>`** (`src/types/results/paginationResults.ts`) – for **page-based paginated** responses (`results` array, `total`, `page`, and `resultType`). The base class has `fromResponseBody(body: unknown)` which validates the wrapper and delegates to the specific result’s `fromResponseBody` (e.g. `MapDataTileKeysResults` with `totalBytes`).
 
 **Specific result classes** (e.g. `RopewikiPageViewResult`, `SearchResults`) live next to their endpoint under `src/types/api/<apiArea>/` and must:
 
