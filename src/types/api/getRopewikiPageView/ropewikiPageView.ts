@@ -11,7 +11,6 @@ type MinMax = { min: number; max: number };
  * Response type for GET getRopewikiPageView (full page view).
  */
 export class RopewikiPageView {
-    pageId: string;
     name: string;
     aka: string[];
     url: string;
@@ -44,7 +43,6 @@ export class RopewikiPageView {
     miniMap: MiniMap | null;
 
     constructor(
-        pageId: string,
         name: string,
         aka: string[],
         url: string,
@@ -75,7 +73,6 @@ export class RopewikiPageView {
         betaSections: BetaSection[],
         miniMap: MiniMap | null,
     ) {
-        this.pageId = pageId;
         this.name = name;
         this.aka = Array.isArray(aka) ? aka.slice() : [];
         this.url = url;
@@ -115,7 +112,6 @@ export class RopewikiPageView {
             throw new Error('RopewikiPageView result must be an object');
         }
         const r = result as Record<string, unknown>;
-        RopewikiPageView.assertString(r, 'pageId');
         RopewikiPageView.assertString(r, 'name');
         RopewikiPageView.assertStringArray(r, 'aka');
         RopewikiPageView.assertString(r, 'url');

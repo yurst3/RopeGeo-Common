@@ -7,7 +7,6 @@ import type { PageMiniMap } from '../../../../src/types/minimap/pageMiniMap';
 
 function validResult(): Record<string, unknown> {
     return {
-        pageId: 'page-1',
         name: 'Test Page',
         aka: [],
         url: 'https://ropewiki.com/page',
@@ -53,7 +52,7 @@ function validTilesMiniMap() {
 describe('RopewikiPageViewResult', () => {
     describe('constructor', () => {
         it('sets result and resultType', () => {
-            const view = { pageId: 'p1', name: 'P', url: '', quality: 0, userVotes: 0 } as unknown as RopewikiPageView;
+            const view = { name: 'P', url: '', quality: 0, userVotes: 0 } as unknown as RopewikiPageView;
             const r = new RopewikiPageViewResult(view);
             expect(r.result).toBe(view);
             expect(r.resultType).toBe(ResultType.RopewikiPageView);
@@ -67,7 +66,6 @@ describe('RopewikiPageViewResult', () => {
             expect(parsed).toBeInstanceOf(RopewikiPageViewResult);
             expect(parsed.resultType).toBe(ResultType.RopewikiPageView);
             expect(parsed.result).toBeInstanceOf(RopewikiPageView);
-            expect(parsed.result.pageId).toBe('page-1');
             expect(parsed.result.name).toBe('Test Page');
             expect(parsed.result.url).toBe('https://ropewiki.com/page');
             expect(parsed.result.quality).toBe(4);
@@ -91,11 +89,11 @@ describe('RopewikiPageViewResult', () => {
 
         it('throws when required field is invalid', () => {
             expect(() =>
-                RopewikiPageViewResult.fromResult({ ...validResult(), pageId: 1 }),
-            ).toThrow(/RopewikiPageView\.pageId must be a string/);
-            expect(() =>
-                RopewikiPageViewResult.fromResult({ ...validResult(), name: undefined }),
+                RopewikiPageViewResult.fromResult({ ...validResult(), name: 1 }),
             ).toThrow(/RopewikiPageView\.name must be a string/);
+            expect(() =>
+                RopewikiPageViewResult.fromResult({ ...validResult(), url: undefined }),
+            ).toThrow(/RopewikiPageView\.url must be a string/);
         });
 
         it('parses miniMap when null', () => {

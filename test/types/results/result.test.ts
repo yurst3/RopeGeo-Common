@@ -12,7 +12,6 @@ import { RouteType } from '../../../src/types/routes/route';
 import { MiniMapType } from '../../../src/types/minimap/miniMapType';
 
 const validRopewikiPageViewResult = {
-    pageId: 'page-1',
     name: 'Test Page',
     aka: [],
     url: 'https://ropewiki.com/page',
@@ -185,7 +184,7 @@ describe('Result', () => {
                 expect(parsed).toBeInstanceOf(RopewikiPageViewResult);
                 expect(parsed.resultType).toBe(ResultType.RopewikiPageView);
                 expect(parsed.result).toBeInstanceOf(RopewikiPageView);
-                expect((parsed.result as RopewikiPageView).pageId).toBe('page-1');
+                expect((parsed.result as RopewikiPageView).url).toBe('https://ropewiki.com/page');
                 expect((parsed.result as RopewikiPageView).name).toBe('Test Page');
             });
 
