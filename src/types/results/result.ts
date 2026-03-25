@@ -9,6 +9,19 @@ export enum ResultType {
     RoutePreview = 'routePreview',
 }
 
+const resultParsers = new Map<ResultType, (resultValue: unknown) => Result>();
+
+/**
+ * Registers the parser for {@link Result.fromResponseBody} for a given {@link ResultType}.
+ * Call once per type from the corresponding result module at load time.
+ */
+export function registerResultParser(
+    type: ResultType,
+    parse: (resultValue: unknown) => Result,
+): void {
+    resultParsers.set(type, parse);
+}
+
 /**
  * Base type for single-result API responses (result + resultType).
  * Each endpoint has a specific Result subclass with a typed result property.
@@ -44,23 +57,12 @@ export abstract class Result<R = unknown> {
             throw new Error('Response body must have result');
         }
         const resultValue = b.result;
-        switch (resultType as ResultType) {
-            case ResultType.RopewikiPageView: {
-                const { RopewikiPageViewResult } = require('../api/getRopewikiPageView/ropewikiPageViewResult');
-                return RopewikiPageViewResult.fromResult(resultValue);
-            }
-            case ResultType.RopewikiRegionView: {
-                const { RopewikiRegionViewResult } = require('../api/getRopewikiRegionView/ropewikiRegionViewResult');
-                return RopewikiRegionViewResult.fromResult(resultValue);
-            }
-            case ResultType.RoutesGeojson: {
-                const { RoutesGeojsonResult } = require('../api/getRoutes/routesGeojsonResult');
-                return RoutesGeojsonResult.fromResult(resultValue);
-            }
-            case ResultType.RoutePreview: {
-                const { RoutePreviewResult } = require('../api/getRoutePreview/routePreviewResult');
-                return RoutePreviewResult.fromResult(resultValue);
-            }
+        const parser = resultParsers.get(resultType as ResultType);
+        if (parser === undefined) {
+            throw new Error(
+                `No result parser registered for resultType ${JSON.stringify(resultType)}`,
+            );
         }
+        return parser(resultValue);
     }
 }

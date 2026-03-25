@@ -1,4 +1,4 @@
-import { Result, ResultType } from '../../results/result';
+import { registerResultParser, Result, ResultType } from '../../results/result';
 import { PagePreview } from '../../previews/pagePreview';
 
 /**
@@ -23,3 +23,7 @@ export class RoutePreviewResult extends Result<PagePreview[]> {
         return new RoutePreviewResult(parsed);
     }
 }
+
+// Side-effect registration so the base `Result` class does not import this subclass to route
+// `fromResponseBody` → `fromResult` (that would be a circular dependency).
+registerResultParser(ResultType.RoutePreview, (v) => RoutePreviewResult.fromResult(v));

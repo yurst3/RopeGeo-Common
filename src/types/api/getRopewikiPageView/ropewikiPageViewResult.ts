@@ -1,4 +1,4 @@
-import { Result, ResultType } from '../../results/result';
+import { registerResultParser, Result, ResultType } from '../../results/result';
 import { RopewikiPageView } from './ropewikiPageView';
 
 /**
@@ -17,3 +17,7 @@ export class RopewikiPageViewResult extends Result<RopewikiPageView> {
         return new RopewikiPageViewResult(parsed);
     }
 }
+
+// Side-effect registration so the base `Result` class does not import this subclass to route
+// `fromResponseBody` → `fromResult` (that would be a circular dependency).
+registerResultParser(ResultType.RopewikiPageView, (v) => RopewikiPageViewResult.fromResult(v));

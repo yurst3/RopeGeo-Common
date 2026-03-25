@@ -16,6 +16,24 @@ export type ValidatedPaginationResponse = {
     page: number;
 };
 
+type PaginationParserFn = (
+    body: Record<string, unknown>,
+    validated: ValidatedPaginationResponse,
+) => PaginationResults;
+
+const paginationParsers = new Map<PaginationResultType, PaginationParserFn>();
+
+/**
+ * Registers the parser for {@link PaginationResults.fromResponseBody} for a given type.
+ * Call once per type from the corresponding result module at load time.
+ */
+export function registerPaginationParser(
+    type: PaginationResultType,
+    parse: PaginationParserFn,
+): void {
+    paginationParsers.set(type, parse);
+}
+
 /**
  * Base type for page-paginated API results (results array + total + page + resultType).
  * fromResponseBody validates body then delegates to the corresponding Result class.
@@ -81,11 +99,12 @@ export abstract class PaginationResults<R = unknown> {
             total,
             page,
         };
-        switch (resultType as PaginationResultType) {
-            case PaginationResultType.MapDataTileKeys: {
-                const { MapDataTileKeysResults } = require('../api/listMapDataTileKeys/mapDataTileKeysResults');
-                return MapDataTileKeysResults.fromResponseBodyInner(b, validated);
-            }
+        const parser = paginationParsers.get(resultType as PaginationResultType);
+        if (parser === undefined) {
+            throw new Error(
+                `No pagination parser registered for resultType ${JSON.stringify(resultType)}`,
+            );
         }
+        return parser(b, validated);
     }
 }

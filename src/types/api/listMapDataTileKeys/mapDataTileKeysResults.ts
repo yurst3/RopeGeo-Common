@@ -1,6 +1,7 @@
 import {
     PaginationResults,
     PaginationResultType,
+    registerPaginationParser,
     type ValidatedPaginationResponse,
 } from '../../results/paginationResults';
 
@@ -59,3 +60,9 @@ export class MapDataTileKeysResults extends PaginationResults<string> {
         }
     }
 }
+
+// Side-effect registration so the base `PaginationResults` class does not import this
+// subclass to route `fromResponseBody` → `fromResponseBodyInner` (that would be a circular dependency).
+registerPaginationParser(PaginationResultType.MapDataTileKeys, (body, validated) =>
+    MapDataTileKeysResults.fromResponseBodyInner(body, validated),
+);

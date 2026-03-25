@@ -1,4 +1,4 @@
-import { Result, ResultType } from '../../results/result';
+import { registerResultParser, Result, ResultType } from '../../results/result';
 import { RoutesGeojson } from './routeGeojson';
 
 /**
@@ -17,3 +17,7 @@ export class RoutesGeojsonResult extends Result<RoutesGeojson> {
         return new RoutesGeojsonResult(parsed);
     }
 }
+
+// Side-effect registration so the base `Result` class does not import this subclass to route
+// `fromResponseBody` → `fromResult` (that would be a circular dependency).
+registerResultParser(ResultType.RoutesGeojson, (v) => RoutesGeojsonResult.fromResult(v));

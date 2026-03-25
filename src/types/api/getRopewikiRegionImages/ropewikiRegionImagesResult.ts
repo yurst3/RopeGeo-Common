@@ -4,6 +4,7 @@ import {
     CursorPaginationResults,
     type ValidatedCursorPaginationResponse,
     CursorPaginationResultType,
+    registerCursorPaginationParser,
 } from '../../results/cursorPaginationResults';
 
 /**
@@ -38,3 +39,10 @@ export class RopewikiRegionImagesResult extends CursorPaginationResults<Ropewiki
         return new RopewikiRegionImagesResult(results, nextCursor);
     }
 }
+
+// Side-effect registration so the base `CursorPaginationResults` class does not import this
+// subclass to route `fromResponseBody` (that would be a circular dependency).
+registerCursorPaginationParser(
+    CursorPaginationResultType.RopewikiRegionImages,
+    (validated) => RopewikiRegionImagesResult.fromResponseBody(validated),
+);

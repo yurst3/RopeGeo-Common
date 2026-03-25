@@ -17,6 +17,26 @@ export type ValidatedCursorPaginationResponse = {
     nextCursor: string | null;
 };
 
+type CursorPaginationParserFn = (
+    validated: ValidatedCursorPaginationResponse,
+) => CursorPaginationResults;
+
+const cursorPaginationParsers = new Map<
+    CursorPaginationResultType,
+    CursorPaginationParserFn
+>();
+
+/**
+ * Registers the parser for {@link CursorPaginationResults.fromResponseBody} for a given type.
+ * Call once per type from the corresponding result module at load time.
+ */
+export function registerCursorPaginationParser(
+    type: CursorPaginationResultType,
+    parse: CursorPaginationParserFn,
+): void {
+    cursorPaginationParsers.set(type, parse);
+}
+
 /**
  * Base type for cursor-paginated API results (results array + nextCursor + resultType).
  * fromResponseBody validates body (resultType, results, nextCursor) then delegates to
@@ -66,19 +86,12 @@ export abstract class CursorPaginationResults<R = unknown> {
             results: resultsRaw,
             nextCursor,
         };
-        switch (resultType as CursorPaginationResultType) {
-            case CursorPaginationResultType.Search: {
-                const { SearchResults } = require('../api/search/searchResults');
-                return SearchResults.fromResponseBody(validated);
-            }
-            case CursorPaginationResultType.RopewikiRegionPreviews: {
-                const { RopewikiRegionPreviewsResult } = require('../api/getRopewikiRegionPreviews/ropewikiRegionPreviewsResult');
-                return RopewikiRegionPreviewsResult.fromResponseBody(validated);
-            }
-            case CursorPaginationResultType.RopewikiRegionImages: {
-                const { RopewikiRegionImagesResult } = require('../api/getRopewikiRegionImages/ropewikiRegionImagesResult');
-                return RopewikiRegionImagesResult.fromResponseBody(validated);
-            }
+        const parser = cursorPaginationParsers.get(resultType as CursorPaginationResultType);
+        if (parser === undefined) {
+            throw new Error(
+                `No cursor pagination parser registered for resultType ${JSON.stringify(resultType)}`,
+            );
         }
+        return parser(validated);
     }
 }

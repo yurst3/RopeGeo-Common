@@ -1,3 +1,5 @@
+import './types/results/registerAllResultParsers';
+
 export { PageDataSource } from './types/pageDataSource';
 export { Difficulty, DifficultyRisk, DifficultyTechnical, DifficultyTime, DifficultyWater } from './types/difficulty';
 export { PermitStatus } from './types/permitStatus';
@@ -22,16 +24,18 @@ export type RopewikiImageView = import('./types/betaSections/betaSectionImage').
 export type RopewikiBetaSectionView = import('./types/betaSections/betaSection').BetaSection;
 export { Cursor, CursorType } from './types/cursors/cursor';
 export { CursorPaginationParams } from './types/params/cursorPaginationParams';
-export { Result, ResultType } from './types/results/result';
+export { Result, ResultType, registerResultParser } from './types/results/result';
 export {
     CursorPaginationResults,
     type ValidatedCursorPaginationResponse,
     CursorPaginationResultType,
+    registerCursorPaginationParser,
 } from './types/results/cursorPaginationResults';
 export {
     PaginationResults,
     type ValidatedPaginationResponse,
     PaginationResultType,
+    registerPaginationParser,
 } from './types/results/paginationResults';
 export { MapDataTileKeysResults } from './types/api/listMapDataTileKeys/mapDataTileKeysResults';
 export { SearchCursor } from './types/cursors/searchCursor';

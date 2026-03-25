@@ -4,6 +4,7 @@ import {
     CursorPaginationResults,
     type ValidatedCursorPaginationResponse,
     CursorPaginationResultType,
+    registerCursorPaginationParser,
 } from '../../results/cursorPaginationResults';
 
 export class SearchResults extends CursorPaginationResults<Preview> {
@@ -28,3 +29,9 @@ export class SearchResults extends CursorPaginationResults<Preview> {
         return new SearchResults(results, nextCursor);
     }
 }
+
+// Side-effect registration so the base `CursorPaginationResults` class does not import this
+// subclass to route `fromResponseBody` (that would be a circular dependency).
+registerCursorPaginationParser(CursorPaginationResultType.Search, (validated) =>
+    SearchResults.fromResponseBody(validated),
+);
