@@ -3,7 +3,10 @@ import { PermitStatus } from '../../permitStatus';
 import { BetaSection } from '../../betaSections/betaSection';
 import { BetaSectionImage } from '../../betaSections/betaSectionImage';
 import { MiniMap } from '../../minimap/miniMap';
+import { MiniMapType } from '../../minimap/miniMapType';
 import { PageMiniMap } from '../../minimap/pageMiniMap';
+import { PageDataSource } from '../../pageDataSource';
+import { PagePreview } from '../../previews/pagePreview';
 
 type MinMax = { min: number; max: number };
 
@@ -158,6 +161,31 @@ export class RopewikiPageView {
         }
         Object.setPrototypeOf(r, RopewikiPageView.prototype);
         return r as unknown as RopewikiPageView;
+    }
+
+    /**
+     * Maps this full page view to a PagePreview for persistence (saved pages).
+     * @param apiPageId Ropewiki page uuid from GET /ropewiki/page/{id}.
+     */
+    toPagePreview(apiPageId: string): PagePreview {
+        let mapData: string | null = null;
+        if (this.miniMap != null && this.miniMap.miniMapType === MiniMapType.TilesTemplate) {
+            mapData = (this.miniMap as PageMiniMap).layerId;
+        }
+        return new PagePreview(
+            apiPageId,
+            PageDataSource.Ropewiki,
+            this.bannerImage?.bannerUrl ?? null,
+            this.quality,
+            this.userVotes,
+            this.name,
+            this.regions.map((r) => r.name),
+            this.aka,
+            this.difficulty,
+            mapData,
+            this.url,
+            this.permit,
+        );
     }
 
     private static assertString(obj: Record<string, unknown>, key: string): void {
