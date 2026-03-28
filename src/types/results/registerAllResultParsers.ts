@@ -4,6 +4,7 @@
  * registration is guaranteed even when a bundler tree-shakes unused re-exports.
  */
 import '../api/getRopewikiPageView/ropewikiPageViewResult';
+import '../api/getRopewikiPageLinkPreview/ropewikiPageLinkPreviewResult';
 import '../api/getRopewikiRegionView/ropewikiRegionViewResult';
 import '../api/getRoutes/routesGeojsonResult';
 import '../api/getRoutePreview/routePreviewResult';

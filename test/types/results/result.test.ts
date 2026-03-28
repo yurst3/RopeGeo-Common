@@ -4,6 +4,8 @@ import { RopewikiPageViewResult } from '../../../src/types/api/getRopewikiPageVi
 import { RopewikiRegionViewResult } from '../../../src/types/api/getRopewikiRegionView/ropewikiRegionViewResult';
 import { RoutesGeojsonResult } from '../../../src/types/api/getRoutes/routesGeojsonResult';
 import { RoutePreviewResult } from '../../../src/types/api/getRoutePreview/routePreviewResult';
+import { RopewikiPageLinkPreviewResult } from '../../../src/types/api/getRopewikiPageLinkPreview/ropewikiPageLinkPreviewResult';
+import { LinkPreview } from '../../../src/types/linkPreview/linkPreview';
 import { RopewikiPageView } from '../../../src/types/api/getRopewikiPageView/ropewikiPageView';
 import { RopewikiRegionView } from '../../../src/types/api/getRopewikiRegionView/ropewikiRegionView';
 import { RoutesGeojson } from '../../../src/types/api/getRoutes/routeGeojson';
@@ -73,6 +75,14 @@ const validRoutesGeojsonResult = {
             properties: { id: 'id-1', name: 'Route One', type: RouteType.Canyon },
         },
     ],
+};
+
+const validLinkPreviewResult = {
+    title: 'T',
+    description: 'D',
+    image: null as null,
+    siteName: 'RopeGeo',
+    type: 'website',
 };
 
 const validPagePreviewItem = {
@@ -230,6 +240,20 @@ describe('Result', () => {
                 expect((parsed.result as PagePreview[])[0]).toBeInstanceOf(PagePreview);
                 expect((parsed.result as PagePreview[])[0].id).toBe('p1');
                 expect((parsed.result as PagePreview[])[0].title).toBe('Page 1');
+            });
+
+            it('delegates to RopewikiPageLinkPreviewResult when resultType is ropewikiPageLinkPreview', () => {
+                const body = {
+                    resultType: ResultType.RopewikiPageLinkPreview,
+                    result: validLinkPreviewResult,
+                };
+                const parsed = Result.fromResponseBody(body);
+                expect(parsed).toBeInstanceOf(RopewikiPageLinkPreviewResult);
+                expect(parsed.resultType).toBe(ResultType.RopewikiPageLinkPreview);
+                expect(parsed.result).toBeInstanceOf(LinkPreview);
+                expect((parsed.result as LinkPreview).title).toBe('T');
+                expect((parsed.result as LinkPreview).siteName).toBe('RopeGeo');
+                expect((parsed.result as LinkPreview).image).toBeNull();
             });
         });
     });
