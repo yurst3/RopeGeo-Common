@@ -2,7 +2,7 @@ import { BetaSectionImage } from '../betaSections/betaSectionImage';
 import { PagePreview } from '../previews/pagePreview';
 import { RouteType } from '../routes/route';
 import { RopewikiPageView } from '../api/getRopewikiPageView/ropewikiPageView';
-import { ImageVersions } from './imageVersions';
+import { ImageVersion, ImageVersions } from './imageVersions';
 
 const STORAGE_KEYS = ['preview', 'routeType', 'savedAt'] as const;
 
@@ -202,7 +202,7 @@ export class SavedPage {
         const out: Record<string, ImageVersions> = {};
         for (const [k, v] of Object.entries(raw)) {
             if (typeof v === 'string') {
-                out[k] = new ImageVersions(null, v, null);
+                out[k] = new ImageVersions({ [ImageVersion.banner]: v });
                 continue;
             }
             out[k] = ImageVersions.fromResult(v);
@@ -225,8 +225,14 @@ export class SavedPage {
         return BetaSectionImage.fromResult({
             order: img.order,
             id: img.id,
-            bannerUrl: iv.banner != null ? SavedPage.toDisplayUri(iv.banner) : img.bannerUrl,
-            fullUrl: iv.full != null ? SavedPage.toDisplayUri(iv.full) : img.fullUrl,
+            bannerUrl:
+                iv[ImageVersion.banner] != null
+                    ? SavedPage.toDisplayUri(iv[ImageVersion.banner]!)
+                    : img.bannerUrl,
+            fullUrl:
+                iv[ImageVersion.full] != null
+                    ? SavedPage.toDisplayUri(iv[ImageVersion.full]!)
+                    : img.fullUrl,
             linkUrl: img.linkUrl,
             caption: img.caption,
             latestRevisionDate: img.latestRevisionDate.toISOString(),

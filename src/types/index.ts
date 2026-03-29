@@ -57,5 +57,5 @@ export type { RopewikiRegionImageViewRow } from './api/getRopewikiRegionImages/r
 export { RopewikiRegionImagesParams } from './api/getRopewikiRegionImages/ropewikiRegionImagesParams';
 export { RopewikiRegionImagesResult } from './api/getRopewikiRegionImages/ropewikiRegionImagesResult';
 export { RoutePreviewResult } from './api/getRoutePreview/routePreviewResult';
-export { ImageVersions } from './mobile/imageVersions';
+export { ImageVersion, VERSION_FORMAT, ImageVersions } from './mobile/imageVersions';
 export { SavedPage } from './mobile/savedPage';
