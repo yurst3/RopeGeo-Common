@@ -1,7 +1,7 @@
 {
     "name": "ropegeo-common",
-    "version": "1.7.0",
-    "description": "Shared types and utilities for RopeGeo and WebScraper",
+    "version": "1.8.0",
+    "description": "Shared domain classes and helpers for RopeGeo and WebScraper",
     "license": "ISC",
     "repository": {
         "type": "git",
@@ -15,29 +15,13 @@
             "types": "./dist/index.d.ts",
             "default": "./dist/index.js"
         },
-        "./types": {
-            "types": "./dist/types/index.d.ts",
-            "default": "./dist/types/index.js"
+        "./classes": {
+            "types": "./dist/classes/index.d.ts",
+            "default": "./dist/classes/index.js"
         },
         "./helpers": {
             "types": "./dist/helpers/index.d.ts",
             "default": "./dist/helpers/index.js"
-        },
-        "./helpers/*": {
-            "types": "./dist/helpers/*.d.ts",
-            "default": "./dist/helpers/*.js"
-        },
-        "./helpers/s3/*": {
-            "types": "./dist/helpers/s3/*.d.ts",
-            "default": "./dist/helpers/s3/*.js"
-        },
-        "./helpers/sqs/*": {
-            "types": "./dist/helpers/sqs/*.d.ts",
-            "default": "./dist/helpers/sqs/*.js"
-        },
-        "./helpers/cloudfront/*": {
-            "types": "./dist/helpers/cloudfront/*.d.ts",
-            "default": "./dist/helpers/cloudfront/*.js"
         }
     },
     "scripts": {

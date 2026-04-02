@@ -1,0 +1,48 @@
+---
+description: How to document new public exports in ropegeo-common README tables
+globs: src/**/*.ts, src/classes/index.ts, src/helpers/index.ts, README.md
+alwaysApply: false
+---
+
+# Documenting ropegeo-common exports
+
+Public API surface is summarized in **README.md** as markdown tables—not a single TypeScript import example. When you add or remove exports, keep the README accurate.
+
+## Where exports live
+
+- **Classes** (domain models, parsers, enums, request params, etc.) — Re-exported from `src/classes/index.ts`. The package root `src/index.ts` re-exports `./classes`. Consumers should use `import { … } from 'ropegeo-common/classes'` and `import type { … } from 'ropegeo-common/classes'` for type-only symbols.
+- **Helpers** — Re-exported from `src/helpers/index.ts`. Consumers use `import { … } from 'ropegeo-common/helpers'` (and `import type { … }` for helper-only types).
+
+## Table format
+
+Group rows by **source folder** under `src/helpers/` or `src/classes/`. Each group has:
+
+1. A **heading** that names the folder (or a short description + path in parentheses), e.g. `### S3 helpers (\`src/helpers/s3/\`)`.
+2. A table with columns (order matters):
+
+**Helper tables** (`src/helpers/`): **Name** → **Description** → **Import**.
+
+**Class tables** (`src/classes/`): **Name** → **Base class** → **Description** → **Import**.
+
+| Column | Content |
+| --- | --- |
+| **Name** | Export name as used in code. |
+| **Base class** | (Classes only.) Direct superclass name, or `N/A` (enums, type-only aliases, functions, constants, registration helpers, standalone classes, abstract roots). |
+| **Description** | One concise sentence: what it is for, not implementation detail. |
+| **Import** | Full example import string (e.g. `import { getS3Object } from 'ropegeo-common/helpers'` or `import type { GetRopewikiPagePreviewRow } from 'ropegeo-common/classes'`). |
+
+## Rules for the Base class column
+
+- **N/A** — Enums, TypeScript-only types, functions, `const` values, `register*` functions, abstract classes that are the base of a family (e.g. `Difficulty`, `Result`, `Preview`, `MiniMap`, `Cursor`, `DifficultyParams`, `DifficultyFilterOptions`, `CursorPaginationParams`, `PaginationResults`, `CursorPaginationResults`).
+- **Superclass name** — Concrete subclasses (e.g. `AcaDifficulty` → `Difficulty`, `PagePreview` → `Preview`, `SearchParams` → `CursorPaginationParams`, `SearchResults` → `CursorPaginationResults`).
+
+## When to update README
+
+- Add a row when you add a new **public** export to `src/classes/index.ts` or `src/helpers/index.ts`.
+- Remove or edit rows when exports are removed, renamed, or deprecated (note deprecation in **Description** if the symbol remains).
+- Place the row in the table that matches the file’s folder (e.g. new class under `src/classes/api/foo/` goes in that API’s table). If you introduce a **new** folder, add a new section with a new table.
+- Do **not** list symbols that are only used internally (e.g. side-effect `register*Parsers.ts` files that are not re-exported).
+
+## Cross-reference
+
+See also **add-classes.mdc** for where to put new files and how `Result` / pagination bases work. After following that workflow, update the matching README table(s) here.
