@@ -286,7 +286,7 @@ Helper tables use columns **Name**, **Description**, **Import**. Class tables ad
 | --- | --- | --- |
 | `RopeGeoHttpRequest` | Single GET/POST wrapper; parses `Result.fromResponseBody`. | `import { RopeGeoHttpRequest, Method, Service } from 'ropegeo-common/components'` |
 | `RopeGeoCursorPaginationHttpRequest` | Cursor-paginated fetch with `loadMore`. | `import { RopeGeoCursorPaginationHttpRequest } from 'ropegeo-common/components'` |
-| `RopeGeoPaginationHttpRequest` | Page-based fetch; loads all pages and `mergePages` into one value. | `import { RopeGeoPaginationHttpRequest } from 'ropegeo-common/components'` |
+| `RopeGeoPaginationHttpRequest<T>` | Page-based fetch; each page validated with `PaginationResults.fromResponseBody`; concatenates `results` into `data` (`T[]` when complete, otherwise `null` with `errors`). | `import { RopeGeoPaginationHttpRequest } from 'ropegeo-common/components'` |
 
 ---
 

@@ -42,21 +42,34 @@ function getResponseBody(raw: unknown): unknown {
   return raw;
 }
 
+/**
+ * Concatenates each page's `results` in fetch order. Call only after every page was built via
+ * {@link PaginationResults.fromResponseBody}.
+ */
+function concatPaginationResultItems<T>(pages: PaginationResults[]): T[] {
+  const out: T[] = [];
+  for (const p of pages) {
+    out.push(...(p.results as T[]));
+  }
+  return out;
+}
+
 export type RopeGeoPaginationHttpRequestProps<T = unknown> = {
   service: Service;
   method?: (typeof Method)[keyof typeof Method];
   path: string;
   pathParams?: Record<string, string>;
   queryParams: PaginationParams;
-  /**
-   * Combines all successful page responses into one value. Not called until every page has been fetched.
-   */
-  mergePages: (pages: PaginationResults[]) => T;
   children: (args: {
     loading: boolean;
     received: number;
     total: number | null;
-    data: T | null;
+    /**
+     * Concatenated `results` from every page after each body was parsed with
+     * {@link PaginationResults.fromResponseBody}. `null` if any page fails HTTP, JSON parse, or validation.
+     */
+    data: T[] | null;
+    /** Set when `data` is `null` after a terminal failure; cleared only when all pages succeed. */
     errors: Error | null;
   }) => ReactNode;
 };
@@ -64,6 +77,9 @@ export type RopeGeoPaginationHttpRequestProps<T = unknown> = {
 /**
  * Fetches page 1, 2, … until all items for {@link queryParams} are loaded (same `limit` and filters,
  * advancing `page` via {@link PaginationParams.withPage}). The initial `page` on `queryParams` is ignored.
+ * Each response body is parsed with {@link PaginationResults.fromResponseBody} before continuing.
+ * When every page succeeds, `data` is the concatenation of each page's `results`; otherwise `data` is `null`
+ * and `errors` is set.
  */
 export function RopeGeoPaginationHttpRequest<T = unknown>({
   service,
@@ -71,13 +87,12 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
   path,
   pathParams,
   queryParams,
-  mergePages,
   children,
 }: RopeGeoPaginationHttpRequestProps<T>) {
   const [loading, setLoading] = useState(true);
   const [received, setReceived] = useState(0);
   const [total, setTotal] = useState<number | null>(null);
-  const [data, setData] = useState<T | null>(null);
+  const [data, setData] = useState<T[] | null>(null);
   const [errors, setErrors] = useState<Error | null>(null);
 
   const pathParamsKey = JSON.stringify(pathParams ?? null);
@@ -180,7 +195,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
         }
 
         if (cancelled) return;
-        setData(mergePages(pages));
+        setData(concatPaginationResultItems<T>(pages));
         setErrors(null);
       } catch (err) {
         if (cancelled) return;
@@ -197,7 +212,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
     return () => {
       cancelled = true;
     };
-  }, [service, method, path, pathParamsKey, queryParamsKey, mergePages, queryParams]);
+  }, [service, method, path, pathParamsKey, queryParamsKey, queryParams]);
 
   return (
     <>
