@@ -65,7 +65,8 @@ export { GetRopewikiPagePreviewRow, PagePreview } from './previews/pagePreview';
 export { RegionPreview } from './previews/regionPreview';
 export { Route, RouteGeoJsonFeature, RouteType } from './routes/route';
 export { RoutesGeojson } from './api/getRoutes/routeGeojson';
-export { RoutesGeojsonResult } from './api/getRoutes/routesGeojsonResult';
+export { RouteResult } from './api/getRoutes/routeResult';
+export { RopewikiRegionBoundsResult } from './api/getRopewikiRegionBounds/ropewikiRegionBoundsResult';
 export { RoutesParams } from './requestParams/routesParams';
 export { BetaSectionImage } from './betaSections/betaSectionImage';
 export { DownloadBytes } from './betaSections/downloadBytes';
@@ -84,6 +85,7 @@ export type RopewikiImageView = import('./betaSections/betaSectionImage').BetaSe
 export type RopewikiBetaSectionView = import('./betaSections/betaSection').BetaSection;
 export { Cursor, CursorType } from './cursors/cursor';
 export { CursorPaginationParams } from './params/cursorPaginationParams';
+export { PaginationParams } from './params/paginationParams';
 export { Result, ResultType, registerResultParser } from './results/result';
 export {
     CursorPaginationResults,

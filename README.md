@@ -103,7 +103,7 @@ Helper tables use columns **Name**, **Description**, **Import**. Class tables ad
 | `Q_ACA_WATER` | N/A | Query key for ACA water rating list. | `import { Q_ACA_WATER } from 'ropegeo-common/classes'` |
 | `Q_ACA_TIME` | N/A | Query key for ACA time rating list. | `import { Q_ACA_TIME } from 'ropegeo-common/classes'` |
 | `Q_ACA_RISK` | N/A | Query key for ACA risk rating list. | `import { Q_ACA_RISK } from 'ropegeo-common/classes'` |
-| `RoutesParams` | N/A | Validated GET /routes params (region, source, route type, difficulty). | `import { RoutesParams } from 'ropegeo-common/classes'` |
+| `RoutesParams` | `PaginationParams` | Validated GET /routes params (region, source, route type, difficulty, `limit`, `page`). | `import { RoutesParams } from 'ropegeo-common/classes'` |
 | `SearchParams` | `CursorPaginationParams` | Validated GET /search params including cursor pagination and difficulty. | `import { SearchParams } from 'ropegeo-common/classes'` |
 | `SearchOrder` | N/A | Search sort order (`similarity` \| `quality` \| `distance`). | `import type { SearchOrder } from 'ropegeo-common/classes'` |
 | `SearchParamsPosition` | N/A | `{ lat, lon }` for distance search. | `import type { SearchParamsPosition } from 'ropegeo-common/classes'` |
@@ -147,8 +147,8 @@ Helper tables use columns **Name**, **Description**, **Import**. Class tables ad
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
-| `RoutesGeojson` | N/A | FeatureCollection wrapper; `fromRoutes` builder. | `import { RoutesGeojson } from 'ropegeo-common/classes'` |
-| `RoutesGeojsonResult` | `Result` | API wrapper for GET routes GeoJSON response. | `import { RoutesGeojsonResult } from 'ropegeo-common/classes'` |
+| `RoutesGeojson` | N/A | GeoJSON FeatureCollection of routes (features only; use region bounds API for bbox). | `import { RoutesGeojson } from 'ropegeo-common/classes'` |
+| `RouteResult` | `PaginationResults` | Page of GET /routes (`RouteGeoJsonFeature[]`, `total`, `page`, `resultType` `route`). | `import { RouteResult } from 'ropegeo-common/classes'` |
 
 ### Route preview API (`src/classes/api/getRoutePreview/`)
 
@@ -187,6 +187,12 @@ Helper tables use columns **Name**, **Description**, **Import**. Class tables ad
 | --- | --- | --- | --- |
 | `RopewikiRegionView` | N/A | Region detail view payload. | `import { RopewikiRegionView } from 'ropegeo-common/classes'` |
 | `RopewikiRegionViewResult` | `Result` | API result wrapping region view. | `import { RopewikiRegionViewResult } from 'ropegeo-common/classes'` |
+
+### Ropewiki region bounds API (`src/classes/api/getRopewikiRegionBounds/`)
+
+| Name | Base class | Description | Import |
+| --- | --- | --- | --- |
+| `RopewikiRegionBoundsResult` | `Result` | GET /ropewiki/region/{id}/bounds (`Bounds` over route coordinates). | `import { RopewikiRegionBoundsResult } from 'ropegeo-common/classes'` |
 
 ### Ropewiki region previews API (`src/classes/api/getRopewikiRegionPreviews/`)
 
@@ -247,6 +253,7 @@ Helper tables use columns **Name**, **Description**, **Import**. Class tables ad
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
 | `CursorPaginationParams` | N/A | Abstract limit + optional encoded cursor for GET APIs. | `import { CursorPaginationParams } from 'ropegeo-common/classes'` |
+| `PaginationParams` | N/A | Abstract `limit` + 1-based `page` for page-based GET APIs. | `import { PaginationParams } from 'ropegeo-common/classes'` |
 
 ### Result wrappers (`src/classes/results/`)
 
@@ -272,6 +279,14 @@ Helper tables use columns **Name**, **Description**, **Import**. Class tables ad
 | `VERSION_FORMAT` | N/A | Format constant for version strings. | `import { VERSION_FORMAT } from 'ropegeo-common/classes'` |
 | `ImageVersions` | N/A | Map of image URLs by `ImageVersion`; `fromResult` for persisted JSON. | `import { ImageVersions } from 'ropegeo-common/classes'` |
 | `SavedPage` | N/A | Offline saved page record (`PagePreview` + metadata). | `import { SavedPage } from 'ropegeo-common/classes'` |
+
+### React components (`src/components/`)
+
+| Name | Description | Import |
+| --- | --- | --- |
+| `RopeGeoHttpRequest` | Single GET/POST wrapper; parses `Result.fromResponseBody`. | `import { RopeGeoHttpRequest, Method, Service } from 'ropegeo-common/components'` |
+| `RopeGeoCursorPaginationHttpRequest` | Cursor-paginated fetch with `loadMore`. | `import { RopeGeoCursorPaginationHttpRequest } from 'ropegeo-common/components'` |
+| `RopeGeoPaginationHttpRequest` | Page-based fetch; loads all pages and `mergePages` into one value. | `import { RopeGeoPaginationHttpRequest } from 'ropegeo-common/components'` |
 
 ---
 

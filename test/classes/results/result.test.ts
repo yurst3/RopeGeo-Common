@@ -2,15 +2,14 @@ import { describe, it, expect } from '@jest/globals';
 import { Result, ResultType } from '../../../src/classes/results/result';
 import { RopewikiPageViewResult } from '../../../src/classes/api/getRopewikiPageView/ropewikiPageViewResult';
 import { RopewikiRegionViewResult } from '../../../src/classes/api/getRopewikiRegionView/ropewikiRegionViewResult';
-import { RoutesGeojsonResult } from '../../../src/classes/api/getRoutes/routesGeojsonResult';
+import { RopewikiRegionBoundsResult } from '../../../src/classes/api/getRopewikiRegionBounds/ropewikiRegionBoundsResult';
 import { RoutePreviewResult } from '../../../src/classes/api/getRoutePreview/routePreviewResult';
 import { RopewikiPageLinkPreviewResult } from '../../../src/classes/api/getRopewikiPageLinkPreview/ropewikiPageLinkPreviewResult';
 import { LinkPreview } from '../../../src/classes/linkPreview/linkPreview';
 import { RopewikiPageView } from '../../../src/classes/api/getRopewikiPageView/ropewikiPageView';
 import { RopewikiRegionView } from '../../../src/classes/api/getRopewikiRegionView/ropewikiRegionView';
-import { RoutesGeojson } from '../../../src/classes/api/getRoutes/routeGeojson';
+import { Bounds } from '../../../src/classes/minimap/bounds';
 import { PagePreview } from '../../../src/classes/previews/pagePreview';
-import { RouteType } from '../../../src/classes/routes/route';
 import { MiniMapType } from '../../../src/classes/minimap/miniMapType';
 
 const validRopewikiPageViewResult = {
@@ -66,15 +65,11 @@ const validRopewikiRegionViewResult = {
     },
 };
 
-const validRoutesGeojsonResult = {
-    type: 'FeatureCollection' as const,
-    features: [
-        {
-            type: 'Feature' as const,
-            geometry: { type: 'Point' as const, coordinates: [-111.5, 40.1] as [number, number] },
-            properties: { id: 'id-1', name: 'Route One', type: RouteType.Canyon },
-        },
-    ],
+const validRopewikiRegionBounds = {
+    north: 41,
+    south: 40,
+    east: -110,
+    west: -112,
 };
 
 const validLinkPreviewResult = {
@@ -134,7 +129,7 @@ describe('Result', () => {
             it('throws if resultType is missing', () => {
                 expect(() =>
                     Result.fromResponseBody({
-                        result: validRoutesGeojsonResult,
+                        result: validRopewikiRegionBounds,
                     }),
                 ).toThrow('Response body must have resultType');
             });
@@ -143,19 +138,19 @@ describe('Result', () => {
                 expect(() =>
                     Result.fromResponseBody({
                         resultType: 123,
-                        result: validRoutesGeojsonResult,
+                        result: validRopewikiRegionBounds,
                     }),
                 ).toThrow(/resultType must be one of/);
                 expect(() =>
                     Result.fromResponseBody({
                         resultType: true,
-                        result: validRoutesGeojsonResult,
+                        result: validRopewikiRegionBounds,
                     }),
                 ).toThrow(/resultType must be one of/);
                 expect(() =>
                     Result.fromResponseBody({
                         resultType: {},
-                        result: validRoutesGeojsonResult,
+                        result: validRopewikiRegionBounds,
                     }),
                 ).toThrow(/resultType must be one of/);
             });
@@ -164,13 +159,13 @@ describe('Result', () => {
                 expect(() =>
                     Result.fromResponseBody({
                         resultType: 'other',
-                        result: validRoutesGeojsonResult,
+                        result: validRopewikiRegionBounds,
                     }),
                 ).toThrow(/resultType must be one of/);
                 expect(() =>
                     Result.fromResponseBody({
                         resultType: '',
-                        result: validRoutesGeojsonResult,
+                        result: validRopewikiRegionBounds,
                     }),
                 ).toThrow(/resultType must be one of/);
             });
@@ -178,7 +173,7 @@ describe('Result', () => {
             it('throws if result is missing', () => {
                 expect(() =>
                     Result.fromResponseBody({
-                        resultType: ResultType.RoutesGeojson,
+                        resultType: ResultType.RopewikiRegionBounds,
                     }),
                 ).toThrow('Response body must have result');
             });
@@ -213,18 +208,16 @@ describe('Result', () => {
                 );
             });
 
-            it('delegates to RoutesGeojsonResult when resultType is routesGeojson', () => {
+            it('delegates to RopewikiRegionBoundsResult when resultType is ropewikiRegionBounds', () => {
                 const body = {
-                    resultType: ResultType.RoutesGeojson,
-                    result: validRoutesGeojsonResult,
+                    resultType: ResultType.RopewikiRegionBounds,
+                    result: validRopewikiRegionBounds,
                 };
                 const parsed = Result.fromResponseBody(body);
-                expect(parsed).toBeInstanceOf(RoutesGeojsonResult);
-                expect(parsed.resultType).toBe(ResultType.RoutesGeojson);
-                expect(parsed.result).toBeInstanceOf(RoutesGeojson);
-                expect((parsed.result as RoutesGeojson).type).toBe('FeatureCollection');
-                expect((parsed.result as RoutesGeojson).features).toHaveLength(1);
-                expect((parsed.result as RoutesGeojson).features[0].properties.id).toBe('id-1');
+                expect(parsed).toBeInstanceOf(RopewikiRegionBoundsResult);
+                expect(parsed.resultType).toBe(ResultType.RopewikiRegionBounds);
+                expect(parsed.result).toBeInstanceOf(Bounds);
+                expect((parsed.result as Bounds).north).toBe(41);
             });
 
             it('delegates to RoutePreviewResult when resultType is routePreview', () => {

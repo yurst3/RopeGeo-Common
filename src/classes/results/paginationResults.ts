@@ -4,6 +4,7 @@
  */
 export enum PaginationResultType {
     MapDataTileKeys = 'mapDataTileKeys',
+    Route = 'route',
 }
 
 /**

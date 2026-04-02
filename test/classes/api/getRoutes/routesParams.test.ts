@@ -1,6 +1,7 @@
 import { describe, it, expect } from '@jest/globals';
 import { PageDataSource } from '../../../../src/classes/pageDataSource';
 import { RouteType } from '../../../../src/classes/routes/routeType';
+import { PaginationParams } from '../../../../src/classes/params/paginationParams';
 import { RoutesParams } from '../../../../src/classes/requestParams/routesParams';
 
 const rid = 'c3d4e5f6-a7b8-9012-cdef-123456789012';
@@ -30,6 +31,24 @@ describe('RoutesParams', () => {
         it('accepts global (no region)', () => {
             const p = new RoutesParams({ region: null });
             expect(p.region).toBeNull();
+            expect(p.limit).toBe(PaginationParams.DEFAULT_LIMIT);
+            expect(p.page).toBe(PaginationParams.DEFAULT_PAGE);
+        });
+
+        it('accepts explicit limit and page', () => {
+            const p = new RoutesParams({ region: null, limit: 100, page: 2 });
+            expect(p.limit).toBe(100);
+            expect(p.page).toBe(2);
+        });
+
+        it('throws when limit exceeds MAX_LIMIT', () => {
+            expect(
+                () =>
+                    new RoutesParams({
+                        region: null,
+                        limit: PaginationParams.MAX_LIMIT + 1,
+                    }),
+            ).toThrow(/limit must not exceed/);
         });
 
         it('accepts routeType and difficulty null', () => {
@@ -53,19 +72,22 @@ describe('RoutesParams', () => {
     });
 
     describe('toQueryString', () => {
-        it('returns empty string when global and no route-type/difficulty', () => {
+        it('includes limit and page when global and no route-type/difficulty', () => {
             const p = new RoutesParams({ region: null });
-            expect(p.toQueryString()).toBe('');
+            const params = new URLSearchParams(p.toQueryString());
+            expect(params.get('limit')).toBe(String(PaginationParams.DEFAULT_LIMIT));
+            expect(params.get('page')).toBe(String(PaginationParams.DEFAULT_PAGE));
         });
 
         it('encodes region without source when all sources', () => {
             const p = new RoutesParams({
                 region: { id: rid, source: null },
             });
-            const q = p.toQueryString();
-            const params = new URLSearchParams(q);
+            const params = new URLSearchParams(p.toQueryString());
             expect(params.get('region')).toBe(rid);
             expect(params.has('source')).toBe(false);
+            expect(params.get('limit')).toBe(String(PaginationParams.DEFAULT_LIMIT));
+            expect(params.get('page')).toBe(String(PaginationParams.DEFAULT_PAGE));
         });
 
         it('encodes source pipe-list when set', () => {
@@ -129,6 +151,36 @@ describe('RoutesParams', () => {
             expect(p.routeType).toBe(RouteType.Canyon);
             expect(p.difficulty).not.toBeNull();
             expect(p.difficulty!.isActive()).toBe(true);
+        });
+
+        it('parses limit and page from query', () => {
+            const p = RoutesParams.fromQueryStringParams({
+                region: rid,
+                limit: '50',
+                page: '3',
+            });
+            expect(p.limit).toBe(50);
+            expect(p.page).toBe(3);
+        });
+
+        it('throws when limit is not a positive integer', () => {
+            expect(() =>
+                RoutesParams.fromQueryStringParams({ region: rid, limit: '0' }),
+            ).toThrow(/limit/);
+        });
+    });
+
+    describe('withPage', () => {
+        it('returns new params with same filters and new page', () => {
+            const p = new RoutesParams({
+                region: { id: rid, source: null },
+                limit: 100,
+                page: 1,
+            });
+            const p2 = p.withPage(4);
+            expect(p2.page).toBe(4);
+            expect(p2.limit).toBe(100);
+            expect(p2.region).toEqual(p.region);
         });
     });
 

@@ -1,6 +1,6 @@
 {
     "name": "ropegeo-common",
-    "version": "1.8.1",
+    "version": "1.9.0",
     "description": "Shared domain classes and helpers for RopeGeo and WebScraper",
     "license": "ISC",
     "repository": {
@@ -22,6 +22,10 @@
         "./helpers": {
             "types": "./dist/helpers/index.d.ts",
             "default": "./dist/helpers/index.js"
+        },
+        "./components": {
+            "types": "./dist/components/index.d.ts",
+            "default": "./dist/components/index.js"
         }
     },
     "scripts": {
@@ -32,6 +36,7 @@
         "@aws-sdk/client-cloudfront": "^3.970.0",
         "@aws-sdk/client-s3": "^3.970.0",
         "@aws-sdk/client-sqs": "^3.970.0",
+        "react": "^18.0.0 || ^19.0.0",
         "undici": "^7.0.0"
     },
     "devDependencies": {
@@ -40,7 +45,9 @@
         "@aws-sdk/client-sqs": "^3.971.0",
         "@types/jest": "^29.5.14",
         "@types/node": "^22.10.0",
+        "@types/react": "^19.0.0",
         "jest": "^30.2.0",
+        "react": "^19.1.0",
         "ts-jest": "^29.2.5",
         "typescript": "^5.9.3",
         "undici": "^7.11.0"

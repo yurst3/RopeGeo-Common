@@ -6,7 +6,8 @@
 import '../api/getRopewikiPageView/ropewikiPageViewResult';
 import '../api/getRopewikiPageLinkPreview/ropewikiPageLinkPreviewResult';
 import '../api/getRopewikiRegionView/ropewikiRegionViewResult';
-import '../api/getRoutes/routesGeojsonResult';
+import '../api/getRoutes/routeResult';
+import '../api/getRopewikiRegionBounds/ropewikiRegionBoundsResult';
 import '../api/getRoutePreview/routePreviewResult';
 import '../api/search/searchResults';
 import '../api/getRopewikiRegionPreviews/ropewikiRegionPreviewsResult';

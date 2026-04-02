@@ -1,3 +1,4 @@
+import { PaginationParams } from '../params/paginationParams';
 import { PageDataSource } from '../pageDataSource';
 import { RouteType } from '../routes/routeType';
 import './registerDifficultyParamsParsers';
@@ -10,8 +11,9 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
  * Validated params for getRoutes (GET /routes).
  * Global request: no `region` query param. Region-scoped: `region` id required; optional `source`
  * pipe-list (omit or empty = all sources). `source` must not appear without `region`.
+ * Includes page-based `limit` and `page` (defaults {@link PaginationParams.DEFAULT_LIMIT} / {@link PaginationParams.DEFAULT_PAGE}).
  */
-export class RoutesParams {
+export class RoutesParams extends PaginationParams {
     /**
      * Null when not region-scoped. When set, `source` null or empty list means all sources
      * for that region.
@@ -24,7 +26,12 @@ export class RoutesParams {
         region: { id: string; source: PageDataSource[] | null } | null;
         routeType?: RouteType | null;
         difficulty?: DifficultyParams | null;
+        limit?: number;
+        page?: number;
     }) {
+        const limit = options.limit ?? PaginationParams.DEFAULT_LIMIT;
+        const page = options.page ?? PaginationParams.DEFAULT_PAGE;
+
         const routeType = options.routeType ?? null;
         if (routeType !== null && !Object.values(RouteType).includes(routeType)) {
             throw new Error(
@@ -37,8 +44,9 @@ export class RoutesParams {
             diffRaw !== null && diffRaw.isActive() ? diffRaw : null;
 
         const reg = options.region;
+        let regionNorm: { id: string; source: PageDataSource[] | null } | null;
         if (reg === null) {
-            this.region = null;
+            regionNorm = null;
         } else {
             const id = reg.id.trim();
             if (id === '') {
@@ -48,11 +56,23 @@ export class RoutesParams {
                 throw new Error('Query parameter "region" must be a valid UUID');
             }
             const src = RoutesParams.normalizeSourceList(reg.source);
-            this.region = { id, source: src };
+            regionNorm = { id, source: src };
         }
 
+        super(limit, page);
+        this.region = regionNorm;
         this.routeType = routeType;
         this.difficulty = diff;
+    }
+
+    withPage(page: number): RoutesParams {
+        return new RoutesParams({
+            region: this.region,
+            routeType: this.routeType,
+            difficulty: this.difficulty,
+            limit: this.limit,
+            page,
+        });
     }
 
     /** Null = all sources; non-empty = allow-list. */
@@ -71,7 +91,7 @@ export class RoutesParams {
     }
 
     toQueryString(): string {
-        const p = new URLSearchParams();
+        const p = new URLSearchParams(super.toQueryString());
         if (this.region !== null) {
             p.set('region', this.region.id);
             if (this.region.source != null && this.region.source.length > 0) {
@@ -88,6 +108,8 @@ export class RoutesParams {
     static fromQueryStringParams(
         q: Record<string, string | undefined>,
     ): RoutesParams {
+        const limit = RoutesParams.parseLimitQuery(q);
+        const page = RoutesParams.parsePageQuery(q);
         const regionRaw = (q.region ?? q.Region ?? '').trim();
         const sourceRaw = (q.source ?? q.Source ?? '').trim();
         const routeTypeStr = (q['route-type'] ?? q['Route-Type'] ?? '').trim();
@@ -109,6 +131,8 @@ export class RoutesParams {
                 region: null,
                 routeType,
                 difficulty,
+                limit,
+                page,
             });
         }
 
@@ -120,7 +144,38 @@ export class RoutesParams {
             region: { id: regionRaw, source: sources },
             routeType,
             difficulty,
+            limit,
+            page,
         });
+    }
+
+    private static parseLimitQuery(q: Record<string, string | undefined>): number {
+        const raw = (q.limit ?? q.Limit ?? '').trim();
+        if (raw === '') {
+            return PaginationParams.DEFAULT_LIMIT;
+        }
+        const n = Number(raw);
+        if (!Number.isInteger(n) || n < 1) {
+            throw new Error('Query parameter "limit" must be a positive integer');
+        }
+        if (n > PaginationParams.MAX_LIMIT) {
+            throw new Error(
+                `Query parameter "limit" must not exceed ${PaginationParams.MAX_LIMIT}`,
+            );
+        }
+        return n;
+    }
+
+    private static parsePageQuery(q: Record<string, string | undefined>): number {
+        const raw = (q.page ?? q.Page ?? '').trim();
+        if (raw === '') {
+            return PaginationParams.DEFAULT_PAGE;
+        }
+        const n = Number(raw);
+        if (!Number.isInteger(n) || n < 1) {
+            throw new Error('Query parameter "page" must be a positive integer');
+        }
+        return n;
     }
 
     private static normalizeDifficulty(
@@ -166,6 +221,7 @@ export class RoutesParams {
             throw new Error('RoutesParams result must be an object');
         }
         const r = result as Record<string, unknown>;
+        const { limit, page } = RoutesParams.paginationFromResult(r);
         const raw = r.region ?? r.Region;
 
         if (typeof raw === 'string') {
@@ -184,7 +240,7 @@ export class RoutesParams {
             const difficulty = RoutesParams.normalizeDifficulty(
                 RoutesParams.optionalDifficultyFromResult(r),
             );
-            return new RoutesParams({ region: null, routeType, difficulty });
+            return new RoutesParams({ region: null, routeType, difficulty, limit, page });
         }
 
         if (typeof raw !== 'object') {
@@ -233,7 +289,49 @@ export class RoutesParams {
             },
             routeType,
             difficulty,
+            limit,
+            page,
         });
+    }
+
+    private static paginationFromResult(r: Record<string, unknown>): {
+        limit: number;
+        page: number;
+    } {
+        const limit = RoutesParams.optionalPositiveInt(
+            r.limit ?? r.Limit,
+            'limit',
+            PaginationParams.DEFAULT_LIMIT,
+        );
+        const page = RoutesParams.optionalPositiveInt(
+            r.page ?? r.Page,
+            'page',
+            PaginationParams.DEFAULT_PAGE,
+        );
+        PaginationParams.assertValidLimitPage(limit, page);
+        return { limit, page };
+    }
+
+    private static optionalPositiveInt(
+        v: unknown,
+        key: string,
+        defaultVal: number,
+    ): number {
+        if (v === undefined || v === null) {
+            return defaultVal;
+        }
+        if (typeof v !== 'number' || !Number.isInteger(v)) {
+            throw new Error(`RoutesParams.${key} must be an integer when set`);
+        }
+        if (v < 1) {
+            throw new Error(`RoutesParams.${key} must be a positive integer when set`);
+        }
+        if (key === 'limit' && v > PaginationParams.MAX_LIMIT) {
+            throw new Error(
+                `RoutesParams.limit must not exceed ${PaginationParams.MAX_LIMIT}`,
+            );
+        }
+        return v;
     }
 
     private static optionalRouteTypeFromResult(
