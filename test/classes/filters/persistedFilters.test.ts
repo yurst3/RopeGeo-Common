@@ -255,7 +255,20 @@ describe('SearchFilter', () => {
         expect(sp.difficulty!.isActive()).toBe(true);
     });
 
-    it('fromJSON restores fields', () => {
+    it('toSearchParams passes live currentPosition (not stored on filter)', () => {
+        const f = new SearchFilter(null, null);
+        f.setOrder('distance');
+        f.setIncludeRegions(false);
+        f.setIncludeAka(false);
+        const sp = f.toSearchParams({
+            name: '',
+            limit: 10,
+            currentPosition: { lat: 40.1, lon: -111.2 },
+        });
+        expect(sp.currentPosition).toEqual({ lat: 40.1, lon: -111.2 });
+    });
+
+    it('fromJSON restores persisted fields without position', () => {
         const f = new SearchFilter({ lat: 10, lon: -20 }, null);
         f.setOrder('quality');
         f.setSimilarityThreshold(0.25);
@@ -264,7 +277,22 @@ describe('SearchFilter', () => {
         expect(again.order).toBe('quality');
         expect(again.similarityThreshold).toBe(0.25);
         expect(again.source).toEqual([PageDataSource.Ropewiki]);
-        expect(again.currentPosition).toEqual({ lat: 10, lon: -20 });
+        expect(f.toJSON()).not.toHaveProperty('currentPosition');
+    });
+
+    it('fromJSON ignores legacy currentPosition key', () => {
+        const again = SearchFilter.fromJSON({
+            order: 'distance',
+            includePages: true,
+            includeRegions: false,
+            includeAka: false,
+            similarityThreshold: 0.5,
+            currentPosition: { lat: 99, lon: -99 },
+            source: null,
+            difficultyOptions: null,
+        });
+        expect(again.order).toBe('distance');
+        expect(again.toJSON()).not.toHaveProperty('currentPosition');
     });
 
     it('fromJsonString throws on bad JSON', () => {
@@ -318,14 +346,13 @@ describe('SavedFilters', () => {
 describe('SavedPagesFilter', () => {
     it('defaultFilter matches documented defaults', () => {
         const d = SavedPagesFilter.defaultFilter();
-        expect(d.name).toBeNull();
         expect(d.includeAka).toBe(true);
         expect(d.order).toBe('newest');
         expect(d.difficultyOptions).toBeNull();
     });
 
     it('fromJSON and toJSON round-trip', () => {
-        const f = new SavedPagesFilter('hello', false, 'oldest', null);
+        const f = new SavedPagesFilter(false, 'oldest', null);
         const again = SavedPagesFilter.fromJSON(f.toJSON());
         expect(again.toJSON()).toEqual(f.toJSON());
     });
@@ -336,11 +363,15 @@ describe('SavedPagesFilter', () => {
         ).toThrow(/Invalid SavedPagesFilter.order/);
     });
 
-    it('setName trims and clears empty', () => {
-        const f = new SavedPagesFilter();
-        f.setName('  x  ');
-        expect(f.name).toBe('x');
-        f.setName('   ');
-        expect(f.name).toBeNull();
+    it('fromJSON ignores legacy name key', () => {
+        const again = SavedPagesFilter.fromJSON({
+            name: 'stored-title',
+            includeAka: false,
+            order: 'oldest',
+            difficultyOptions: null,
+        });
+        expect(again.includeAka).toBe(false);
+        expect(again.order).toBe('oldest');
+        expect(again.toJSON()).not.toHaveProperty('name');
     });
 });

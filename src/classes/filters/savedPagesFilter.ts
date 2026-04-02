@@ -5,32 +5,25 @@ export type SavedPagesOrder = 'newest' | 'oldest';
 
 /**
  * Client-side filter for saved pages list (no `/search` API).
+ * Name/title matching is live UI state only and is not persisted in {@link SavedFilters}.
  */
 export class SavedPagesFilter {
-    name: string | null;
     includeAka: boolean;
     order: SavedPagesOrder;
     difficultyOptions: DifficultyFilterOptions | null;
 
     constructor(
-        name: string | null = null,
         includeAka = true,
         order: SavedPagesOrder = 'newest',
         difficultyOptions: DifficultyFilterOptions | null = null,
     ) {
-        this.name = name;
         this.includeAka = includeAka;
         this.order = order;
         this.difficultyOptions = difficultyOptions;
     }
 
     static defaultFilter(): SavedPagesFilter {
-        return new SavedPagesFilter(null, true, 'newest', null);
-    }
-
-    setName(v: string | null): void {
-        this.name =
-            v === null || v === undefined || v.trim() === '' ? null : v.trim();
+        return new SavedPagesFilter(true, 'newest', null);
     }
 
     setIncludeAka(v: boolean): void {
@@ -47,7 +40,6 @@ export class SavedPagesFilter {
 
     toJSON(): Record<string, unknown> {
         return {
-            name: this.name,
             includeAka: this.includeAka,
             order: this.order,
             difficultyOptions:
@@ -78,12 +70,6 @@ export class SavedPagesFilter {
             throw new Error('SavedPagesFilter must be a JSON object');
         }
         const o = parsed as Record<string, unknown>;
-        const name =
-            o.name === null || o.name === undefined
-                ? null
-                : String(o.name).trim() === ''
-                  ? null
-                  : String(o.name).trim();
         const includeAka =
             o.includeAka === undefined ? true : Boolean(o.includeAka);
         const order = SavedPagesFilter.parseOrder(o.order);
@@ -91,7 +77,7 @@ export class SavedPagesFilter {
         if (o.difficultyOptions != null && typeof o.difficultyOptions === 'object') {
             difficultyOptions = DifficultyFilterOptions.fromResult(o.difficultyOptions);
         }
-        return new SavedPagesFilter(name, includeAka, order, difficultyOptions);
+        return new SavedPagesFilter(includeAka, order, difficultyOptions);
     }
 
     private static parseOrder(v: unknown): SavedPagesOrder {

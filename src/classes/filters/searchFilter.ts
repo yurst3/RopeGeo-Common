@@ -8,8 +8,10 @@ import './registerDifficultyFilterOptionsParsers';
 import { DifficultyFilterOptions } from './difficultyFilterOptions';
 
 /**
- * Mobile search filter persisted in {@link SavedFilters}. Defaults depend on name + location
- * when constructed for a fresh slot; hydrated instances keep stored values.
+ * Mobile search filter persisted in {@link SavedFilters}.
+ * Default order depends on live name + position passed to the constructor (ephemeral only).
+ * Persisted JSON does not include position; pass live {@link SearchParamsPosition} into
+ * {@link SearchFilter.toSearchParams} when building requests.
  */
 export class SearchFilter {
     order: SearchOrder;
@@ -17,13 +19,12 @@ export class SearchFilter {
     includeRegions: boolean;
     includeAka: boolean;
     similarityThreshold: number;
-    currentPosition: SearchParamsPosition | null;
     /** Null or empty = all sources */
     source: PageDataSource[] | null;
     difficultyOptions: DifficultyFilterOptions | null;
 
     constructor(
-        currentPosition: SearchParamsPosition | null | undefined = null,
+        livePosition: SearchParamsPosition | null | undefined = null,
         name: string | null | undefined = null,
     ) {
         const nameEmpty =
@@ -31,11 +32,11 @@ export class SearchFilter {
             name === undefined ||
             name.trim() === '';
         const hasPos =
-            currentPosition != null &&
-            typeof currentPosition.lat === 'number' &&
-            typeof currentPosition.lon === 'number' &&
-            !Number.isNaN(currentPosition.lat) &&
-            !Number.isNaN(currentPosition.lon);
+            livePosition != null &&
+            typeof livePosition.lat === 'number' &&
+            typeof livePosition.lon === 'number' &&
+            !Number.isNaN(livePosition.lat) &&
+            !Number.isNaN(livePosition.lon);
 
         if (!nameEmpty) {
             this.order = 'similarity';
@@ -55,9 +56,6 @@ export class SearchFilter {
         }
 
         this.similarityThreshold = 0.5;
-        this.currentPosition = hasPos
-            ? { lat: currentPosition!.lat, lon: currentPosition!.lon }
-            : null;
         this.source = null;
         this.difficultyOptions = null;
     }
@@ -90,10 +88,6 @@ export class SearchFilter {
         this.similarityThreshold = v;
     }
 
-    setCurrentPosition(pos: SearchParamsPosition | null): void {
-        this.currentPosition = pos;
-    }
-
     setSource(source: PageDataSource[] | null): void {
         this.source =
             source == null || source.length === 0 ? null : [...source];
@@ -110,6 +104,8 @@ export class SearchFilter {
         name: string;
         limit: number;
         cursorEncoded?: string;
+        /** Live device position; required when {@link order} is `distance` (same rules as {@link SearchParams}). */
+        currentPosition?: SearchParamsPosition | null;
     }): SearchParams {
         const nameNorm = options.name.trim();
         const diff =
@@ -125,7 +121,7 @@ export class SearchFilter {
             this.order,
             options.limit,
             options.cursorEncoded,
-            this.currentPosition,
+            options.currentPosition ?? null,
             this.source,
             diff != null && diff.isActive() ? diff : null,
         );
@@ -138,7 +134,6 @@ export class SearchFilter {
             includeRegions: this.includeRegions,
             includeAka: this.includeAka,
             similarityThreshold: this.similarityThreshold,
-            currentPosition: this.currentPosition,
             source: this.source,
             difficultyOptions:
                 this.difficultyOptions !== null
@@ -180,7 +175,6 @@ export class SearchFilter {
         ) {
             f.similarityThreshold = 0.5;
         }
-        f.currentPosition = SearchFilter.parsePosition(o.currentPosition);
         f.source = SearchFilter.parseSource(o.source);
         if (o.difficultyOptions != null && typeof o.difficultyOptions === 'object') {
             f.difficultyOptions = DifficultyFilterOptions.fromResult(o.difficultyOptions);
@@ -195,20 +189,6 @@ export class SearchFilter {
             return v;
         }
         throw new Error(`Invalid SearchFilter.order: ${JSON.stringify(v)}`);
-    }
-
-    private static parsePosition(v: unknown): SearchParamsPosition | null {
-        if (v === null || v === undefined) return null;
-        if (typeof v !== 'object') {
-            throw new Error('SearchFilter.currentPosition must be an object or null');
-        }
-        const p = v as Record<string, unknown>;
-        const lat = Number(p.lat);
-        const lon = Number(p.lon);
-        if (Number.isNaN(lat) || Number.isNaN(lon)) {
-            return null;
-        }
-        return { lat, lon };
     }
 
     private static parseSource(v: unknown): PageDataSource[] | null {
