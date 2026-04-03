@@ -95,7 +95,10 @@ export async function httpRequest(
 
         let response: Response;
         try {
-            response = (await undiciFetch(requestUrl, requestOptions as Parameters<typeof undiciFetch>[1])) as Response;
+            response = (await undiciFetch(
+                requestUrl,
+                requestOptions as Parameters<typeof undiciFetch>[1],
+            )) as unknown as Response;
         } catch (error) {
             lastError = new Error(`httpRequest failed: requestUrl=${requestUrl} error=${error}`);
             if (abortSignal?.aborted) {

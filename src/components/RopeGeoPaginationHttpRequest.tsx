@@ -42,14 +42,32 @@ function getResponseBody(raw: unknown): unknown {
   return raw;
 }
 
+function isAbortError(e: unknown): boolean {
+  if (e instanceof DOMException && e.name === "AbortError") return true;
+  if (e instanceof Error && e.name === "AbortError") return true;
+  return false;
+}
+
+function sumReceived(pagesByNum: Map<number, PaginationResults>): number {
+  let sum = 0;
+  for (const p of pagesByNum.values()) {
+    sum += p.results.length;
+  }
+  return sum;
+}
+
 /**
- * Concatenates each page's `results` in fetch order. Call only after every page was built via
+ * Concatenates each page's `results` in ascending page order. Call only after every page was built via
  * {@link PaginationResults.fromResponseBody}.
  */
-function concatPaginationResultItems<T>(pages: PaginationResults[]): T[] {
+function concatPaginationResultItemsSorted<T>(
+  pagesByNum: Map<number, PaginationResults>
+): T[] {
+  const keys = [...pagesByNum.keys()].sort((a, b) => a - b);
   const out: T[] = [];
-  for (const p of pages) {
-    out.push(...(p.results as T[]));
+  for (const k of keys) {
+    const p = pagesByNum.get(k);
+    if (p != null) out.push(...(p.results as T[]));
   }
   return out;
 }
@@ -60,6 +78,12 @@ export type RopeGeoPaginationHttpRequestProps<T = unknown> = {
   path: string;
   pathParams?: Record<string, string>;
   queryParams: PaginationParams;
+  /**
+   * Max concurrent page requests after page 1 completes (page 1 is always alone so `total` is known).
+   * Clamped to at least 1.
+   * @default 10
+   */
+  batchSize?: number;
   children: (args: {
     loading: boolean;
     received: number;
@@ -75,11 +99,10 @@ export type RopeGeoPaginationHttpRequestProps<T = unknown> = {
 };
 
 /**
- * Fetches page 1, 2, … until all items for {@link queryParams} are loaded (same `limit` and filters,
- * advancing `page` via {@link PaginationParams.withPage}). The initial `page` on `queryParams` is ignored.
- * Each response body is parsed with {@link PaginationResults.fromResponseBody} before continuing.
- * When every page succeeds, `data` is the concatenation of each page's `results`; otherwise `data` is `null`
- * and `errors` is set.
+ * Fetches page 1, then remaining pages in parallel batches of {@link batchSize}.
+ * The initial `page` on `queryParams` is ignored. Each body is parsed with
+ * {@link PaginationResults.fromResponseBody}. Final `data` is pages concatenated in page order.
+ * In-flight requests use one {@link AbortController}: unmount or any failure aborts the rest.
  */
 export function RopeGeoPaginationHttpRequest<T = unknown>({
   service,
@@ -87,6 +110,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
   path,
   pathParams,
   queryParams,
+  batchSize = 10,
   children,
 }: RopeGeoPaginationHttpRequestProps<T>) {
   const [loading, setLoading] = useState(true);
@@ -97,9 +121,13 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
 
   const pathParamsKey = JSON.stringify(pathParams ?? null);
   const queryParamsKey = queryParams.toQueryString();
+  const effectiveBatch = Math.max(1, Math.floor(batchSize));
 
   useEffect(() => {
     let cancelled = false;
+    const abortController = new AbortController();
+    const { signal } = abortController;
+
     setLoading(true);
     setReceived(0);
     setTotal(null);
@@ -108,97 +136,119 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
 
     const baseUrl = SERVICE_BASE_URL[service];
     const resolvedPath = resolvePath(path, pathParams);
-    const init: RequestInit = {
+    const baseInit: RequestInit = {
       method,
       headers: { "Content-Type": "application/json" },
+      signal,
     };
 
     (async () => {
-      const pages: PaginationResults[] = [];
-      let pageNum = 1;
-      let receivedCount = 0;
-      let totalCount: number | null = null;
+      const pagesByNum = new Map<number, PaginationResults>();
+      const limit = queryParams.limit;
+
+      const fetchPage = async (pageNum: number): Promise<PaginationResults> => {
+        const params = queryParams.withPage(pageNum);
+        const queryString = params.toQueryString();
+        const fullPath = queryString
+          ? `${resolvedPath}?${queryString}`
+          : resolvedPath;
+        const url = new URL(fullPath, baseUrl).toString();
+
+        const res = await fetch(url, baseInit);
+        const text = await res.text();
+
+        if (!res.ok) {
+          abortController.abort();
+          throw new Error(`HTTP ${res.status}: ${text || res.statusText}`);
+        }
+
+        if (text.length === 0) {
+          abortController.abort();
+          throw new Error("Empty response body");
+        }
+
+        let raw: unknown;
+        try {
+          raw = JSON.parse(text) as unknown;
+        } catch (parseError) {
+          abortController.abort();
+          console.error("[RopeGeoPaginationHttpRequest] Invalid JSON response", {
+            url,
+            status: res.status,
+            responseText: text.slice(0, 500),
+            parseError:
+              parseError instanceof Error
+                ? parseError.message
+                : String(parseError),
+          });
+          throw new Error("Invalid JSON response");
+        }
+
+        try {
+          return PaginationResults.fromResponseBody(getResponseBody(raw));
+        } catch (e) {
+          abortController.abort();
+          const msg = e instanceof Error ? e.message : String(e);
+          throw new Error(msg);
+        }
+      };
 
       try {
-        while (true) {
-          const params = queryParams.withPage(pageNum);
-          const queryString = params.toQueryString();
-          const fullPath = queryString
-            ? `${resolvedPath}?${queryString}`
-            : resolvedPath;
-          const url = new URL(fullPath, baseUrl).toString();
+        const first = await fetchPage(1);
+        if (cancelled) return;
 
-          const res = await fetch(url, init);
-          const text = await res.text();
+        pagesByNum.set(1, first);
+        const totalCount = first.total;
+        let receivedCount = first.results.length;
+        setReceived(receivedCount);
+        setTotal(totalCount);
+
+        const doneByTotal =
+          totalCount !== null && receivedCount >= totalCount;
+        const doneByShortPage = first.results.length < limit;
+
+        if (doneByTotal || doneByShortPage) {
           if (cancelled) return;
+          setData(concatPaginationResultItemsSorted<T>(pagesByNum));
+          setErrors(null);
+          return;
+        }
 
-          if (!res.ok) {
-            setErrors(
-              new Error(`HTTP ${res.status}: ${text || res.statusText}`)
-            );
-            setData(null);
-            return;
-          }
+        const lastPage = Math.max(1, Math.ceil(totalCount / limit));
+        const toFetch: number[] = [];
+        for (let p = 2; p <= lastPage; p++) {
+          toFetch.push(p);
+        }
 
-          if (text.length === 0) {
-            setErrors(new Error("Empty response body"));
-            setData(null);
-            return;
-          }
+        for (let i = 0; i < toFetch.length; i += effectiveBatch) {
+          if (cancelled) return;
+          if (sumReceived(pagesByNum) >= totalCount) break;
 
-          let raw: unknown;
-          try {
-            raw = JSON.parse(text) as unknown;
-          } catch (parseError) {
-            console.error("[RopeGeoPaginationHttpRequest] Invalid JSON response", {
-              url,
-              status: res.status,
-              responseText: text.slice(0, 500),
-              parseError:
-                parseError instanceof Error
-                  ? parseError.message
-                  : String(parseError),
-            });
-            setErrors(new Error("Invalid JSON response"));
-            setData(null);
-            return;
-          }
-
-          let parsed: PaginationResults;
-          try {
-            parsed = PaginationResults.fromResponseBody(getResponseBody(raw));
-          } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e);
-            setErrors(new Error(msg));
-            setData(null);
-            return;
-          }
+          const chunk = toFetch.slice(i, i + effectiveBatch);
+          const batchResults = await Promise.all(
+            chunk.map(async (pageNum) => {
+              const parsed = await fetchPage(pageNum);
+              return { pageNum, parsed } as const;
+            })
+          );
 
           if (cancelled) return;
 
-          pages.push(parsed);
-          receivedCount += parsed.results.length;
-          if (totalCount === null) {
-            totalCount = parsed.total;
+          for (const { pageNum, parsed } of batchResults) {
+            pagesByNum.set(pageNum, parsed);
           }
+          receivedCount = sumReceived(pagesByNum);
           setReceived(receivedCount);
           setTotal(totalCount);
 
-          const doneByTotal =
-            totalCount !== null && receivedCount >= totalCount;
-          const doneByShortPage = parsed.results.length < queryParams.limit;
-          if (doneByTotal || doneByShortPage) {
-            break;
-          }
-
-          pageNum += 1;
+          if (receivedCount >= totalCount) break;
         }
 
         if (cancelled) return;
-        setData(concatPaginationResultItems<T>(pages));
+        setData(concatPaginationResultItemsSorted<T>(pagesByNum));
         setErrors(null);
       } catch (err) {
-        if (cancelled) return;
+        if (cancelled || isAbortError(err)) return;
         console.error("[RopeGeoPaginationHttpRequest] Request failed", {
           error: err instanceof Error ? err.message : String(err),
         });
@@ -211,8 +261,17 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
 
     return () => {
       cancelled = true;
+      abortController.abort();
     };
-  }, [service, method, path, pathParamsKey, queryParamsKey, queryParams]);
+  }, [
+    service,
+    method,
+    path,
+    pathParamsKey,
+    queryParamsKey,
+    queryParams,
+    effectiveBatch,
+  ]);
 
   return (
     <>
