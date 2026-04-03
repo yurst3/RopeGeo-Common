@@ -225,23 +225,19 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
           if (sumReceived(pagesByNum) >= totalCount) break;
 
           const chunk = toFetch.slice(i, i + effectiveBatch);
-          const batchResults = await Promise.all(
+          await Promise.all(
             chunk.map(async (pageNum) => {
               const parsed = await fetchPage(pageNum);
-              return { pageNum, parsed } as const;
+              if (cancelled) return;
+              pagesByNum.set(pageNum, parsed);
+              setReceived(sumReceived(pagesByNum));
+              setTotal(totalCount);
             })
           );
 
           if (cancelled) return;
 
-          for (const { pageNum, parsed } of batchResults) {
-            pagesByNum.set(pageNum, parsed);
-          }
-          receivedCount = sumReceived(pagesByNum);
-          setReceived(receivedCount);
-          setTotal(totalCount);
-
-          if (receivedCount >= totalCount) break;
+          if (sumReceived(pagesByNum) >= totalCount) break;
         }
 
         if (cancelled) return;
