@@ -232,6 +232,15 @@ describe('SearchFilter', () => {
         expect(() => f.setIncludePages(false)).toThrow(/clear difficulty/);
     });
 
+    it('setIncludePages false clears includeAka', () => {
+        const f = new SearchFilter(null, 'x');
+        f.setIncludeAka(true);
+        expect(f.includeAka).toBe(true);
+        f.setIncludePages(false);
+        f.setIncludeRegions(true);
+        expect(f.includeAka).toBe(false);
+    });
+
     it('setSimilarityThreshold rejects out of range', () => {
         const f = new SearchFilter(null, 'x');
         expect(() => f.setSimilarityThreshold(1.5)).toThrow(/0 and 1/);
@@ -293,6 +302,19 @@ describe('SearchFilter', () => {
         });
         expect(again.order).toBe('distance');
         expect(again.toJSON()).not.toHaveProperty('currentPosition');
+    });
+
+    it('fromJSON forces includeAka false when includePages false', () => {
+        const again = SearchFilter.fromJSON({
+            order: 'similarity',
+            includePages: false,
+            includeRegions: true,
+            includeAka: true,
+            similarityThreshold: 0.5,
+            source: null,
+            difficultyOptions: null,
+        });
+        expect(again.includeAka).toBe(false);
     });
 
     it('fromJsonString throws on bad JSON', () => {

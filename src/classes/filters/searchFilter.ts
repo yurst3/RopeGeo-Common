@@ -71,6 +71,9 @@ export class SearchFilter {
             );
         }
         this.includePages = v;
+        if (!v) {
+            this.includeAka = false;
+        }
     }
 
     setIncludeRegions(v: boolean): void {
@@ -168,6 +171,9 @@ export class SearchFilter {
         f.includePages = Boolean(o.includePages);
         f.includeRegions = Boolean(o.includeRegions);
         f.includeAka = Boolean(o.includeAka);
+        if (!f.includePages) {
+            f.includeAka = false;
+        }
         f.similarityThreshold = Number(o.similarityThreshold);
         if (
             typeof f.similarityThreshold !== 'number' ||
