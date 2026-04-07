@@ -10,18 +10,19 @@ import { DifficultyFilterOptions } from './difficultyFilterOptions';
 export class RouteFilter {
     source: PageDataSource[] | null;
     regionId: string | null;
-    routeType: RouteType | null;
+    /** Null or empty = no route-type filter (all types). */
+    routeTypes: RouteType[] | null;
     difficultyOptions: DifficultyFilterOptions | null;
 
     constructor(
         source: PageDataSource[] | null = null,
         regionId: string | null = null,
-        routeType: RouteType | null = null,
+        routeTypes: RouteType[] | null = null,
         difficultyOptions: DifficultyFilterOptions | null = null,
     ) {
         this.source = source;
         this.regionId = regionId;
-        this.routeType = routeType;
+        this.routeTypes = RouteFilter.normalizeRouteTypesList(routeTypes);
         this.difficultyOptions = difficultyOptions;
     }
 
@@ -39,7 +40,9 @@ export class RouteFilter {
             return new RoutesParams({
                 region: null,
                 routeTypes:
-                    this.routeType !== null ? [this.routeType] : null,
+                    this.routeTypes != null && this.routeTypes.length > 0
+                        ? [...this.routeTypes]
+                        : null,
                 difficulty:
                     this.difficultyOptions !== null
                         ? this.difficultyOptions.toDifficultyParams()
@@ -53,7 +56,9 @@ export class RouteFilter {
         return new RoutesParams({
             region: { id: rid, source: src },
             routeTypes:
-                this.routeType !== null ? [this.routeType] : null,
+                this.routeTypes != null && this.routeTypes.length > 0
+                    ? [...this.routeTypes]
+                    : null,
             difficulty:
                 this.difficultyOptions !== null
                     ? this.difficultyOptions.toDifficultyParams()
@@ -65,7 +70,7 @@ export class RouteFilter {
         return {
             source: this.source,
             regionId: this.regionId,
-            routeType: this.routeType,
+            routeTypes: this.routeTypes,
             difficultyOptions:
                 this.difficultyOptions !== null
                     ? this.difficultyOptions.toJSON()
@@ -99,15 +104,60 @@ export class RouteFilter {
             o.regionId === null || o.regionId === undefined
                 ? null
                 : String(o.regionId);
-        const routeType =
-            o.routeType === null || o.routeType === undefined
-                ? null
-                : RouteFilter.parseRouteType(o.routeType);
+        const routeTypes = RouteFilter.parseRouteTypesField(o);
         let difficultyOptions: DifficultyFilterOptions | null = null;
         if (o.difficultyOptions != null && typeof o.difficultyOptions === 'object') {
             difficultyOptions = DifficultyFilterOptions.fromResult(o.difficultyOptions);
         }
-        return new RouteFilter(source, regionId, routeType, difficultyOptions);
+        return new RouteFilter(source, regionId, routeTypes, difficultyOptions);
+    }
+
+    private static normalizeRouteTypesList(
+        list: RouteType[] | null | undefined,
+    ): RouteType[] | null {
+        if (list == null || list.length === 0) return null;
+        const out: RouteType[] = [];
+        for (const t of list) {
+            if (!Object.values(RouteType).includes(t)) {
+                throw new Error(`Invalid RouteType: ${JSON.stringify(t)}`);
+            }
+            if (!out.includes(t)) out.push(t);
+        }
+        return out;
+    }
+
+    /** Accepts `routeTypes` array or legacy singular `routeType` string. */
+    private static parseRouteTypesField(o: Record<string, unknown>): RouteType[] | null {
+        const raw = o.routeTypes;
+        if (raw !== null && raw !== undefined) {
+            if (!Array.isArray(raw)) {
+                throw new Error('RouteFilter.routeTypes must be an array or null');
+            }
+            const types = raw.map((item, i) => {
+                if (typeof item !== 'string') {
+                    throw new Error(`RouteFilter.routeTypes[${i}] must be a string`);
+                }
+                return RouteFilter.parseRouteTypeToken(item);
+            });
+            return RouteFilter.normalizeRouteTypesList(types);
+        }
+        const legacy = o.routeType;
+        if (legacy === null || legacy === undefined) {
+            return null;
+        }
+        if (typeof legacy !== 'string') {
+            throw new Error('RouteFilter.routeType must be a string or null');
+        }
+        return RouteFilter.normalizeRouteTypesList([
+            RouteFilter.parseRouteTypeToken(legacy),
+        ]);
+    }
+
+    private static parseRouteTypeToken(v: string): RouteType {
+        if (!Object.values(RouteType).includes(v as RouteType)) {
+            throw new Error(`Invalid RouteType: ${JSON.stringify(v)}`);
+        }
+        return v as RouteType;
     }
 
     private static parseSourceField(v: unknown): PageDataSource[] | null {
@@ -128,12 +178,5 @@ export class RouteFilter {
             }
         }
         return out.length === 0 ? null : out;
-    }
-
-    private static parseRouteType(v: unknown): RouteType {
-        if (typeof v !== 'string' || !Object.values(RouteType).includes(v as RouteType)) {
-            throw new Error(`Invalid RouteType: ${JSON.stringify(v)}`);
-        }
-        return v as RouteType;
     }
 }
