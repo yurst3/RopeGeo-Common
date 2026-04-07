@@ -1,6 +1,6 @@
 # ropegeo-common
 
-Shared **domain classes** (validated models, enums, request params) and **helpers** (S3, SQS, HTTP, etc.) for [RopeGeo](https://github.com/yurst3/RopeGeo) and [WebScraper](https://github.com/yurst3/WebScraper). Published to npm as [`ropegeo-common`](https://www.npmjs.com/package/ropegeo-common) so both projects can share one package instead of duplicating code.
+Shared **domain models** (validated model classes, enums, query params) and **helpers** (S3, SQS, HTTP, etc.) for [RopeGeo](https://github.com/yurst3/RopeGeo) and [WebScraper](https://github.com/yurst3/WebScraper). Published to npm as [`ropegeo-common`](https://www.npmjs.com/package/ropegeo-common) so both projects can share one package instead of duplicating code.
 
 ## Install
 
@@ -10,10 +10,10 @@ npm install ropegeo-common
 
 ## Imports
 
-- **Classes** — `import { … } from 'ropegeo-common/classes'` (or `import type { … }` for symbols that are type-only in TypeScript). The package entry `ropegeo-common` also re-exports everything from `./classes` for convenience.
+- **Models** — `import { … } from 'ropegeo-common/models'` (or `import type { … }` for symbols that are type-only in TypeScript). The package root `ropegeo-common` re-exports everything from `./models` for convenience. The subpath `ropegeo-common/classes` is kept as an alias of `./models` for older imports until dependents switch over.
 - **Helpers** — `import { … } from 'ropegeo-common/helpers'` (and `import type { … }` for helper types such as `GetS3ObjectResult`).
 
-Helper tables use columns **Name**, **Description**, **Import**. Class tables add **Base class** after **Name** (`N/A` for enums, TypeScript-only type aliases, constants, registration functions, and classes without an exported superclass; otherwise the direct superclass).
+Helper tables use columns **Name**, **Description**, **Import**. Model tables add **Base class** after **Name** (`N/A` for enums, TypeScript-only type aliases, constants, registration functions, and classes without an exported superclass; otherwise the direct superclass).
 
 ---
 
@@ -59,226 +59,221 @@ Helper tables use columns **Name**, **Description**, **Import**. Class tables ad
 
 ---
 
-### Core enums (`src/classes/` root files)
+### Core enums (`src/models/` root files)
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
-| `PageDataSource` | N/A | Where linked page content comes from (e.g. Ropewiki). | `import { PageDataSource } from 'ropegeo-common/classes'` |
-| `PermitStatus` | N/A | Permit state for a canyon page (Yes, No, Restricted, Closed). | `import { PermitStatus } from 'ropegeo-common/classes'` |
+| `PageDataSource` | N/A | Where linked page content comes from (e.g. Ropewiki). | `import { PageDataSource } from 'ropegeo-common/models'` |
+| `PermitStatus` | N/A | Permit state for a canyon page (Yes, No, Restricted, Closed). | `import { PermitStatus } from 'ropegeo-common/models'` |
 
-### Difficulty (`src/classes/difficulty/`)
-
-| Name | Base class | Description | Import |
-| --- | --- | --- | --- |
-| `DifficultyType` | N/A | Discriminator for difficulty scales (e.g. ACA). | `import { DifficultyType } from 'ropegeo-common/classes'` |
-| `Difficulty` | N/A | Abstract base for page/route difficulty; `fromResult` dispatches by `difficultyType`. | `import { Difficulty } from 'ropegeo-common/classes'` |
-| `registerDifficultyParser` | N/A | Registers a `Difficulty.fromResult` parser for a `DifficultyType`. | `import { registerDifficultyParser } from 'ropegeo-common/classes'` |
-| `ACA_RISK_ORDER` | N/A | Numeric total order for ACA risk ratings. | `import { ACA_RISK_ORDER } from 'ropegeo-common/classes'` |
-| `ACA_TECHNICAL_ORDER` | N/A | Numeric total order for ACA technical ratings. | `import { ACA_TECHNICAL_ORDER } from 'ropegeo-common/classes'` |
-| `ACA_TIME_ORDER` | N/A | Numeric total order for ACA time ratings. | `import { ACA_TIME_ORDER } from 'ropegeo-common/classes'` |
-| `ACA_WATER_ORDER` | N/A | Numeric total order for ACA water ratings. | `import { ACA_WATER_ORDER } from 'ropegeo-common/classes'` |
-| `AcaTechnicalRating` | N/A | ACA technical rating enum (1–4). | `import { AcaTechnicalRating } from 'ropegeo-common/classes'` |
-| `AcaWaterRating` | N/A | ACA water rating enum. | `import { AcaWaterRating } from 'ropegeo-common/classes'` |
-| `AcaTimeRating` | N/A | ACA time rating enum (I–VI). | `import { AcaTimeRating } from 'ropegeo-common/classes'` |
-| `AcaRiskRating` | N/A | ACA risk rating enum. | `import { AcaRiskRating } from 'ropegeo-common/classes'` |
-| `RISK_ORDER` | N/A | Deprecated alias for `ACA_RISK_ORDER`. | `import { RISK_ORDER } from 'ropegeo-common/classes'` |
-| `AcaDifficulty` | `Difficulty` | ACA difficulty from DB/API strings; raw vs effective risk. | `import { AcaDifficulty } from 'ropegeo-common/classes'` |
-| `DifficultyTechnical` | N/A | Deprecated alias for `AcaTechnicalRating`. | `import { DifficultyTechnical } from 'ropegeo-common/classes'` |
-| `DifficultyWater` | N/A | Deprecated alias for `AcaWaterRating`. | `import { DifficultyWater } from 'ropegeo-common/classes'` |
-| `DifficultyTime` | N/A | Deprecated alias for `AcaTimeRating`. | `import { DifficultyTime } from 'ropegeo-common/classes'` |
-| `DifficultyRisk` | N/A | Deprecated alias for `AcaRiskRating`. | `import { DifficultyRisk } from 'ropegeo-common/classes'` |
-
-### Request parameters (`src/classes/requestParams/`)
+### Difficulty (`src/models/difficulty/`)
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
-| `DifficultyParams` | N/A | Abstract GET-query difficulty filter; `fromQueryStringParams` / `fromResult`. | `import { DifficultyParams } from 'ropegeo-common/classes'` |
-| `DifficultyParamsQueryRecord` | N/A | Flat string map for difficulty query parsing. | `import type { DifficultyParamsQueryRecord } from 'ropegeo-common/classes'` |
-| `registerDifficultyParamsQueryInference` | N/A | Registers inference when `difficulty-type` is omitted. | `import { registerDifficultyParamsQueryInference } from 'ropegeo-common/classes'` |
-| `registerDifficultyParamsQueryParser` | N/A | Registers a query parser for a `DifficultyType`. | `import { registerDifficultyParamsQueryParser } from 'ropegeo-common/classes'` |
-| `isDifficultyParamsActive` | N/A | True if difficulty params are non-null and active. | `import { isDifficultyParamsActive } from 'ropegeo-common/classes'` |
-| `AcaDifficultyParams` | `DifficultyParams` | ACA pipe-list allow-lists for routes/search query strings. | `import { AcaDifficultyParams } from 'ropegeo-common/classes'` |
-| `Q_DIFFICULTY_TYPE` | N/A | Query key constant for difficulty type. | `import { Q_DIFFICULTY_TYPE } from 'ropegeo-common/classes'` |
-| `Q_ACA_TECHNICAL` | N/A | Query key for ACA technical rating list. | `import { Q_ACA_TECHNICAL } from 'ropegeo-common/classes'` |
-| `Q_ACA_WATER` | N/A | Query key for ACA water rating list. | `import { Q_ACA_WATER } from 'ropegeo-common/classes'` |
-| `Q_ACA_TIME` | N/A | Query key for ACA time rating list. | `import { Q_ACA_TIME } from 'ropegeo-common/classes'` |
-| `Q_ACA_RISK` | N/A | Query key for ACA risk rating list. | `import { Q_ACA_RISK } from 'ropegeo-common/classes'` |
-| `RoutesParams` | `PaginationParams` | Validated GET /routes params (region, source, route type, difficulty, `limit`, `page`). | `import { RoutesParams } from 'ropegeo-common/classes'` |
-| `SearchParams` | `CursorPaginationParams` | Validated GET /search params including cursor pagination and difficulty. | `import { SearchParams } from 'ropegeo-common/classes'` |
-| `SearchOrder` | N/A | Search sort order (`similarity` \| `quality` \| `distance`). | `import type { SearchOrder } from 'ropegeo-common/classes'` |
-| `SearchParamsPosition` | N/A | `{ lat, lon }` for distance search. | `import type { SearchParamsPosition } from 'ropegeo-common/classes'` |
+| `DifficultyType` | N/A | Discriminator for difficulty scales (e.g. ACA). | `import { DifficultyType } from 'ropegeo-common/models'` |
+| `Difficulty` | N/A | Abstract base for page/route difficulty; `fromResult` dispatches by `difficultyType`. | `import { Difficulty } from 'ropegeo-common/models'` |
+| `registerDifficultyParser` | N/A | Registers a `Difficulty.fromResult` parser for a `DifficultyType`. | `import { registerDifficultyParser } from 'ropegeo-common/models'` |
+| `ACA_RISK_ORDER` | N/A | Numeric total order for ACA risk ratings. | `import { ACA_RISK_ORDER } from 'ropegeo-common/models'` |
+| `ACA_TECHNICAL_ORDER` | N/A | Numeric total order for ACA technical ratings. | `import { ACA_TECHNICAL_ORDER } from 'ropegeo-common/models'` |
+| `ACA_TIME_ORDER` | N/A | Numeric total order for ACA time ratings. | `import { ACA_TIME_ORDER } from 'ropegeo-common/models'` |
+| `ACA_WATER_ORDER` | N/A | Numeric total order for ACA water ratings. | `import { ACA_WATER_ORDER } from 'ropegeo-common/models'` |
+| `AcaTechnicalRating` | N/A | ACA technical rating enum (1–4). | `import { AcaTechnicalRating } from 'ropegeo-common/models'` |
+| `AcaWaterRating` | N/A | ACA water rating enum. | `import { AcaWaterRating } from 'ropegeo-common/models'` |
+| `AcaTimeRating` | N/A | ACA time rating enum (I–VI). | `import { AcaTimeRating } from 'ropegeo-common/models'` |
+| `AcaRiskRating` | N/A | ACA risk rating enum. | `import { AcaRiskRating } from 'ropegeo-common/models'` |
+| `RISK_ORDER` | N/A | Deprecated alias for `ACA_RISK_ORDER`. | `import { RISK_ORDER } from 'ropegeo-common/models'` |
+| `AcaDifficulty` | `Difficulty` | ACA difficulty from DB/API strings; raw vs effective risk. | `import { AcaDifficulty } from 'ropegeo-common/models'` |
+| `DifficultyTechnical` | N/A | Deprecated alias for `AcaTechnicalRating`. | `import { DifficultyTechnical } from 'ropegeo-common/models'` |
+| `DifficultyWater` | N/A | Deprecated alias for `AcaWaterRating`. | `import { DifficultyWater } from 'ropegeo-common/models'` |
+| `DifficultyTime` | N/A | Deprecated alias for `AcaTimeRating`. | `import { DifficultyTime } from 'ropegeo-common/models'` |
+| `DifficultyRisk` | N/A | Deprecated alias for `AcaRiskRating`. | `import { DifficultyRisk } from 'ropegeo-common/models'` |
 
-### Persisted filters (`src/classes/filters/`)
-
-| Name | Base class | Description | Import |
-| --- | --- | --- | --- |
-| `DifficultyFilterOptions` | N/A | Abstract saved/modal difficulty filter; `fromResult` by `difficultyType`. | `import { DifficultyFilterOptions } from 'ropegeo-common/classes'` |
-| `registerDifficultyFilterOptionsParser` | N/A | Registers `DifficultyFilterOptions.fromResult` for a scale. | `import { registerDifficultyFilterOptionsParser } from 'ropegeo-common/classes'` |
-| `TechnicalMinMax` | N/A | Inclusive ACA technical min/max for filter UI. | `import { TechnicalMinMax } from 'ropegeo-common/classes'` |
-| `WaterMinMax` | N/A | Inclusive ACA water min/max. | `import { WaterMinMax } from 'ropegeo-common/classes'` |
-| `TimeMinMax` | N/A | Inclusive ACA time min/max. | `import { TimeMinMax } from 'ropegeo-common/classes'` |
-| `RiskMinMax` | N/A | Inclusive ACA risk min/max. | `import { RiskMinMax } from 'ropegeo-common/classes'` |
-| `AcaDifficultyFilterOptions` | `DifficultyFilterOptions` | ACA filter options; expands to `AcaDifficultyParams`. | `import { AcaDifficultyFilterOptions } from 'ropegeo-common/classes'` |
-| `RouteFilter` | N/A | Persisted explore/minimap route filter → `RoutesParams`. | `import { RouteFilter } from 'ropegeo-common/classes'` |
-| `SearchFilter` | N/A | Persisted mobile search filter → `SearchParams`. | `import { SearchFilter } from 'ropegeo-common/classes'` |
-| `SavedPagesFilter` | N/A | Saved-pages list filter (name, order, difficulty). | `import { SavedPagesFilter } from 'ropegeo-common/classes'` |
-| `SavedPagesOrder` | N/A | `'newest'` \| `'oldest'`. | `import type { SavedPagesOrder } from 'ropegeo-common/classes'` |
-| `SavedFilters` | N/A | Bundle of explore, search, and saved-pages filter slots. | `import { SavedFilters } from 'ropegeo-common/classes'` |
-
-### Previews (`src/classes/previews/`)
+### API query parameters (`src/models/api/params/`)
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
-| `PreviewType` | N/A | Discriminator for search hit kind (page vs region). | `import { PreviewType } from 'ropegeo-common/classes'` |
-| `Preview` | N/A | Abstract union base for search/route preview payloads. | `import { Preview } from 'ropegeo-common/classes'` |
-| `GetRopewikiPagePreviewRow` | N/A | DB row shape for building `PagePreview` from Ropewiki. | `import type { GetRopewikiPagePreviewRow } from 'ropegeo-common/classes'` |
-| `PagePreview` | `Preview` | Page preview (route preview and search hits). | `import { PagePreview } from 'ropegeo-common/classes'` |
-| `RegionPreview` | `Preview` | Region search preview. | `import { RegionPreview } from 'ropegeo-common/classes'` |
+| `CursorPaginationParams` | N/A | Abstract limit + optional encoded cursor for GET APIs. | `import { CursorPaginationParams } from 'ropegeo-common/models'` |
+| `PaginationParams` | N/A | Abstract `limit` + 1-based `page` for page-based GET APIs. | `import { PaginationParams } from 'ropegeo-common/models'` |
+| `DifficultyParams` | N/A | Abstract GET-query difficulty filter; `fromQueryStringParams` / `fromResult`. | `import { DifficultyParams } from 'ropegeo-common/models'` |
+| `DifficultyParamsQueryRecord` | N/A | Flat string map for difficulty query parsing. | `import type { DifficultyParamsQueryRecord } from 'ropegeo-common/models'` |
+| `registerDifficultyParamsQueryInference` | N/A | Registers inference when `difficulty-type` is omitted. | `import { registerDifficultyParamsQueryInference } from 'ropegeo-common/models'` |
+| `registerDifficultyParamsQueryParser` | N/A | Registers a query parser for a `DifficultyType`. | `import { registerDifficultyParamsQueryParser } from 'ropegeo-common/models'` |
+| `isDifficultyParamsActive` | N/A | True if difficulty params are non-null and active. | `import { isDifficultyParamsActive } from 'ropegeo-common/models'` |
+| `AcaDifficultyParams` | `DifficultyParams` | ACA pipe-list allow-lists for routes/search query strings. | `import { AcaDifficultyParams } from 'ropegeo-common/models'` |
+| `Q_DIFFICULTY_TYPE` | N/A | Query key constant for difficulty type. | `import { Q_DIFFICULTY_TYPE } from 'ropegeo-common/models'` |
+| `Q_ACA_TECHNICAL` | N/A | Query key for ACA technical rating list. | `import { Q_ACA_TECHNICAL } from 'ropegeo-common/models'` |
+| `Q_ACA_WATER` | N/A | Query key for ACA water rating list. | `import { Q_ACA_WATER } from 'ropegeo-common/models'` |
+| `Q_ACA_TIME` | N/A | Query key for ACA time rating list. | `import { Q_ACA_TIME } from 'ropegeo-common/models'` |
+| `Q_ACA_RISK` | N/A | Query key for ACA risk rating list. | `import { Q_ACA_RISK } from 'ropegeo-common/models'` |
+| `RoutesParams` | `PaginationParams` | Validated GET /routes params (region, source, route type, difficulty, `limit`, `page`). | `import { RoutesParams } from 'ropegeo-common/models'` |
+| `SearchParams` | `CursorPaginationParams` | Validated GET /search params including cursor pagination and difficulty. | `import { SearchParams } from 'ropegeo-common/models'` |
+| `SearchOrder` | N/A | Search sort order (`similarity` \| `quality` \| `distance`). | `import type { SearchOrder } from 'ropegeo-common/models'` |
+| `SearchParamsPosition` | N/A | `{ lat, lon }` for distance search. | `import type { SearchParamsPosition } from 'ropegeo-common/models'` |
 
-### Route domain (`src/classes/routes/`)
-
-| Name | Base class | Description | Import |
-| --- | --- | --- | --- |
-| `RouteType` | N/A | Canyon, Cave, POI, Unknown. | `import { RouteType } from 'ropegeo-common/classes'` |
-| `Route` | N/A | Route entity for APIs. | `import { Route } from 'ropegeo-common/classes'` |
-| `RouteGeoJsonFeature` | N/A | One GeoJSON feature in the routes collection. | `import { RouteGeoJsonFeature } from 'ropegeo-common/classes'` |
-
-### Routes GeoJSON API (`src/classes/api/getRoutes/`)
-
-| Name | Base class | Description | Import |
-| --- | --- | --- | --- |
-| `RoutesGeojson` | N/A | GeoJSON FeatureCollection of routes (features only; use region bounds API for bbox). | `import { RoutesGeojson } from 'ropegeo-common/classes'` |
-| `RouteResult` | `PaginationResults` | Page of GET /routes (`RouteGeoJsonFeature[]`, `total`, `page`, `resultType` `route`). | `import { RouteResult } from 'ropegeo-common/classes'` |
-
-### Route preview API (`src/classes/api/getRoutePreview/`)
+### Persisted filters (`src/models/filters/`)
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
-| `RoutePreviewResult` | `Result` | Result for GET route preview (page previews array). | `import { RoutePreviewResult } from 'ropegeo-common/classes'` |
+| `DifficultyFilterOptions` | N/A | Abstract saved/modal difficulty filter; `fromResult` by `difficultyType`. | `import { DifficultyFilterOptions } from 'ropegeo-common/models'` |
+| `registerDifficultyFilterOptionsParser` | N/A | Registers `DifficultyFilterOptions.fromResult` for a scale. | `import { registerDifficultyFilterOptionsParser } from 'ropegeo-common/models'` |
+| `TechnicalMinMax` | N/A | Inclusive ACA technical min/max for filter UI. | `import { TechnicalMinMax } from 'ropegeo-common/models'` |
+| `WaterMinMax` | N/A | Inclusive ACA water min/max. | `import { WaterMinMax } from 'ropegeo-common/models'` |
+| `TimeMinMax` | N/A | Inclusive ACA time min/max. | `import { TimeMinMax } from 'ropegeo-common/models'` |
+| `RiskMinMax` | N/A | Inclusive ACA risk min/max. | `import { RiskMinMax } from 'ropegeo-common/models'` |
+| `AcaDifficultyFilterOptions` | `DifficultyFilterOptions` | ACA filter options; expands to `AcaDifficultyParams`. | `import { AcaDifficultyFilterOptions } from 'ropegeo-common/models'` |
+| `RouteFilter` | N/A | Persisted explore/minimap route filter → `RoutesParams`. | `import { RouteFilter } from 'ropegeo-common/models'` |
+| `SearchFilter` | N/A | Persisted mobile search filter → `SearchParams`. | `import { SearchFilter } from 'ropegeo-common/models'` |
+| `SavedPagesFilter` | N/A | Saved-pages list filter (name, order, difficulty). | `import { SavedPagesFilter } from 'ropegeo-common/models'` |
+| `SavedPagesOrder` | N/A | `'newest'` \| `'oldest'`. | `import type { SavedPagesOrder } from 'ropegeo-common/models'` |
+| `SavedFilters` | N/A | Bundle of explore, search, and saved-pages filter slots. | `import { SavedFilters } from 'ropegeo-common/models'` |
 
-### Ropewiki page view API (`src/classes/api/getRopewikiPageView/`)
-
-| Name | Base class | Description | Import |
-| --- | --- | --- | --- |
-| `RopewikiPageView` | N/A | Full Ropewiki page view (sections, images, minimap). | `import { RopewikiPageView } from 'ropegeo-common/classes'` |
-| `RopewikiPageViewResult` | `Result` | API result wrapping `RopewikiPageView`. | `import { RopewikiPageViewResult } from 'ropegeo-common/classes'` |
-
-### Page link preview API (`src/classes/api/getRopewikiPageLinkPreview/`)
-
-| Name | Base class | Description | Import |
-| --- | --- | --- | --- |
-| `RopewikiPageLinkPreviewResult` | `Result` | Result for lightweight link preview. | `import { RopewikiPageLinkPreviewResult } from 'ropegeo-common/classes'` |
-
-### Map data tile keys API (`src/classes/api/listMapDataTileKeys/`)
+### Previews (`src/models/previews/`)
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
-| `MapDataTileKeysResults` | `PaginationResults` | Page-based pagination of map tile keys (`total`, `page`, `totalBytes`). | `import { MapDataTileKeysResults } from 'ropegeo-common/classes'` |
+| `PreviewType` | N/A | Discriminator for search hit kind (page vs region). | `import { PreviewType } from 'ropegeo-common/models'` |
+| `Preview` | N/A | Abstract union base for search/route preview payloads. | `import { Preview } from 'ropegeo-common/models'` |
+| `GetRopewikiPagePreviewRow` | N/A | DB row shape for building `PagePreview` from Ropewiki. | `import type { GetRopewikiPagePreviewRow } from 'ropegeo-common/models'` |
+| `PagePreview` | `Preview` | Page preview (route preview and search hits). | `import { PagePreview } from 'ropegeo-common/models'` |
+| `RegionPreview` | `Preview` | Region search preview. | `import { RegionPreview } from 'ropegeo-common/models'` |
 
-### Search API (`src/classes/api/search/`)
-
-| Name | Base class | Description | Import |
-| --- | --- | --- | --- |
-| `SearchResults` | `CursorPaginationResults` | Cursor-paginated search response (`Preview` items). | `import { SearchResults } from 'ropegeo-common/classes'` |
-
-### Ropewiki region view API (`src/classes/api/getRopewikiRegionView/`)
+### Route domain (`src/models/routes/`)
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
-| `RopewikiRegionView` | N/A | Region detail view payload. | `import { RopewikiRegionView } from 'ropegeo-common/classes'` |
-| `RopewikiRegionViewResult` | `Result` | API result wrapping region view. | `import { RopewikiRegionViewResult } from 'ropegeo-common/classes'` |
+| `RouteType` | N/A | Canyon, Cave, POI, Unknown. | `import { RouteType } from 'ropegeo-common/models'` |
+| `Route` | N/A | Route entity for APIs. | `import { Route } from 'ropegeo-common/models'` |
+| `RouteGeoJsonFeature` | N/A | One GeoJSON feature in the routes collection. | `import { RouteGeoJsonFeature } from 'ropegeo-common/models'` |
 
-### Ropewiki region bounds API (`src/classes/api/getRopewikiRegionBounds/`)
-
-| Name | Base class | Description | Import |
-| --- | --- | --- | --- |
-| `RopewikiRegionBoundsResult` | `Result` | GET /ropewiki/region/{id}/bounds (`Bounds` over route coordinates). | `import { RopewikiRegionBoundsResult } from 'ropegeo-common/classes'` |
-
-### Ropewiki region previews API (`src/classes/api/getRopewikiRegionPreviews/`)
+### Routes GeoJSON API (`src/models/api/results/`)
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
-| `RopewikiRegionPreviewsParams` | `CursorPaginationParams` | Query/cursor params for region previews. | `import { RopewikiRegionPreviewsParams } from 'ropegeo-common/classes'` |
-| `RopewikiRegionPreviewsResult` | `CursorPaginationResults` | Cursor-paginated region previews (`Preview`). | `import { RopewikiRegionPreviewsResult } from 'ropegeo-common/classes'` |
+| `RoutesGeojson` | N/A | GeoJSON FeatureCollection of routes (features only; use region bounds API for bbox). | `import { RoutesGeojson } from 'ropegeo-common/models'` |
+| `RouteResult` | `PaginationResults` | Page of GET /routes (`RouteGeoJsonFeature[]`, `total`, `page`, `resultType` `route`). | `import { RouteResult } from 'ropegeo-common/models'` |
 
-### Ropewiki region images API (`src/classes/api/getRopewikiRegionImages/`)
-
-| Name | Base class | Description | Import |
-| --- | --- | --- | --- |
-| `RopewikiRegionImageView` | N/A | One image row in region images list. | `import { RopewikiRegionImageView } from 'ropegeo-common/classes'` |
-| `RopewikiRegionImageViewRow` | N/A | Raw row shape for region image views. | `import type { RopewikiRegionImageViewRow } from 'ropegeo-common/classes'` |
-| `RopewikiRegionImagesParams` | `CursorPaginationParams` | Query/cursor params for region images. | `import { RopewikiRegionImagesParams } from 'ropegeo-common/classes'` |
-| `RopewikiRegionImagesResult` | `CursorPaginationResults` | Cursor-paginated region images. | `import { RopewikiRegionImagesResult } from 'ropegeo-common/classes'` |
-
-### Beta sections (`src/classes/betaSections/`)
+### Route preview API (`src/models/api/results/`)
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
-| `BetaSectionImage` | N/A | Image in a beta section (URLs, pagination bytes). | `import { BetaSectionImage } from 'ropegeo-common/classes'` |
-| `RopewikiImageView` | N/A | Type alias of `BetaSectionImage` for Ropewiki page view typings. | `import type { RopewikiImageView } from 'ropegeo-common/classes'` |
-| `DownloadBytes` | N/A | Preview/banner/full byte sizes for downloads. | `import { DownloadBytes } from 'ropegeo-common/classes'` |
-| `BetaSection` | N/A | Beta section with images. | `import { BetaSection } from 'ropegeo-common/classes'` |
-| `RopewikiBetaSectionView` | N/A | Type alias of `BetaSection` for Ropewiki page view typings. | `import type { RopewikiBetaSectionView } from 'ropegeo-common/classes'` |
+| `RoutePreviewResult` | `Result` | Result for GET route preview (page previews array). | `import { RoutePreviewResult } from 'ropegeo-common/models'` |
 
-### Minimap (`src/classes/minimap/`)
+### Ropewiki page view API (`src/models/api/endpoints/`, `src/models/api/results/`)
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
-| `Bounds` | N/A | Geographic bounding box. | `import { Bounds } from 'ropegeo-common/classes'` |
-| `MiniMapType` | N/A | Minimap discriminator (e.g. GeoJSON). | `import { MiniMapType } from 'ropegeo-common/classes'` |
-| `MiniMap` | N/A | Abstract base for page/region minimaps. | `import { MiniMap } from 'ropegeo-common/classes'` |
-| `RegionMiniMap` | `MiniMap` | Region minimap payload. | `import { RegionMiniMap } from 'ropegeo-common/classes'` |
-| `PageMiniMap` | `MiniMap` | Page minimap payload. | `import { PageMiniMap } from 'ropegeo-common/classes'` |
+| `RopewikiPageView` | N/A | Full Ropewiki page view (sections, images, minimap). | `import { RopewikiPageView } from 'ropegeo-common/models'` |
+| `RopewikiPageViewResult` | `Result` | API result wrapping `RopewikiPageView`. | `import { RopewikiPageViewResult } from 'ropegeo-common/models'` |
 
-### Link preview (`src/classes/linkPreview/`)
+### Page link preview API (`src/models/api/results/`)
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
-| `LinkPreview` | N/A | Generic link preview (title, image, URL). | `import { LinkPreview } from 'ropegeo-common/classes'` |
-| `LinkPreviewImage` | N/A | Image sub-object for link previews. | `import { LinkPreviewImage } from 'ropegeo-common/classes'` |
+| `RopewikiPageLinkPreviewResult` | `Result` | Result for lightweight link preview. | `import { RopewikiPageLinkPreviewResult } from 'ropegeo-common/models'` |
 
-### Cursors (`src/classes/cursors/`)
-
-| Name | Base class | Description | Import |
-| --- | --- | --- | --- |
-| `CursorType` | N/A | Discriminator for cursor encodings. | `import { CursorType } from 'ropegeo-common/classes'` |
-| `Cursor` | N/A | Abstract base for typed API cursors. | `import { Cursor } from 'ropegeo-common/classes'` |
-| `SearchCursor` | `Cursor` | Search pagination cursor (base64). | `import { SearchCursor } from 'ropegeo-common/classes'` |
-| `SearchCursorType` | N/A | Type alias for search cursor payload typing. | `import type { SearchCursorType } from 'ropegeo-common/classes'` |
-| `RegionPreviewsCursor` | `Cursor` | Cursor for region previews pagination. | `import { RegionPreviewsCursor } from 'ropegeo-common/classes'` |
-| `RegionImagesCursor` | `Cursor` | Cursor for region images pagination. | `import { RegionImagesCursor } from 'ropegeo-common/classes'` |
-
-### Pagination params (`src/classes/params/`)
+### Map data tile keys API (`src/models/api/results/`)
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
-| `CursorPaginationParams` | N/A | Abstract limit + optional encoded cursor for GET APIs. | `import { CursorPaginationParams } from 'ropegeo-common/classes'` |
-| `PaginationParams` | N/A | Abstract `limit` + 1-based `page` for page-based GET APIs. | `import { PaginationParams } from 'ropegeo-common/classes'` |
+| `MapDataTileKeysResults` | `PaginationResults` | Page-based pagination of map tile keys (`total`, `page`, `totalBytes`). | `import { MapDataTileKeysResults } from 'ropegeo-common/models'` |
 
-### Result wrappers (`src/classes/results/`)
-
-| Name | Base class | Description | Import |
-| --- | --- | --- | --- |
-| `ResultType` | N/A | Discriminator enum for single-result API wrappers. | `import { ResultType } from 'ropegeo-common/classes'` |
-| `Result` | N/A | Abstract single-result response; `fromResponseBody` dispatches to parsers. | `import { Result } from 'ropegeo-common/classes'` |
-| `registerResultParser` | N/A | Registers `Result.fromResponseBody` for a `ResultType`. | `import { registerResultParser } from 'ropegeo-common/classes'` |
-| `CursorPaginationResultType` | N/A | Discriminator for cursor-paginated result wrappers. | `import { CursorPaginationResultType } from 'ropegeo-common/classes'` |
-| `CursorPaginationResults` | N/A | Abstract `results` + `nextCursor` response shape. | `import { CursorPaginationResults } from 'ropegeo-common/classes'` |
-| `ValidatedCursorPaginationResponse` | N/A | Validated inner shape passed to specific cursor result classes. | `import type { ValidatedCursorPaginationResponse } from 'ropegeo-common/classes'` |
-| `registerCursorPaginationParser` | N/A | Registers parser for a `CursorPaginationResultType`. | `import { registerCursorPaginationParser } from 'ropegeo-common/classes'` |
-| `PaginationResultType` | N/A | Discriminator for page-based paginated result wrappers. | `import { PaginationResultType } from 'ropegeo-common/classes'` |
-| `PaginationResults` | N/A | Abstract `results` + `total` + `page` response shape. | `import { PaginationResults } from 'ropegeo-common/classes'` |
-| `ValidatedPaginationResponse` | N/A | Validated inner shape for page-based pagination. | `import type { ValidatedPaginationResponse } from 'ropegeo-common/classes'` |
-| `registerPaginationParser` | N/A | Registers parser for a `PaginationResultType`. | `import { registerPaginationParser } from 'ropegeo-common/classes'` |
-
-### Mobile / offline (`src/classes/mobile/`)
+### Search API (`src/models/api/results/`)
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
-| `ImageVersion` | N/A | Enum of cached image variant kinds. | `import { ImageVersion } from 'ropegeo-common/classes'` |
-| `VERSION_FORMAT` | N/A | Format constant for version strings. | `import { VERSION_FORMAT } from 'ropegeo-common/classes'` |
-| `ImageVersions` | N/A | Map of image URLs by `ImageVersion`; `fromResult` for persisted JSON. | `import { ImageVersions } from 'ropegeo-common/classes'` |
-| `SavedPage` | N/A | Offline saved page record (`PagePreview` + metadata). | `import { SavedPage } from 'ropegeo-common/classes'` |
+| `SearchResults` | `CursorPaginationResults` | Cursor-paginated search response (`Preview` items). | `import { SearchResults } from 'ropegeo-common/models'` |
+
+### Ropewiki region view API (`src/models/api/endpoints/`, `src/models/api/results/`)
+
+| Name | Base class | Description | Import |
+| --- | --- | --- | --- |
+| `RopewikiRegionView` | N/A | Region detail view payload. | `import { RopewikiRegionView } from 'ropegeo-common/models'` |
+| `RopewikiRegionViewResult` | `Result` | API result wrapping region view. | `import { RopewikiRegionViewResult } from 'ropegeo-common/models'` |
+
+### Ropewiki region bounds API (`src/models/api/results/`)
+
+| Name | Base class | Description | Import |
+| --- | --- | --- | --- |
+| `RopewikiRegionBoundsResult` | `Result` | GET /ropewiki/region/{id}/bounds (`Bounds` over route coordinates). | `import { RopewikiRegionBoundsResult } from 'ropegeo-common/models'` |
+
+### Ropewiki region previews API (`src/models/api/params/`, `src/models/api/results/`)
+
+| Name | Base class | Description | Import |
+| --- | --- | --- | --- |
+| `RopewikiRegionPreviewsParams` | `CursorPaginationParams` | Query/cursor params for region previews. | `import { RopewikiRegionPreviewsParams } from 'ropegeo-common/models'` |
+| `RopewikiRegionPreviewsResult` | `CursorPaginationResults` | Cursor-paginated region previews (`Preview`). | `import { RopewikiRegionPreviewsResult } from 'ropegeo-common/models'` |
+
+### Ropewiki region images API (`src/models/api/endpoints/`, `src/models/api/params/`, `src/models/api/results/`)
+
+| Name | Base class | Description | Import |
+| --- | --- | --- | --- |
+| `RopewikiRegionImageView` | N/A | One image row in region images list. | `import { RopewikiRegionImageView } from 'ropegeo-common/models'` |
+| `RopewikiRegionImageViewRow` | N/A | Raw row shape for region image views. | `import type { RopewikiRegionImageViewRow } from 'ropegeo-common/models'` |
+| `RopewikiRegionImagesParams` | `CursorPaginationParams` | Query/cursor params for region images. | `import { RopewikiRegionImagesParams } from 'ropegeo-common/models'` |
+| `RopewikiRegionImagesResult` | `CursorPaginationResults` | Cursor-paginated region images. | `import { RopewikiRegionImagesResult } from 'ropegeo-common/models'` |
+
+### Beta sections (`src/models/betaSections/`)
+
+| Name | Base class | Description | Import |
+| --- | --- | --- | --- |
+| `BetaSectionImage` | N/A | Image in a beta section (URLs, pagination bytes). | `import { BetaSectionImage } from 'ropegeo-common/models'` |
+| `RopewikiImageView` | N/A | Type alias of `BetaSectionImage` for Ropewiki page view typings. | `import type { RopewikiImageView } from 'ropegeo-common/models'` |
+| `DownloadBytes` | N/A | Preview/banner/full byte sizes for downloads. | `import { DownloadBytes } from 'ropegeo-common/models'` |
+| `BetaSection` | N/A | Beta section with images. | `import { BetaSection } from 'ropegeo-common/models'` |
+| `RopewikiBetaSectionView` | N/A | Type alias of `BetaSection` for Ropewiki page view typings. | `import type { RopewikiBetaSectionView } from 'ropegeo-common/models'` |
+
+### Minimap (`src/models/minimap/`)
+
+| Name | Base class | Description | Import |
+| --- | --- | --- | --- |
+| `Bounds` | N/A | Geographic bounding box. | `import { Bounds } from 'ropegeo-common/models'` |
+| `MiniMapType` | N/A | Minimap discriminator (e.g. GeoJSON). | `import { MiniMapType } from 'ropegeo-common/models'` |
+| `MiniMap` | N/A | Abstract base for page/region minimaps. | `import { MiniMap } from 'ropegeo-common/models'` |
+| `RegionMiniMap` | `MiniMap` | Region minimap payload. | `import { RegionMiniMap } from 'ropegeo-common/models'` |
+| `PageMiniMap` | `MiniMap` | Page minimap payload. | `import { PageMiniMap } from 'ropegeo-common/models'` |
+
+### Link preview (`src/models/linkPreview/`)
+
+| Name | Base class | Description | Import |
+| --- | --- | --- | --- |
+| `LinkPreview` | N/A | Generic link preview (title, image, URL). | `import { LinkPreview } from 'ropegeo-common/models'` |
+| `LinkPreviewImage` | N/A | Image sub-object for link previews. | `import { LinkPreviewImage } from 'ropegeo-common/models'` |
+
+### Cursors (`src/models/api/params/cursors/`)
+
+| Name | Base class | Description | Import |
+| --- | --- | --- | --- |
+| `CursorType` | N/A | Discriminator for cursor encodings. | `import { CursorType } from 'ropegeo-common/models'` |
+| `Cursor` | N/A | Abstract base for typed API cursors. | `import { Cursor } from 'ropegeo-common/models'` |
+| `SearchCursor` | `Cursor` | Search pagination cursor (base64). | `import { SearchCursor } from 'ropegeo-common/models'` |
+| `SearchCursorType` | N/A | Type alias for search cursor payload typing. | `import type { SearchCursorType } from 'ropegeo-common/models'` |
+| `RegionPreviewsCursor` | `Cursor` | Cursor for region previews pagination. | `import { RegionPreviewsCursor } from 'ropegeo-common/models'` |
+| `RegionImagesCursor` | `Cursor` | Cursor for region images pagination. | `import { RegionImagesCursor } from 'ropegeo-common/models'` |
+
+### Result wrappers (`src/models/api/results/`)
+
+| Name | Base class | Description | Import |
+| --- | --- | --- | --- |
+| `ResultType` | N/A | Discriminator enum for single-result API wrappers. | `import { ResultType } from 'ropegeo-common/models'` |
+| `Result` | N/A | Abstract single-result response; `fromResponseBody` dispatches to parsers. | `import { Result } from 'ropegeo-common/models'` |
+| `registerResultParser` | N/A | Registers `Result.fromResponseBody` for a `ResultType`. | `import { registerResultParser } from 'ropegeo-common/models'` |
+| `CursorPaginationResultType` | N/A | Discriminator for cursor-paginated result wrappers. | `import { CursorPaginationResultType } from 'ropegeo-common/models'` |
+| `CursorPaginationResults` | N/A | Abstract `results` + `nextCursor` response shape. | `import { CursorPaginationResults } from 'ropegeo-common/models'` |
+| `ValidatedCursorPaginationResponse` | N/A | Validated inner shape passed to specific cursor result classes. | `import type { ValidatedCursorPaginationResponse } from 'ropegeo-common/models'` |
+| `registerCursorPaginationParser` | N/A | Registers parser for a `CursorPaginationResultType`. | `import { registerCursorPaginationParser } from 'ropegeo-common/models'` |
+| `PaginationResultType` | N/A | Discriminator for page-based paginated result wrappers. | `import { PaginationResultType } from 'ropegeo-common/models'` |
+| `PaginationResults` | N/A | Abstract `results` + `total` + `page` response shape. | `import { PaginationResults } from 'ropegeo-common/models'` |
+| `ValidatedPaginationResponse` | N/A | Validated inner shape for page-based pagination. | `import type { ValidatedPaginationResponse } from 'ropegeo-common/models'` |
+| `registerPaginationParser` | N/A | Registers parser for a `PaginationResultType`. | `import { registerPaginationParser } from 'ropegeo-common/models'` |
+
+### Mobile / offline (`src/models/mobile/`)
+
+| Name | Base class | Description | Import |
+| --- | --- | --- | --- |
+| `ImageVersion` | N/A | Enum of cached image variant kinds. | `import { ImageVersion } from 'ropegeo-common/models'` |
+| `VERSION_FORMAT` | N/A | Format constant for version strings. | `import { VERSION_FORMAT } from 'ropegeo-common/models'` |
+| `ImageVersions` | N/A | Map of image URLs by `ImageVersion`; `fromResult` for persisted JSON. | `import { ImageVersions } from 'ropegeo-common/models'` |
+| `SavedPage` | N/A | Offline saved page record (`PagePreview` + metadata). | `import { SavedPage } from 'ropegeo-common/models'` |
 
 ### React components (`src/components/`)
 

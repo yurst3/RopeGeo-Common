@@ -2,9 +2,9 @@
 
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import { render, waitFor, cleanup, act } from '@testing-library/react';
-import { Bounds } from '../../src/classes/minimap/bounds';
-import { ResultType } from '../../src/classes/results/result';
-import '../../src/classes/api/getRopewikiRegionBounds/ropewikiRegionBoundsResult';
+import { Bounds } from '../../src/models/minimap/bounds';
+import { ResultType } from '../../src/models/api/results/result';
+import '../../src/models/api/results/ropewikiRegionBoundsResult';
 import {
     Method,
     RopeGeoHttpRequest,

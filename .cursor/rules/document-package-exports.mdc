@@ -1,6 +1,6 @@
 ---
 description: How to document new public exports in ropegeo-common README tables
-globs: src/**/*.ts, src/classes/index.ts, src/helpers/index.ts, README.md
+globs: src/**/*.ts, src/models/index.ts, src/helpers/index.ts, README.md
 alwaysApply: false
 ---
 
@@ -10,26 +10,26 @@ Public API surface is summarized in **README.md** as markdown tables—not a sin
 
 ## Where exports live
 
-- **Classes** (domain models, parsers, enums, request params, etc.) — Re-exported from `src/classes/index.ts`. The package root `src/index.ts` re-exports `./classes`. Consumers should use `import { … } from 'ropegeo-common/classes'` and `import type { … } from 'ropegeo-common/classes'` for type-only symbols.
+- **Models** (domain models, parsers, enums, query params, API shapes, etc.) — Re-exported from `src/models/index.ts`. The package root `src/index.ts` re-exports `./models`. Consumers should use `import { … } from 'ropegeo-common/models'` and `import type { … } from 'ropegeo-common/models'` for type-only symbols. The subpath `ropegeo-common/classes` remains an alias of `./models` for backward compatibility.
 - **Helpers** — Re-exported from `src/helpers/index.ts`. Consumers use `import { … } from 'ropegeo-common/helpers'` (and `import type { … }` for helper-only types).
 
 ## Table format
 
-Group rows by **source folder** under `src/helpers/` or `src/classes/`. Each group has:
+Group rows by **source folder** under `src/helpers/` or `src/models/`. Each group has:
 
 1. A **heading** that names the folder (or a short description + path in parentheses), e.g. `### S3 helpers (\`src/helpers/s3/\`)`.
 2. A table with columns (order matters):
 
 **Helper tables** (`src/helpers/`): **Name** → **Description** → **Import**.
 
-**Class tables** (`src/classes/`): **Name** → **Base class** → **Description** → **Import**.
+**Model tables** (`src/models/`): **Name** → **Base class** → **Description** → **Import**.
 
 | Column | Content |
 | --- | --- |
 | **Name** | Export name as used in code. |
-| **Base class** | (Classes only.) Direct superclass name, or `N/A` (enums, type-only aliases, functions, constants, registration helpers, standalone classes, abstract roots). |
+| **Base class** | (Models only.) Direct superclass name, or `N/A` (enums, type-only aliases, functions, constants, registration helpers, standalone classes, abstract roots). |
 | **Description** | One concise sentence: what it is for, not implementation detail. |
-| **Import** | Full example import string (e.g. `import { getS3Object } from 'ropegeo-common/helpers'` or `import type { GetRopewikiPagePreviewRow } from 'ropegeo-common/classes'`). |
+| **Import** | Full example import string (e.g. `import { getS3Object } from 'ropegeo-common/helpers'` or `import type { GetRopewikiPagePreviewRow } from 'ropegeo-common/models'`). |
 
 ## Rules for the Base class column
 
@@ -38,11 +38,11 @@ Group rows by **source folder** under `src/helpers/` or `src/classes/`. Each gro
 
 ## When to update README
 
-- Add a row when you add a new **public** export to `src/classes/index.ts` or `src/helpers/index.ts`.
+- Add a row when you add a new **public** export to `src/models/index.ts` or `src/helpers/index.ts`.
 - Remove or edit rows when exports are removed, renamed, or deprecated (note deprecation in **Description** if the symbol remains).
-- Place the row in the table that matches the file’s folder (e.g. new class under `src/classes/api/foo/` goes in that API’s table). If you introduce a **new** folder, add a new section with a new table.
+- Place the row in the table that matches the file’s folder (e.g. a new endpoint view under `src/models/api/endpoints/` goes in that API’s section; result wrappers under `src/models/api/results/`). If you introduce a **new** folder, add a new section with a new table.
 - Do **not** list symbols that are only used internally (e.g. side-effect `register*Parsers.ts` files that are not re-exported).
 
 ## Cross-reference
 
-See also **add-classes.mdc** for where to put new files and how `Result` / pagination bases work. After following that workflow, update the matching README table(s) here.
+See also **add-models.mdc** for where to put new files and how `Result` / pagination bases work. After following that workflow, update the matching README table(s) here.

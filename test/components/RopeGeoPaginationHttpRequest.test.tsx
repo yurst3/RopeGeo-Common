@@ -2,10 +2,10 @@
 
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import { render, waitFor, cleanup } from '@testing-library/react';
-import type { RouteGeoJsonFeature } from '../../src/classes/routes/route';
-import { RouteType } from '../../src/classes/routes/routeType';
-import '../../src/classes/results/registerAllResultParsers';
-import { RoutesParams } from '../../src/classes/requestParams/routesParams';
+import type { RouteGeoJsonFeature } from '../../src/models/routes/route';
+import { RouteType } from '../../src/models/routes/routeType';
+import '../../src/models/api/results/registerAllResultParsers';
+import { RoutesParams } from '../../src/models/api/params/routesParams';
 import { RopeGeoPaginationHttpRequest } from '../../src/components/RopeGeoPaginationHttpRequest';
 import { Service } from '../../src/components/RopeGeoHttpRequest';
 import { mockJsonResponse, requestUrl } from '../helpers/jestFetch';

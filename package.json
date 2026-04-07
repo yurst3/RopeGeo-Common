@@ -1,7 +1,7 @@
 {
     "name": "ropegeo-common",
-    "version": "1.9.6",
-    "description": "Shared domain classes and helpers for RopeGeo and WebScraper",
+    "version": "1.10.0",
+    "description": "Shared domain models and helpers for RopeGeo and WebScraper",
     "license": "ISC",
     "repository": {
         "type": "git",
@@ -15,9 +15,9 @@
             "types": "./dist/index.d.ts",
             "default": "./dist/index.js"
         },
-        "./classes": {
-            "types": "./dist/classes/index.d.ts",
-            "default": "./dist/classes/index.js"
+        "./models": {
+            "types": "./dist/models/index.d.ts",
+            "default": "./dist/models/index.js"
         },
         "./helpers": {
             "types": "./dist/helpers/index.d.ts",

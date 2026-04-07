@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   type PaginationParams,
   PaginationResults,
-} from "../classes";
+} from "../models";
 import { Method, Service, SERVICE_BASE_URL } from "./RopeGeoHttpRequest";
 
 const PATH_PARAM_PATTERN = /:([a-zA-Z0-9_]+)/g;

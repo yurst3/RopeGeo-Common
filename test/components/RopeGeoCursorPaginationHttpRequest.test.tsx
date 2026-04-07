@@ -3,10 +3,10 @@
 import { TextDecoder, TextEncoder } from 'util';
 import { describe, it, expect, jest, beforeEach, afterEach, beforeAll } from '@jest/globals';
 import { render, waitFor, cleanup, act } from '@testing-library/react';
-import { RegionPreviewsCursor } from '../../src/classes/cursors/regionPreviewsCursor';
-import { RopewikiRegionPreviewsParams } from '../../src/classes/api/getRopewikiRegionPreviews/ropewikiRegionPreviewsParams';
-import '../../src/classes/api/getRopewikiRegionPreviews/ropewikiRegionPreviewsResult';
-import { CursorPaginationResultType } from '../../src/classes/results/cursorPaginationResults';
+import { RegionPreviewsCursor } from '../../src/models/api/params/cursors/regionPreviewsCursor';
+import { RopewikiRegionPreviewsParams } from '../../src/models/api/params/ropewikiRegionPreviewsParams';
+import '../../src/models/api/results/ropewikiRegionPreviewsResult';
+import { CursorPaginationResultType } from '../../src/models/api/results/cursorPaginationResults';
 import {
     RopeGeoCursorPaginationHttpRequest,
 } from '../../src/components/RopeGeoCursorPaginationHttpRequest';

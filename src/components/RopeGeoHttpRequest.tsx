@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { Result } from "../classes";
+import { Result } from "../models";
 
 export const Service = {
   WEBSCRAPER: "WEBSCRAPER",
