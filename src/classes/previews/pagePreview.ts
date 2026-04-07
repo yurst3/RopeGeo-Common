@@ -119,7 +119,7 @@ export class PagePreview extends Preview {
 
     /**
      * Validates result has page preview fields and applies PagePreview.prototype.
-     * Expects difficulty as plain object with technical, water, time, risk (optional).
+     * Expects difficulty as plain object with technical, water, time, additionalRisk (optional).
      */
     static fromResult(result: unknown): PagePreview {
         if (result == null || typeof result !== 'object') {
@@ -201,7 +201,7 @@ export class PagePreview extends Preview {
         strOrNull(d.technical, 'technical');
         strOrNull(d.water, 'water');
         strOrNull(d.time, 'time');
-        strOrNull(d.risk, 'risk');
+        strOrNull(d.additionalRisk, 'additionalRisk');
         strOrNull(d.effectiveRisk, 'effectiveRisk');
         const dtype = d.difficultyType ?? d.DifficultyType;
         if (

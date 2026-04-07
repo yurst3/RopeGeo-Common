@@ -50,7 +50,7 @@ describe('PagePreview', () => {
             expect(d.technical).toBe(AcaTechnicalRating.Two);
             expect(d.water).toBe(AcaWaterRating.C);
             expect(d.time).toBe(AcaTimeRating.III);
-            expect(d.risk).toBe(AcaRiskRating.PG);
+            expect(d.additionalRisk).toBe(AcaRiskRating.PG);
             expect(d.effectiveRisk).toBe(AcaRiskRating.PG);
         });
 
@@ -84,11 +84,11 @@ describe('PagePreview', () => {
             expect(PagePreview.fromDbRow({ ...baseRow, permits: 'Closed' }, null).permit).toBe(PermitStatus.Closed);
         });
 
-        it('sets effectiveRisk from technical when risk not in row', () => {
+        it('sets effectiveRisk from technical when additionalRisk not in row', () => {
             const row = { ...baseRow, riskRating: null };
             const preview = PagePreview.fromDbRow(row, null);
             const d = preview.difficulty as AcaDifficulty;
-            expect(d.risk).toBeNull();
+            expect(d.additionalRisk).toBeNull();
             expect(d.effectiveRisk).toBe(AcaRiskRating.PG);
         });
 

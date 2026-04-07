@@ -15,7 +15,7 @@ describe('AcaDifficulty', () => {
             expect(d.technical).toBeNull();
             expect(d.water).toBeNull();
             expect(d.time).toBeNull();
-            expect(d.risk).toBeNull();
+            expect(d.additionalRisk).toBeNull();
             expect(d.effectiveRisk).toBeNull();
         });
 
@@ -33,7 +33,7 @@ describe('AcaDifficulty', () => {
             expect(d.technical).toBe(AcaTechnicalRating.Two);
             expect(d.water).toBe(AcaWaterRating.C);
             expect(d.time).toBe(AcaTimeRating.III);
-            expect(d.risk).toBe(AcaRiskRating.PG);
+            expect(d.additionalRisk).toBe(AcaRiskRating.PG);
             expect(d.effectiveRisk).toBe(AcaRiskRating.PG);
         });
 
@@ -43,7 +43,7 @@ describe('AcaDifficulty', () => {
             );
         });
 
-        it('effectiveRisk defaults from technical when risk is null', () => {
+        it('effectiveRisk defaults from technical when additionalRisk is null', () => {
             expect(new AcaDifficulty('1', null, null, null).effectiveRisk).toBe(
                 AcaRiskRating.G,
             );
@@ -55,21 +55,21 @@ describe('AcaDifficulty', () => {
             );
         });
 
-        it('keeps explicit risk when not milder than default', () => {
+        it('keeps explicit additionalRisk when not milder than default', () => {
             const d = new AcaDifficulty('1', null, null, 'PG');
-            expect(d.risk).toBe(AcaRiskRating.PG);
+            expect(d.additionalRisk).toBe(AcaRiskRating.PG);
             expect(d.effectiveRisk).toBe(AcaRiskRating.PG);
         });
 
-        it('upgrades effectiveRisk when explicit risk is milder than default', () => {
+        it('upgrades effectiveRisk when explicit additionalRisk is milder than default', () => {
             const d = new AcaDifficulty('3', null, null, 'G');
-            expect(d.risk).toBe(AcaRiskRating.G);
+            expect(d.additionalRisk).toBe(AcaRiskRating.G);
             expect(d.effectiveRisk).toBe(AcaRiskRating.PG13);
         });
 
-        it('keeps explicit risk when no default (technical null)', () => {
+        it('keeps explicit additionalRisk when no default (technical null)', () => {
             const d = new AcaDifficulty(null, null, null, 'R');
-            expect(d.risk).toBe(AcaRiskRating.R);
+            expect(d.additionalRisk).toBe(AcaRiskRating.R);
             expect(d.effectiveRisk).toBe(AcaRiskRating.R);
         });
     });
@@ -81,16 +81,16 @@ describe('AcaDifficulty', () => {
                 technical: '2',
                 water: null,
                 time: null,
-                risk: 'PG',
+                additionalRisk: 'PG',
             }) as AcaDifficulty;
             expect(d.technical).toBe(AcaTechnicalRating.Two);
-            expect(d.risk).toBe(AcaRiskRating.PG);
+            expect(d.additionalRisk).toBe(AcaRiskRating.PG);
         });
 
         it('defaults missing difficultyType to ACA', () => {
             const d = Difficulty.fromResult({
                 technical: '1',
-                risk: null,
+                additionalRisk: null,
             }) as AcaDifficulty;
             expect(d.technical).toBe(AcaTechnicalRating.One);
         });
@@ -99,10 +99,10 @@ describe('AcaDifficulty', () => {
             const d = AcaDifficulty.fromResult({
                 difficultyType: 'ACA',
                 technical: '3',
-                risk: 'G',
+                additionalRisk: 'G',
                 effectiveRisk: 'R',
             });
-            expect(d.risk).toBe(AcaRiskRating.G);
+            expect(d.additionalRisk).toBe(AcaRiskRating.G);
             expect(d.effectiveRisk).toBe(AcaRiskRating.R);
         });
 

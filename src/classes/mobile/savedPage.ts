@@ -27,7 +27,7 @@ function pagePreviewToPlain(p: PagePreview): Record<string, unknown> {
                   technical: p.difficulty.technical,
                   water: p.difficulty.water,
                   time: p.difficulty.time,
-                  risk: p.difficulty.risk,
+                  additionalRisk: p.difficulty.additionalRisk,
                   effectiveRisk: p.difficulty.effectiveRisk,
               }
             : {

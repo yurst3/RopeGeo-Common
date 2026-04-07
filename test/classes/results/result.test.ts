@@ -19,7 +19,7 @@ const validRopewikiPageViewResult = {
     quality: 4,
     userVotes: 10,
     regions: [{ id: 'r1', name: 'Region' }],
-    difficulty: { technical: null, water: null, time: null, risk: null },
+    difficulty: { technical: null, water: null, time: null, additionalRisk: null },
     permit: null,
     rappelCount: null,
     jumps: null,

@@ -311,8 +311,14 @@ export class RopewikiPageView {
         if (d.time !== null && d.time !== undefined && typeof d.time !== 'string') {
             throw new Error(`RopewikiPageView.${key}.time must be string or null`);
         }
-        if (d.risk !== null && d.risk !== undefined && typeof d.risk !== 'string') {
-            throw new Error(`RopewikiPageView.${key}.risk must be string or null`);
+        if (
+            d.additionalRisk !== null &&
+            d.additionalRisk !== undefined &&
+            typeof d.additionalRisk !== 'string'
+        ) {
+            throw new Error(
+                `RopewikiPageView.${key}.additionalRisk must be string or null`,
+            );
         }
     }
 

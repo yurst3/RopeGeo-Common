@@ -11,13 +11,14 @@ type AcaParts = {
     technical: AcaTechnicalRating | null;
     water: AcaWaterRating | null;
     time: AcaTimeRating | null;
-    risk: AcaRiskRating | null;
+    additionalRisk: AcaRiskRating | null;
     effectiveRisk: AcaRiskRating | null;
 };
 
 /**
- * ACA canyon difficulty from DB strings. `risk` is the raw stored value; `effectiveRisk`
- * applies the technical default floor when `risk` is null or milder than that default.
+ * ACA canyon difficulty from DB strings. `additionalRisk` is the raw stored value (`riskRating`
+ * column); `effectiveRisk` applies the technical default floor when `additionalRisk` is null or
+ * milder than that default.
  */
 export class AcaDifficulty extends Difficulty {
     readonly difficultyType = DifficultyType.ACA;
@@ -25,8 +26,8 @@ export class AcaDifficulty extends Difficulty {
     readonly technical!: AcaTechnicalRating | null;
     readonly water!: AcaWaterRating | null;
     readonly time!: AcaTimeRating | null;
-    /** Raw risk from ropewiki (`riskRating` column), after enum parse; null if unset. */
-    readonly risk!: AcaRiskRating | null;
+    /** Raw additional risk from ropewiki (`riskRating` column), after enum parse; null if unset. */
+    readonly additionalRisk!: AcaRiskRating | null;
     /** Risk used for display and sorting (never milder than the default implied by technical). */
     readonly effectiveRisk!: AcaRiskRating | null;
 
@@ -34,7 +35,7 @@ export class AcaDifficulty extends Difficulty {
         technicalRating: string | null | undefined,
         waterRating: string | null | undefined,
         timeRating: string | null | undefined,
-        riskRating: string | null | undefined,
+        additionalRiskRating: string | null | undefined,
     ) {
         super();
         const technical = AcaDifficulty.parseField(
@@ -52,17 +53,20 @@ export class AcaDifficulty extends Difficulty {
             Object.values(AcaTimeRating),
             'time',
         );
-        const parsedRisk = AcaDifficulty.parseField(
-            riskRating,
+        const parsedAdditionalRisk = AcaDifficulty.parseField(
+            additionalRiskRating,
             Object.values(AcaRiskRating),
-            'risk',
+            'additionalRisk',
         );
         const parts: AcaParts = {
             technical,
             water,
             time,
-            risk: parsedRisk,
-            effectiveRisk: AcaDifficulty.computeEffectiveRisk(parsedRisk, technical),
+            additionalRisk: parsedAdditionalRisk,
+            effectiveRisk: AcaDifficulty.computeEffectiveRisk(
+                parsedAdditionalRisk,
+                technical,
+            ),
         };
         AcaDifficulty.assignParts(this, parts);
     }
@@ -75,7 +79,8 @@ export class AcaDifficulty extends Difficulty {
         (target as { technical: typeof parts.technical }).technical = parts.technical;
         (target as { water: typeof parts.water }).water = parts.water;
         (target as { time: typeof parts.time }).time = parts.time;
-        (target as { risk: typeof parts.risk }).risk = parts.risk;
+        (target as { additionalRisk: typeof parts.additionalRisk }).additionalRisk =
+            parts.additionalRisk;
         (target as { effectiveRisk: typeof parts.effectiveRisk }).effectiveRisk =
             parts.effectiveRisk;
     }
@@ -95,14 +100,15 @@ export class AcaDifficulty extends Difficulty {
     }
 
     private static computeEffectiveRisk(
-        rawRisk: AcaRiskRating | null,
+        additionalRisk: AcaRiskRating | null,
         technical: AcaTechnicalRating | null,
     ): AcaRiskRating | null {
         const defaultRisk = AcaDifficulty.defaultRiskFromTechnical(technical);
-        if (rawRisk != null) {
-            return defaultRisk != null && ACA_RISK_ORDER[rawRisk] < ACA_RISK_ORDER[defaultRisk]
+        if (additionalRisk != null) {
+            return defaultRisk != null &&
+                ACA_RISK_ORDER[additionalRisk] < ACA_RISK_ORDER[defaultRisk]
                 ? defaultRisk
-                : rawRisk;
+                : additionalRisk;
         }
         return defaultRisk;
     }
@@ -124,7 +130,7 @@ export class AcaDifficulty extends Difficulty {
 
     /**
      * Parses JSON/API objects: `difficultyType: 'ACA'` (optional when dispatched via
-     * {@link Difficulty.fromResult}), `technical`, `water`, `time`, `risk` (raw), optional
+     * {@link Difficulty.fromResult}), `technical`, `water`, `time`, `additionalRisk` (raw), optional
      * `effectiveRisk` override.
      */
     static fromResult(result: unknown): AcaDifficulty {
@@ -147,13 +153,15 @@ export class AcaDifficulty extends Difficulty {
         const tech = AcaDifficulty.coerceOptionalString(r.technical ?? r.Technical);
         const water = AcaDifficulty.coerceOptionalString(r.water ?? r.Water);
         const time = AcaDifficulty.coerceOptionalString(r.time ?? r.Time);
-        const riskRaw = AcaDifficulty.coerceOptionalString(r.risk ?? r.Risk);
+        const additionalRiskRaw = AcaDifficulty.coerceOptionalString(
+            r.additionalRisk ?? r.AdditionalRisk,
+        );
         const effectiveRaw = AcaDifficulty.coerceOptionalString(
             r.effectiveRisk ?? r.EffectiveRisk,
         );
 
         if (effectiveRaw !== null) {
-            const inst = new AcaDifficulty(tech, water, time, riskRaw);
+            const inst = new AcaDifficulty(tech, water, time, additionalRiskRaw);
             const effParsed = AcaDifficulty.parseField(
                 effectiveRaw,
                 Object.values(AcaRiskRating),
@@ -163,7 +171,7 @@ export class AcaDifficulty extends Difficulty {
             return inst;
         }
 
-        return new AcaDifficulty(tech, water, time, riskRaw);
+        return new AcaDifficulty(tech, water, time, additionalRiskRaw);
     }
 
     private static coerceOptionalString(v: unknown): string | null {

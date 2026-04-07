@@ -21,7 +21,7 @@ const validPreviewWire = {
         technical: '3',
         water: 'B',
         time: 'III',
-        risk: 'PG',
+        additionalRisk: 'PG',
     },
     mapData: null,
     externalLink: 'https://ropewiki.com/x',
