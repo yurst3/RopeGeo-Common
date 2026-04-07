@@ -38,7 +38,8 @@ export class RouteFilter {
             }
             return new RoutesParams({
                 region: null,
-                routeType: this.routeType,
+                routeTypes:
+                    this.routeType !== null ? [this.routeType] : null,
                 difficulty:
                     this.difficultyOptions !== null
                         ? this.difficultyOptions.toDifficultyParams()
@@ -51,7 +52,8 @@ export class RouteFilter {
                 : [...this.source];
         return new RoutesParams({
             region: { id: rid, source: src },
-            routeType: this.routeType,
+            routeTypes:
+                this.routeType !== null ? [this.routeType] : null,
             difficulty:
                 this.difficultyOptions !== null
                     ? this.difficultyOptions.toDifficultyParams()

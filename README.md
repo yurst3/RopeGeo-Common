@@ -105,7 +105,7 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 | `Q_ACA_WATER` | N/A | Query key for ACA water rating list. | `import { Q_ACA_WATER } from 'ropegeo-common/models'` |
 | `Q_ACA_TIME` | N/A | Query key for ACA time rating list. | `import { Q_ACA_TIME } from 'ropegeo-common/models'` |
 | `Q_ACA_RISK` | N/A | Query key for ACA risk rating list. | `import { Q_ACA_RISK } from 'ropegeo-common/models'` |
-| `RoutesParams` | `PaginationParams` | Validated GET /routes params (region, source, route type, difficulty, `limit`, `page`). | `import { RoutesParams } from 'ropegeo-common/models'` |
+| `RoutesParams` | `PaginationParams` | Validated GET /routes params (region, source, optional `route-types` pipe-list, difficulty, `limit`, `page`). | `import { RoutesParams } from 'ropegeo-common/models'` |
 | `SearchParams` | `CursorPaginationParams` | Validated GET /search params including cursor pagination and difficulty. | `import { SearchParams } from 'ropegeo-common/models'` |
 | `SearchOrder` | N/A | Search sort order (`similarity` \| `quality` \| `distance`). | `import type { SearchOrder } from 'ropegeo-common/models'` |
 | `SearchParamsPosition` | N/A | `{ lat, lon }` for distance search. | `import type { SearchParamsPosition } from 'ropegeo-common/models'` |

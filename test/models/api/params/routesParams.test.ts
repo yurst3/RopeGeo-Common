@@ -51,14 +51,41 @@ describe('RoutesParams', () => {
             ).toThrow(/limit must not exceed/);
         });
 
-        it('accepts routeType and difficulty null', () => {
+        it('accepts routeTypes list and difficulty null', () => {
             const p = new RoutesParams({
                 region: null,
-                routeType: RouteType.Canyon,
+                routeTypes: [RouteType.Canyon],
                 difficulty: null,
             });
-            expect(p.routeType).toBe(RouteType.Canyon);
+            expect(p.routeTypes).toEqual([RouteType.Canyon]);
             expect(p.difficulty).toBeNull();
+        });
+
+        it('dedupes routeTypes while preserving order', () => {
+            const p = new RoutesParams({
+                region: null,
+                routeTypes: [
+                    RouteType.Canyon,
+                    RouteType.Cave,
+                    RouteType.Canyon,
+                ],
+            });
+            expect(p.routeTypes).toEqual([RouteType.Canyon, RouteType.Cave]);
+        });
+
+        it('normalizes empty routeTypes array to null', () => {
+            const p = new RoutesParams({ region: null, routeTypes: [] });
+            expect(p.routeTypes).toBeNull();
+        });
+
+        it('throws when routeTypes entry is invalid', () => {
+            expect(
+                () =>
+                    new RoutesParams({
+                        region: null,
+                        routeTypes: ['NotAType' as RouteType],
+                    }),
+            ).toThrow(/Invalid route type/);
         });
 
         it('throws when region id is not a valid UUID', () => {
@@ -72,7 +99,7 @@ describe('RoutesParams', () => {
     });
 
     describe('toQueryString', () => {
-        it('includes limit and page when global and no route-type/difficulty', () => {
+        it('includes limit and page when global and no route-types/difficulty', () => {
             const p = new RoutesParams({ region: null });
             const params = new URLSearchParams(p.toQueryString());
             expect(params.get('limit')).toBe(String(PaginationParams.DEFAULT_LIMIT));
@@ -99,6 +126,15 @@ describe('RoutesParams', () => {
             });
             const params = new URLSearchParams(p.toQueryString());
             expect(params.get('source')).toBe('ropewiki');
+        });
+
+        it('encodes route-types as pipe-list when set', () => {
+            const p = new RoutesParams({
+                region: null,
+                routeTypes: [RouteType.Canyon, RouteType.Cave],
+            });
+            const params = new URLSearchParams(p.toQueryString());
+            expect(params.get('route-types')).toBe('Canyon|Cave');
         });
     });
 
@@ -141,16 +177,33 @@ describe('RoutesParams', () => {
             ).toThrow(/source.*token/);
         });
 
-        it('parses route-type and ACA difficulty from query', () => {
+        it('parses route-types and ACA difficulty from query', () => {
             const p = RoutesParams.fromQueryStringParams({
                 region: rid,
-                'route-type': 'Canyon',
+                'route-types': 'Canyon',
                 'difficulty-type': 'aca',
                 'aca-technical-rating': '3',
             });
-            expect(p.routeType).toBe(RouteType.Canyon);
+            expect(p.routeTypes).toEqual([RouteType.Canyon]);
             expect(p.difficulty).not.toBeNull();
             expect(p.difficulty!.isActive()).toBe(true);
+        });
+
+        it('parses pipe-separated route-types from query', () => {
+            const p = RoutesParams.fromQueryStringParams({
+                region: rid,
+                'route-types': 'Canyon|Cave',
+            });
+            expect(p.routeTypes).toEqual([RouteType.Canyon, RouteType.Cave]);
+        });
+
+        it('throws when route-types token is invalid', () => {
+            expect(() =>
+                RoutesParams.fromQueryStringParams({
+                    region: rid,
+                    'route-types': 'Canyon|nope',
+                }),
+            ).toThrow(/route-types/);
         });
 
         it('parses limit and page from query', () => {
@@ -174,6 +227,7 @@ describe('RoutesParams', () => {
         it('returns new params with same filters and new page', () => {
             const p = new RoutesParams({
                 region: { id: rid, source: null },
+                routeTypes: [RouteType.Canyon, RouteType.Cave],
                 limit: 100,
                 page: 1,
             });
@@ -181,6 +235,7 @@ describe('RoutesParams', () => {
             expect(p2.page).toBe(4);
             expect(p2.limit).toBe(100);
             expect(p2.region).toEqual(p.region);
+            expect(p2.routeTypes).toEqual([RouteType.Canyon, RouteType.Cave]);
         });
     });
 
@@ -277,6 +332,45 @@ describe('RoutesParams', () => {
             expect(p.difficulty).not.toBeNull();
             const q = new URLSearchParams(p.toQueryString());
             expect(q.get('aca-technical-rating')).toBe('4');
+        });
+
+        it('parses routeTypes string (single value)', () => {
+            const p = RoutesParams.fromResult({
+                region: null,
+                routeTypes: 'Canyon',
+            });
+            expect(p.routeTypes).toEqual([RouteType.Canyon]);
+        });
+
+        it('parses routeTypes pipe string', () => {
+            const p = RoutesParams.fromResult({
+                region: null,
+                routeTypes: 'Canyon|Cave',
+            });
+            expect(p.routeTypes).toEqual([RouteType.Canyon, RouteType.Cave]);
+        });
+
+        it('parses routeTypes string array', () => {
+            const p = RoutesParams.fromResult({
+                region: null,
+                routeTypes: ['Canyon', 'Cave'],
+            });
+            expect(p.routeTypes).toEqual([RouteType.Canyon, RouteType.Cave]);
+        });
+
+        it('throws when routeTypes array has non-string entry', () => {
+            expect(() =>
+                RoutesParams.fromResult({
+                    region: null,
+                    routeTypes: ['Canyon', 1],
+                }),
+            ).toThrow(/routeTypes\[1\]/);
+        });
+
+        it('throws when routeTypes is neither string nor array', () => {
+            expect(() =>
+                RoutesParams.fromResult({ region: null, routeTypes: 1 }),
+            ).toThrow(/string, string\[\], or null/);
         });
     });
 });

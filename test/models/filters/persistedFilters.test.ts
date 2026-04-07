@@ -158,7 +158,7 @@ describe('RouteFilter', () => {
             id: rid,
             source: [PageDataSource.Ropewiki],
         });
-        expect(rp.routeType).toBe(RouteType.Canyon);
+        expect(rp.routeTypes).toEqual([RouteType.Canyon]);
         expect(rp.difficulty).toBeInstanceOf(AcaDifficultyParams);
         expect(rp.difficulty!.isActive()).toBe(true);
     });
