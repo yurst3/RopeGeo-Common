@@ -68,19 +68,19 @@ export class AcaDifficultyParams extends DifficultyParams {
     readonly technical: AcaTechnicalRating[];
     readonly water: AcaWaterRating[];
     readonly time: AcaTimeRating[];
-    readonly risk: AcaRiskRating[];
+    readonly effectiveRisk: AcaRiskRating[];
 
     constructor(
         technical: AcaTechnicalRating[],
         water: AcaWaterRating[],
         time: AcaTimeRating[],
-        risk: AcaRiskRating[],
+        effectiveRisk: AcaRiskRating[],
     ) {
         super();
         this.technical = [...technical];
         this.water = [...water];
         this.time = [...time];
-        this.risk = [...risk];
+        this.effectiveRisk = [...effectiveRisk];
     }
 
     isActive(): boolean {
@@ -88,7 +88,7 @@ export class AcaDifficultyParams extends DifficultyParams {
             this.technical.length > 0 ||
             this.water.length > 0 ||
             this.time.length > 0 ||
-            this.risk.length > 0
+            this.effectiveRisk.length > 0
         );
     }
 
@@ -107,8 +107,11 @@ export class AcaDifficultyParams extends DifficultyParams {
         if (this.time.length > 0) {
             p.set(Q_ACA_TIME, this.time.map((x) => x.toLowerCase()).join('|'));
         }
-        if (this.risk.length > 0) {
-            p.set(Q_ACA_RISK, this.risk.map((x) => x.toLowerCase()).join('|'));
+        if (this.effectiveRisk.length > 0) {
+            p.set(
+                Q_ACA_RISK,
+                this.effectiveRisk.map((x) => x.toLowerCase()).join('|'),
+            );
         }
         return p.toString();
     }
@@ -131,12 +134,12 @@ export class AcaDifficultyParams extends DifficultyParams {
             Object.values(AcaTimeRating),
             'aca-time-rating',
         );
-        const risk = parseEnumTokens(
+        const effectiveRisk = parseEnumTokens(
             q[Q_ACA_RISK] ?? q['Aca-Risk-Rating'],
             Object.values(AcaRiskRating),
             'aca-risk-rating',
         );
-        return new AcaDifficultyParams(technical, water, time, risk);
+        return new AcaDifficultyParams(technical, water, time, effectiveRisk);
     }
 
     private static optionalString(
@@ -175,12 +178,12 @@ export class AcaDifficultyParams extends DifficultyParams {
             Object.values(AcaTimeRating),
             'aca-time-rating',
         );
-        const risk = parseEnumTokens(
+        const effectiveRisk = parseEnumTokens(
             AcaDifficultyParams.optionalString(obj, Q_ACA_RISK, 'Aca-Risk-Rating'),
             Object.values(AcaRiskRating),
             'aca-risk-rating',
         );
-        return new AcaDifficultyParams(technical, water, time, risk);
+        return new AcaDifficultyParams(technical, water, time, effectiveRisk);
     }
 
     /** Returns null if every axis is empty (no difficulty filter). */

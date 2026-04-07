@@ -56,7 +56,7 @@ describe('DifficultyParams', () => {
             const d = DifficultyParams.fromQueryStringParams({
                 'aca-risk-rating': 'R|PG|r',
             }) as AcaDifficultyParams;
-            expect(d.risk).toEqual([AcaRiskRating.PG, AcaRiskRating.R]);
+            expect(d.effectiveRisk).toEqual([AcaRiskRating.PG, AcaRiskRating.R]);
         });
 
         it('throws on invalid difficulty-type value', () => {
@@ -89,7 +89,7 @@ describe('DifficultyParams', () => {
             const d = DifficultyParams.fromResult({
                 'aca-risk-rating': 'G',
             }) as AcaDifficultyParams;
-            expect(d.risk).toEqual([AcaRiskRating.G]);
+            expect(d.effectiveRisk).toEqual([AcaRiskRating.G]);
         });
 
         it('returns null when empty difficulty object', () => {

@@ -105,19 +105,19 @@ export class AcaDifficultyFilterOptions extends DifficultyFilterOptions {
     readonly technical: TechnicalMinMax;
     readonly water: WaterMinMax;
     readonly time: TimeMinMax;
-    readonly risk: RiskMinMax;
+    readonly effectiveRisk: RiskMinMax;
 
     constructor(
         technical: TechnicalMinMax,
         water: WaterMinMax,
         time: TimeMinMax,
-        risk: RiskMinMax,
+        effectiveRisk: RiskMinMax,
     ) {
         super();
         this.technical = technical;
         this.water = water;
         this.time = time;
-        this.risk = risk;
+        this.effectiveRisk = effectiveRisk;
     }
 
     toDifficultyParams(): AcaDifficultyParams {
@@ -141,8 +141,8 @@ export class AcaDifficultyFilterOptions extends DifficultyFilterOptions {
                 ACA_TIME_ORDER,
             ),
             expandInclusive(
-                this.risk.min,
-                this.risk.max,
+                this.effectiveRisk.min,
+                this.effectiveRisk.max,
                 RISK_ORDERED,
                 ACA_RISK_ORDER,
             ),
@@ -155,7 +155,10 @@ export class AcaDifficultyFilterOptions extends DifficultyFilterOptions {
             technical: { min: this.technical.min, max: this.technical.max },
             water: { min: this.water.min, max: this.water.max },
             time: { min: this.time.min, max: this.time.max },
-            risk: { min: this.risk.min, max: this.risk.max },
+            effectiveRisk: {
+                min: this.effectiveRisk.min,
+                max: this.effectiveRisk.max,
+            },
         };
     }
 
@@ -180,7 +183,7 @@ export class AcaDifficultyFilterOptions extends DifficultyFilterOptions {
         const tech = r.technical as Record<string, unknown>;
         const water = r.water as Record<string, unknown>;
         const time = r.time as Record<string, unknown>;
-        const risk = r.risk as Record<string, unknown>;
+        const riskRec = r.effectiveRisk as Record<string, unknown>;
         return new AcaDifficultyFilterOptions(
             new TechnicalMinMax(
                 tech.min as AcaTechnicalRating,
@@ -188,7 +191,10 @@ export class AcaDifficultyFilterOptions extends DifficultyFilterOptions {
             ),
             new WaterMinMax(water.min as AcaWaterRating, water.max as AcaWaterRating),
             new TimeMinMax(time.min as AcaTimeRating, time.max as AcaTimeRating),
-            new RiskMinMax(risk.min as AcaRiskRating, risk.max as AcaRiskRating),
+            new RiskMinMax(
+                riskRec.min as AcaRiskRating,
+                riskRec.max as AcaRiskRating,
+            ),
         );
     }
 }

@@ -77,7 +77,7 @@ describe('AcaDifficultyFilterOptions', () => {
         ]);
         expect(p.water).toEqual([AcaWaterRating.C]);
         expect(p.time).toEqual([AcaTimeRating.I]);
-        expect(p.risk).toEqual([AcaRiskRating.G]);
+        expect(p.effectiveRisk).toEqual([AcaRiskRating.G]);
     });
 
     it('toJSON and DifficultyFilterOptions.fromResult round-trip', () => {
@@ -93,7 +93,7 @@ describe('AcaDifficultyFilterOptions', () => {
             technical: { min: '1', max: '1' },
             water: { min: 'A', max: 'A' },
             time: { min: 'I', max: 'I' },
-            risk: { min: 'G', max: 'G' },
+            effectiveRisk: { min: 'G', max: 'G' },
         };
         const f = AcaDifficultyFilterOptions.fromResult(j);
         expect(f.difficultyType).toBe('ACA');
@@ -107,7 +107,7 @@ describe('AcaDifficultyFilterOptions', () => {
                 technical: { min: '1', max: '1' },
                 water: { min: 'A', max: 'A' },
                 time: { min: 'I', max: 'I' },
-                risk: { min: 'G', max: 'G' },
+                effectiveRisk: { min: 'G', max: 'G' },
             }),
         ).toThrow(/must be ACA/);
     });
@@ -127,7 +127,7 @@ describe('DifficultyFilterOptions.fromResult', () => {
                 technical: { min: '1', max: '1' },
                 water: { min: 'A', max: 'A' },
                 time: { min: 'I', max: 'I' },
-                risk: { min: 'G', max: 'G' },
+                effectiveRisk: { min: 'G', max: 'G' },
             }),
         ).toThrow(/Unknown difficultyType/);
     });
@@ -139,7 +139,7 @@ describe('DifficultyFilterOptions.fromResult', () => {
                 technical: { min: '1', max: '1' },
                 water: { min: 'A', max: 'A' },
                 time: { min: 'I', max: 'I' },
-                risk: { min: 'G', max: 'G' },
+                effectiveRisk: { min: 'G', max: 'G' },
             }),
         ).toThrow(/must be a string or null/);
     });
