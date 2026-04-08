@@ -8,29 +8,46 @@ const rid = 'c3d4e5f6-a7b8-9012-cdef-123456789012';
 
 describe('RoutesParams', () => {
     describe('constructor', () => {
-        it('accepts region with source allow-list', () => {
+        it('accepts region with single source', () => {
             const p = new RoutesParams({
                 region: {
                     id: rid,
-                    source: [PageDataSource.Ropewiki],
+                    source: PageDataSource.Ropewiki,
                 },
             });
             expect(p.region).toEqual({
                 id: rid,
-                source: [PageDataSource.Ropewiki],
+                source: PageDataSource.Ropewiki,
             });
+            expect(p.sources).toBeNull();
         });
 
-        it('accepts region with null source (all sources)', () => {
+        it('accepts global sources allow-list without region', () => {
             const p = new RoutesParams({
-                region: { id: rid, source: null },
+                region: null,
+                sources: [PageDataSource.Ropewiki],
             });
-            expect(p.region).toEqual({ id: rid, source: null });
+            expect(p.region).toBeNull();
+            expect(p.sources).toEqual([PageDataSource.Ropewiki]);
         });
 
-        it('accepts global (no region)', () => {
+        it('throws when region and sources are both set', () => {
+            expect(
+                () =>
+                    new RoutesParams({
+                        region: {
+                            id: rid,
+                            source: PageDataSource.Ropewiki,
+                        },
+                        sources: [PageDataSource.Ropewiki],
+                    }),
+            ).toThrow(/region and sources cannot both be set/);
+        });
+
+        it('accepts global (no region, no sources)', () => {
             const p = new RoutesParams({ region: null });
             expect(p.region).toBeNull();
+            expect(p.sources).toBeNull();
             expect(p.limit).toBe(PaginationParams.DEFAULT_LIMIT);
             expect(p.page).toBe(PaginationParams.DEFAULT_PAGE);
         });
@@ -92,7 +109,10 @@ describe('RoutesParams', () => {
             expect(
                 () =>
                     new RoutesParams({
-                        region: { id: 'not-uuid', source: null },
+                        region: {
+                            id: 'not-uuid',
+                            source: PageDataSource.Ropewiki,
+                        },
                     }),
             ).toThrow(/valid UUID/);
         });
@@ -106,26 +126,26 @@ describe('RoutesParams', () => {
             expect(params.get('page')).toBe(String(PaginationParams.DEFAULT_PAGE));
         });
 
-        it('encodes region without source when all sources', () => {
-            const p = new RoutesParams({
-                region: { id: rid, source: null },
-            });
-            const params = new URLSearchParams(p.toQueryString());
-            expect(params.get('region')).toBe(rid);
-            expect(params.has('source')).toBe(false);
-            expect(params.get('limit')).toBe(String(PaginationParams.DEFAULT_LIMIT));
-            expect(params.get('page')).toBe(String(PaginationParams.DEFAULT_PAGE));
-        });
-
-        it('encodes source pipe-list when set', () => {
+        it('encodes region-id and region-source', () => {
             const p = new RoutesParams({
                 region: {
                     id: rid,
-                    source: [PageDataSource.Ropewiki],
+                    source: PageDataSource.Ropewiki,
                 },
             });
             const params = new URLSearchParams(p.toQueryString());
-            expect(params.get('source')).toBe('ropewiki');
+            expect(params.get('region-id')).toBe(rid);
+            expect(params.get('region-source')).toBe('ropewiki');
+            expect(params.has('sources')).toBe(false);
+        });
+
+        it('encodes sources pipe-list when global', () => {
+            const p = new RoutesParams({
+                region: null,
+                sources: [PageDataSource.Ropewiki],
+            });
+            const params = new URLSearchParams(p.toQueryString());
+            expect(params.get('sources')).toBe('ropewiki');
         });
 
         it('encodes route-types as pipe-list when set', () => {
@@ -142,44 +162,66 @@ describe('RoutesParams', () => {
         it('parses empty query as global', () => {
             const p = RoutesParams.fromQueryStringParams({});
             expect(p.region).toBeNull();
+            expect(p.sources).toBeNull();
         });
 
-        it('parses region without source (all sources)', () => {
+        it('parses region-id and region-source', () => {
             const p = RoutesParams.fromQueryStringParams({
-                region: rid,
-            });
-            expect(p.region).toEqual({ id: rid, source: null });
-        });
-
-        it('parses region and source pipe-list', () => {
-            const p = RoutesParams.fromQueryStringParams({
-                region: rid,
-                source: 'ropewiki',
+                'region-id': rid,
+                'region-source': 'ropewiki',
             });
             expect(p.region).toEqual({
                 id: rid,
-                source: [PageDataSource.Ropewiki],
+                source: PageDataSource.Ropewiki,
             });
+            expect(p.sources).toBeNull();
         });
 
-        it('throws when source is set without region', () => {
-            expect(() =>
-                RoutesParams.fromQueryStringParams({ source: 'ropewiki' }),
-            ).toThrow(/source.*without.*region/);
+        it('parses global sources without region', () => {
+            const p = RoutesParams.fromQueryStringParams({
+                sources: 'ropewiki',
+            });
+            expect(p.region).toBeNull();
+            expect(p.sources).toEqual([PageDataSource.Ropewiki]);
         });
 
-        it('throws when source token is invalid', () => {
+        it('throws when region-source is set without region-id', () => {
             expect(() =>
                 RoutesParams.fromQueryStringParams({
-                    region: rid,
-                    source: 'nope',
+                    'region-source': 'ropewiki',
                 }),
-            ).toThrow(/source.*token/);
+            ).toThrow(/region-source.*without.*region-id/);
+        });
+
+        it('throws when region-id is set without region-source', () => {
+            expect(() =>
+                RoutesParams.fromQueryStringParams({ 'region-id': rid }),
+            ).toThrow(/region-source.*required/);
+        });
+
+        it('throws when region and sources are combined', () => {
+            expect(() =>
+                RoutesParams.fromQueryStringParams({
+                    'region-id': rid,
+                    'region-source': 'ropewiki',
+                    sources: 'ropewiki',
+                }),
+            ).toThrow(/cannot be combined with "sources"/);
+        });
+
+        it('throws when region-source token is invalid', () => {
+            expect(() =>
+                RoutesParams.fromQueryStringParams({
+                    'region-id': rid,
+                    'region-source': 'nope',
+                }),
+            ).toThrow(/PageDataSource token/);
         });
 
         it('parses route-types and ACA difficulty from query', () => {
             const p = RoutesParams.fromQueryStringParams({
-                region: rid,
+                'region-id': rid,
+                'region-source': 'ropewiki',
                 'route-types': 'Canyon',
                 'difficulty-type': 'aca',
                 'aca-technical-rating': '3',
@@ -191,7 +233,8 @@ describe('RoutesParams', () => {
 
         it('parses pipe-separated route-types from query', () => {
             const p = RoutesParams.fromQueryStringParams({
-                region: rid,
+                'region-id': rid,
+                'region-source': 'ropewiki',
                 'route-types': 'Canyon|Cave',
             });
             expect(p.routeTypes).toEqual([RouteType.Canyon, RouteType.Cave]);
@@ -200,7 +243,8 @@ describe('RoutesParams', () => {
         it('throws when route-types token is invalid', () => {
             expect(() =>
                 RoutesParams.fromQueryStringParams({
-                    region: rid,
+                    'region-id': rid,
+                    'region-source': 'ropewiki',
                     'route-types': 'Canyon|nope',
                 }),
             ).toThrow(/route-types/);
@@ -208,7 +252,8 @@ describe('RoutesParams', () => {
 
         it('parses limit and page from query', () => {
             const p = RoutesParams.fromQueryStringParams({
-                region: rid,
+                'region-id': rid,
+                'region-source': 'ropewiki',
                 limit: '50',
                 page: '3',
             });
@@ -218,7 +263,11 @@ describe('RoutesParams', () => {
 
         it('throws when limit is not a positive integer', () => {
             expect(() =>
-                RoutesParams.fromQueryStringParams({ region: rid, limit: '0' }),
+                RoutesParams.fromQueryStringParams({
+                    'region-id': rid,
+                    'region-source': 'ropewiki',
+                    limit: '0',
+                }),
             ).toThrow(/limit/);
         });
     });
@@ -226,7 +275,10 @@ describe('RoutesParams', () => {
     describe('withPage', () => {
         it('returns new params with same filters and new page', () => {
             const p = new RoutesParams({
-                region: { id: rid, source: null },
+                region: {
+                    id: rid,
+                    source: PageDataSource.Ropewiki,
+                },
                 routeTypes: [RouteType.Canyon, RouteType.Cave],
                 limit: 100,
                 page: 1,
@@ -235,6 +287,7 @@ describe('RoutesParams', () => {
             expect(p2.page).toBe(4);
             expect(p2.limit).toBe(100);
             expect(p2.region).toEqual(p.region);
+            expect(p2.sources).toEqual(p.sources);
             expect(p2.routeTypes).toEqual([RouteType.Canyon, RouteType.Cave]);
         });
     });
@@ -245,26 +298,57 @@ describe('RoutesParams', () => {
             expect(p.region).toBeNull();
         });
 
-        it('parses nested region with string source (legacy)', () => {
+        it('parses nested region with string source', () => {
             const p = RoutesParams.fromResult({
                 region: { source: 'ropewiki', id: rid },
             });
             expect(p.region).toEqual({
                 id: rid,
-                source: [PageDataSource.Ropewiki],
+                source: PageDataSource.Ropewiki,
             });
         });
 
-        it('parses nested region with source array', () => {
+        it('parses flat region-id and region-source', () => {
             const p = RoutesParams.fromResult({
-                region: { source: ['ropewiki'], id: rid },
+                'region-id': rid,
+                'region-source': 'ropewiki',
             });
-            expect(p.region!.source).toEqual([PageDataSource.Ropewiki]);
+            expect(p.region).toEqual({
+                id: rid,
+                source: PageDataSource.Ropewiki,
+            });
+        });
+
+        it('parses top-level sources without region', () => {
+            const p = RoutesParams.fromResult({
+                sources: ['ropewiki'],
+            });
+            expect(p.region).toBeNull();
+            expect(p.sources).toEqual([PageDataSource.Ropewiki]);
+        });
+
+        it('throws when nested region and flat region keys both present', () => {
+            expect(() =>
+                RoutesParams.fromResult({
+                    region: { id: rid, source: 'ropewiki' },
+                    'region-id': rid,
+                    'region-source': 'ropewiki',
+                }),
+            ).toThrow(/either nested region or region-id/);
+        });
+
+        it('throws when region and sources both active', () => {
+            expect(() =>
+                RoutesParams.fromResult({
+                    region: { id: rid, source: 'ropewiki' },
+                    sources: ['ropewiki'],
+                }),
+            ).toThrow(/region and sources cannot both be set/);
         });
 
         it('throws when requiredRegion is true and object is empty', () => {
             expect(() => RoutesParams.fromResult({}, true)).toThrow(
-                /region must be a non-null/,
+                /region must be set when requiredRegion is true/,
             );
         });
 
@@ -291,12 +375,12 @@ describe('RoutesParams', () => {
             );
         });
 
-        it('throws when region.source is not string or array', () => {
+        it('throws when region.source is not a non-empty string', () => {
             expect(() =>
                 RoutesParams.fromResult({
                     region: { source: 1, id: rid },
                 }),
-            ).toThrow(/region\.source must be string, string\[\], or null/);
+            ).toThrow(/region\.source must be a non-empty string/);
         });
 
         it('throws when region is a string', () => {
@@ -309,6 +393,12 @@ describe('RoutesParams', () => {
             expect(() => RoutesParams.fromResult({ region: {} })).toThrow(
                 /non-empty id/,
             );
+        });
+
+        it('throws when nested region omits source', () => {
+            expect(() =>
+                RoutesParams.fromResult({ region: { id: rid } }),
+            ).toThrow(/region\.source must be a non-empty string/);
         });
 
         it('parses top-level difficulty fields', () => {

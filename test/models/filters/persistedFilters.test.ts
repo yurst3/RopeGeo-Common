@@ -146,32 +146,23 @@ describe('DifficultyFilterOptions.fromResult', () => {
 });
 
 describe('RouteFilter', () => {
-    it('toRoutesParams maps region and difficulty params', () => {
+    it('toRoutesParams maps sources, routeTypes, and difficulty only (no region)', () => {
         const rf = new RouteFilter(
             [PageDataSource.Ropewiki],
-            rid,
             [RouteType.Canyon],
             sampleAcaFilterOptions(),
         );
         const rp = rf.toRoutesParams();
-        expect(rp.region).toEqual({
-            id: rid,
-            source: [PageDataSource.Ropewiki],
-        });
+        expect(rp.region).toBeNull();
+        expect(rp.sources).toEqual([PageDataSource.Ropewiki]);
         expect(rp.routeTypes).toEqual([RouteType.Canyon]);
         expect(rp.difficulty).toBeInstanceOf(AcaDifficultyParams);
         expect(rp.difficulty!.isActive()).toBe(true);
     });
 
-    it('throws when source set without regionId', () => {
-        const rf = new RouteFilter([PageDataSource.Ropewiki], null, null, null);
-        expect(() => rf.toRoutesParams()).toThrow(/regionId/);
-    });
-
     it('fromJSON and toJSON round-trip', () => {
         const orig = new RouteFilter(
             null,
-            rid,
             [RouteType.Canyon],
             sampleAcaFilterOptions(),
         );
@@ -181,20 +172,18 @@ describe('RouteFilter', () => {
 
     it('fromJsonString parses valid JSON', () => {
         const j = JSON.stringify({
-            source: null,
-            regionId: rid,
-            routeType: 'Canyon',
+            sources: ['ropewiki'],
+            routeTypes: ['Canyon'],
             difficultyOptions: null,
         });
         const rf = RouteFilter.fromJsonString(j);
-        expect(rf.regionId).toBe(rid);
+        expect(rf.sources).toEqual([PageDataSource.Ropewiki]);
         expect(rf.routeTypes).toEqual([RouteType.Canyon]);
     });
 
     it('fromJsonString parses routeTypes array', () => {
         const j = JSON.stringify({
-            source: null,
-            regionId: rid,
+            sources: ['ropewiki'],
             routeTypes: ['Canyon', 'Cave'],
             difficultyOptions: null,
         });
@@ -212,10 +201,10 @@ describe('RouteFilter', () => {
         expect(() => RouteFilter.fromJSON(null)).toThrow(/JSON object/);
     });
 
-    it('fromJSON throws on invalid source entry', () => {
-        expect(() =>
-            RouteFilter.fromJSON({ source: ['nope'], regionId: null }),
-        ).toThrow(/Invalid PageDataSource/);
+    it('fromJSON throws on invalid sources entry', () => {
+        expect(() => RouteFilter.fromJSON({ sources: ['nope'] })).toThrow(
+            /Invalid PageDataSource/,
+        );
     });
 });
 
@@ -341,7 +330,7 @@ describe('SearchFilter', () => {
 
 describe('SavedFilters', () => {
     it('fromJSON hydrates explore and search', () => {
-        const explore = new RouteFilter(null, rid, [RouteType.Canyon], null);
+        const explore = new RouteFilter(null, [RouteType.Canyon], null);
         const search = new SearchFilter(null, 'q');
         const raw = {
             explore: explore.toJSON(),
@@ -349,7 +338,7 @@ describe('SavedFilters', () => {
             savedPages: null,
         };
         const sf = SavedFilters.fromJSON(raw);
-        expect(sf.explore!.regionId).toBe(rid);
+        expect(sf.explore!.routeTypes).toEqual([RouteType.Canyon]);
         expect(sf.search!.order).toBe('similarity');
     });
 
@@ -363,7 +352,7 @@ describe('SavedFilters', () => {
 
     it('toJSON round-trip', () => {
         const orig = new SavedFilters(
-            new RouteFilter(null, rid, null, null),
+            new RouteFilter(null, null, null),
             new SearchFilter(null, 'x'),
             null,
         );

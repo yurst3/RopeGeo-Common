@@ -9,23 +9,24 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 /**
  * Validated params for getRoutes (GET /routes).
- * Global request: no `region` query param. Region-scoped: `region` id required; optional `source`
- * pipe-list (omit or empty = all sources). `source` must not appear without `region`.
- * Optional `route-types` query param is a pipe-list of {@link RouteType} values (omit or empty = all types).
+ * Either a region scope (`region-id` + `region-source`) or a global source allow-list (`sources`),
+ * never both. Optional `route-types` query param is a pipe-list of {@link RouteType} values.
  * Includes page-based `limit` and `page` (defaults {@link PaginationParams.DEFAULT_LIMIT} / {@link PaginationParams.DEFAULT_PAGE}).
  */
 export class RoutesParams extends PaginationParams {
     /**
-     * Null when not region-scoped. When set, `source` null or empty list means all sources
-     * for that region.
+     * Null when not region-scoped. When set, `source` is the single catalogue for that region.
      */
-    public readonly region: { id: string; source: PageDataSource[] | null } | null;
+    public readonly region: { id: string; source: PageDataSource } | null;
+    /** Global source allow-list when not region-scoped; null = all sources. Mutually exclusive with `region`. */
+    public readonly sources: PageDataSource[] | null;
     /** Null = no route-type filter; non-empty = allow-list (pipe-encoded in query strings as `route-types`). */
     public readonly routeTypes: RouteType[] | null;
     public readonly difficulty: DifficultyParams | null;
 
     constructor(options: {
-        region: { id: string; source: PageDataSource[] | null } | null;
+        region: { id: string; source: PageDataSource } | null;
+        sources?: PageDataSource[] | null;
         routeTypes?: RouteType[] | null;
         difficulty?: DifficultyParams | null;
         limit?: number;
@@ -43,7 +44,7 @@ export class RoutesParams extends PaginationParams {
             diffRaw !== null && diffRaw.isActive() ? diffRaw : null;
 
         const reg = options.region;
-        let regionNorm: { id: string; source: PageDataSource[] | null } | null;
+        let regionNorm: { id: string; source: PageDataSource } | null;
         if (reg === null) {
             regionNorm = null;
         } else {
@@ -52,14 +53,29 @@ export class RoutesParams extends PaginationParams {
                 throw new Error('RoutesParams.region.id must be non-empty when region is set');
             }
             if (!UUID_REGEX.test(id)) {
-                throw new Error('Query parameter "region" must be a valid UUID');
+                throw new Error('Query parameter "region-id" must be a valid UUID');
             }
-            const src = RoutesParams.normalizeSourceList(reg.source);
-            regionNorm = { id, source: src };
+            if (!Object.values(PageDataSource).includes(reg.source)) {
+                throw new Error(`Invalid PageDataSource for region: ${JSON.stringify(reg.source)}`);
+            }
+            regionNorm = { id, source: reg.source };
+        }
+
+        const sourcesNorm = RoutesParams.normalizeSourcesList(options.sources ?? null);
+
+        if (
+            regionNorm !== null &&
+            sourcesNorm !== null &&
+            sourcesNorm.length > 0
+        ) {
+            throw new Error(
+                'RoutesParams: region and sources cannot both be set',
+            );
         }
 
         super(limit, page);
         this.region = regionNorm;
+        this.sources = sourcesNorm;
         this.routeTypes = routeTypes;
         this.difficulty = diff;
     }
@@ -67,6 +83,7 @@ export class RoutesParams extends PaginationParams {
     withPage(page: number): RoutesParams {
         return new RoutesParams({
             region: this.region,
+            sources: this.sources,
             routeTypes: this.routeTypes,
             difficulty: this.difficulty,
             limit: this.limit,
@@ -75,7 +92,7 @@ export class RoutesParams extends PaginationParams {
     }
 
     /** Null = all sources; non-empty = allow-list. */
-    private static normalizeSourceList(
+    private static normalizeSourcesList(
         list: PageDataSource[] | null | undefined,
     ): PageDataSource[] | null {
         if (list == null || list.length === 0) return null;
@@ -92,10 +109,11 @@ export class RoutesParams extends PaginationParams {
     toQueryString(): string {
         const p = new URLSearchParams(super.toQueryString());
         if (this.region !== null) {
-            p.set('region', this.region.id);
-            if (this.region.source != null && this.region.source.length > 0) {
-                p.set('source', this.region.source.join('|'));
-            }
+            p.set('region-id', this.region.id);
+            p.set('region-source', this.region.source);
+        }
+        if (this.sources != null && this.sources.length > 0) {
+            p.set('sources', this.sources.join('|'));
         }
         if (this.routeTypes != null && this.routeTypes.length > 0) {
             p.set('route-types', this.routeTypes.join('|'));
@@ -109,8 +127,13 @@ export class RoutesParams extends PaginationParams {
     ): RoutesParams {
         const limit = RoutesParams.parseLimitQuery(q);
         const page = RoutesParams.parsePageQuery(q);
-        const regionRaw = (q.region ?? q.Region ?? '').trim();
-        const sourceRaw = (q.source ?? q.Source ?? '').trim();
+        const regionIdRaw = (q['region-id'] ?? q['Region-Id'] ?? '').trim();
+        const regionSourceRaw = (
+            q['region-source'] ??
+            q['Region-Source'] ??
+            ''
+        ).trim();
+        const sourcesRaw = (q.sources ?? q.Sources ?? '').trim();
         const routeTypesStr = (q['route-types'] ?? q['Route-Types'] ?? '').trim();
         const routeTypes =
             routeTypesStr === ''
@@ -120,14 +143,20 @@ export class RoutesParams extends PaginationParams {
             DifficultyParams.fromQueryStringParams(q),
         );
 
-        if (regionRaw === '') {
-            if (sourceRaw !== '') {
+        const sourcesParsed =
+            sourcesRaw === ''
+                ? null
+                : RoutesParams.parseSourcePipe(sourcesRaw);
+
+        if (regionIdRaw === '') {
+            if (regionSourceRaw !== '') {
                 throw new Error(
-                    'Query parameter "source" must not be set without "region"',
+                    'Query parameter "region-source" must not be set without "region-id"',
                 );
             }
             return new RoutesParams({
                 region: null,
+                sources: sourcesParsed,
                 routeTypes,
                 difficulty,
                 limit,
@@ -135,12 +164,23 @@ export class RoutesParams extends PaginationParams {
             });
         }
 
-        const sources =
-            sourceRaw === ''
-                ? null
-                : RoutesParams.parseSourcePipe(sourceRaw);
+        if (!UUID_REGEX.test(regionIdRaw)) {
+            throw new Error('Query parameter "region-id" must be a valid UUID');
+        }
+        if (regionSourceRaw === '') {
+            throw new Error(
+                'Query parameter "region-source" is required when "region-id" is set',
+            );
+        }
+        if (sourcesParsed != null && sourcesParsed.length > 0) {
+            throw new Error(
+                'Query parameters "region-id" / "region-source" cannot be combined with "sources"',
+            );
+        }
+        const regionSource = RoutesParams.parseSourceToken(regionSourceRaw);
         return new RoutesParams({
-            region: { id: regionRaw, source: sources },
+            region: { id: regionIdRaw, source: regionSource },
+            sources: null,
             routeTypes,
             difficulty,
             limit,
@@ -233,13 +273,14 @@ export class RoutesParams extends PaginationParams {
             if (s === lower || s === value) return s;
         }
         throw new Error(
-            `Query parameter "source" token must be one of: ${Object.values(PageDataSource).join(', ')}`,
+            `PageDataSource token must be one of: ${Object.values(PageDataSource).join(', ')}`,
         );
     }
 
     /**
-     * Validates a JSON-like object: optional `region` null or `{ id, source }` where `source`
-     * is `PageDataSource[]`, null, or a single `PageDataSource` string (legacy).
+     * Validates a JSON-like object: optional `region` null or `{ id, source }` with a single
+     * `source` string, optional top-level `region-id` / `region-source`, optional `sources`
+     * (string pipe-list or string array). `region` and `sources` must not both be active.
      */
     static fromResult(result: unknown, requiredRegion = false): RoutesParams {
         if (result == null || typeof result !== 'object') {
@@ -247,65 +288,97 @@ export class RoutesParams extends PaginationParams {
         }
         const r = result as Record<string, unknown>;
         const { limit, page } = RoutesParams.paginationFromResult(r);
-        const raw = r.region ?? r.Region;
 
-        if (typeof raw === 'string') {
+        const flatId = RoutesParams.coerceTrimmedString(
+            r['region-id'] ?? r['Region-Id'],
+            'region-id',
+        );
+        const flatSource = RoutesParams.coerceTrimmedString(
+            r['region-source'] ?? r['Region-Source'],
+            'region-source',
+        );
+        const rawNested = r.region ?? r.Region;
+
+        if (typeof rawNested === 'string') {
             throw new Error(
-                'RoutesParams.region must be an object { id, source? } or null, not a string',
+                'RoutesParams.region must be an object { id, source } or null, not a string',
             );
         }
 
-        if (raw === null || raw === undefined) {
-            if (requiredRegion) {
+        let regionNorm: { id: string; source: PageDataSource } | null = null;
+
+        const hasFlatRegion = flatId !== '' || flatSource !== '';
+        const hasNestedRegion =
+            rawNested !== null &&
+            rawNested !== undefined &&
+            typeof rawNested === 'object';
+
+        if (hasFlatRegion && hasNestedRegion) {
+            throw new Error(
+                'RoutesParams: use either nested region or region-id / region-source, not both',
+            );
+        }
+
+        if (hasFlatRegion) {
+            if (flatId === '') {
                 throw new Error(
-                    'RoutesParams: region must be a non-null { id, source? } object when requiredRegion is true',
+                    'RoutesParams.region-id must be non-empty when region-source is set',
                 );
             }
-            const routeTypes = RoutesParams.optionalRouteTypesFromResult(r);
-            const difficulty = RoutesParams.normalizeDifficulty(
-                RoutesParams.optionalDifficultyFromResult(r),
-            );
-            return new RoutesParams({
-                region: null,
-                routeTypes,
-                difficulty,
-                limit,
-                page,
-            });
-        }
-
-        if (typeof raw !== 'object') {
-            throw new Error(
-                'RoutesParams.region must be an object or null, got: ' + typeof raw,
-            );
-        }
-
-        const reg = raw as Record<string, unknown>;
-        const idStr = RoutesParams.coerceTrimmedString(reg.id ?? reg.Id, 'region.id');
-        if (idStr === '') {
-            throw new Error('RoutesParams.region must include non-empty id');
-        }
-        if (!UUID_REGEX.test(idStr)) {
-            throw new Error('RoutesParams.region.id must be a valid UUID');
-        }
-
-        const sourceRaw = reg.source ?? reg.Source;
-        let sourceList: PageDataSource[] | null = null;
-        if (sourceRaw === null || sourceRaw === undefined) {
-            sourceList = null;
-        } else if (Array.isArray(sourceRaw)) {
-            sourceList = sourceRaw.map((item, i) => {
-                if (typeof item !== 'string') {
-                    throw new Error(`RoutesParams.region.source[${i}] must be a string`);
-                }
-                return RoutesParams.parseSourceToken(item);
-            });
-        } else if (typeof sourceRaw === 'string') {
-            if (sourceRaw.trim() !== '') {
-                sourceList = [RoutesParams.parseSourceToken(sourceRaw.trim())];
+            if (!UUID_REGEX.test(flatId)) {
+                throw new Error('RoutesParams.region-id must be a valid UUID');
             }
-        } else {
-            throw new Error('RoutesParams.region.source must be string, string[], or null');
+            if (flatSource === '') {
+                throw new Error(
+                    'RoutesParams.region-source must be non-empty when region-id is set',
+                );
+            }
+            regionNorm = {
+                id: flatId,
+                source: RoutesParams.parseSourceToken(flatSource),
+            };
+        } else if (hasNestedRegion) {
+            const reg = rawNested as Record<string, unknown>;
+            const idStr = RoutesParams.coerceTrimmedString(reg.id ?? reg.Id, 'region.id');
+            if (idStr === '') {
+                throw new Error('RoutesParams.region must include non-empty id');
+            }
+            if (!UUID_REGEX.test(idStr)) {
+                throw new Error('RoutesParams.region.id must be a valid UUID');
+            }
+            const sourceRaw = reg.source ?? reg.Source;
+            if (sourceRaw === null || sourceRaw === undefined) {
+                throw new Error(
+                    'RoutesParams.region.source must be a non-empty string',
+                );
+            }
+            if (typeof sourceRaw !== 'string' || sourceRaw.trim() === '') {
+                throw new Error(
+                    'RoutesParams.region.source must be a non-empty string',
+                );
+            }
+            regionNorm = {
+                id: idStr,
+                source: RoutesParams.parseSourceToken(sourceRaw.trim()),
+            };
+        }
+
+        if (requiredRegion && regionNorm === null) {
+            throw new Error(
+                'RoutesParams: region must be set when requiredRegion is true',
+            );
+        }
+
+        const sourcesNorm = RoutesParams.optionalSourcesFromResult(r);
+
+        if (
+            regionNorm !== null &&
+            sourcesNorm !== null &&
+            sourcesNorm.length > 0
+        ) {
+            throw new Error(
+                'RoutesParams: region and sources cannot both be set',
+            );
         }
 
         const routeTypes = RoutesParams.optionalRouteTypesFromResult(r);
@@ -314,15 +387,35 @@ export class RoutesParams extends PaginationParams {
         );
 
         return new RoutesParams({
-            region: {
-                id: idStr,
-                source: RoutesParams.normalizeSourceList(sourceList),
-            },
+            region: regionNorm,
+            sources: sourcesNorm,
             routeTypes,
             difficulty,
             limit,
             page,
         });
+    }
+
+    private static optionalSourcesFromResult(
+        r: Record<string, unknown>,
+    ): PageDataSource[] | null {
+        const v = r.sources ?? r.Sources;
+        if (v === null || v === undefined || v === '') return null;
+        if (typeof v === 'string') {
+            return RoutesParams.parseSourcePipe(v);
+        }
+        if (Array.isArray(v)) {
+            const list = v.map((item, i) => {
+                if (typeof item !== 'string') {
+                    throw new Error(`RoutesParams.sources[${i}] must be a string`);
+                }
+                return RoutesParams.parseSourceToken(item);
+            });
+            return RoutesParams.normalizeSourcesList(list);
+        }
+        throw new Error(
+            'RoutesParams.sources must be a string, string[], or null',
+        );
     }
 
     private static paginationFromResult(r: Record<string, unknown>): {
@@ -400,11 +493,11 @@ export class RoutesParams extends PaginationParams {
         ) {
             throw new Error('RoutesParams.difficulty must be an object or null');
         }
-        const source =
+        const diffInput =
             nested !== null && nested !== undefined
                 ? (nested as Record<string, unknown>)
                 : r;
-        return DifficultyParams.fromResult(source);
+        return DifficultyParams.fromResult(diffInput);
     }
 
     private static coerceTrimmedString(v: unknown, key: string): string {

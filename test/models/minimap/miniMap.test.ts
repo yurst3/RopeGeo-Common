@@ -55,7 +55,7 @@ describe('RegionMiniMap', () => {
         });
         expect(m.routesParams.region).toEqual({
             id: MAP_REGION_ID,
-            source: [PageDataSource.Ropewiki],
+            source: PageDataSource.Ropewiki,
         });
     });
 
