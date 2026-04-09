@@ -183,6 +183,7 @@ export class SavedPage {
             bannerImage,
             betaSections,
             data.miniMap,
+            data.coordinates,
         );
     }
 

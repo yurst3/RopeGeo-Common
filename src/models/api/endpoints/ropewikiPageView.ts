@@ -45,6 +45,8 @@ export class RopewikiPageView {
     betaSections: BetaSection[];
     /** Minimap for the page route (tiles template + bounds when present), or null. */
     miniMap: MiniMap | null;
+    /** Page centroid in WGS84 degrees when known; otherwise null (same convention as search and Route). */
+    coordinates: { lat: number; lon: number } | null;
 
     constructor(
         name: string,
@@ -76,6 +78,7 @@ export class RopewikiPageView {
         bannerImage: BetaSectionImage | null,
         betaSections: BetaSection[],
         miniMap: MiniMap | null,
+        coordinates: { lat: number; lon: number } | null,
     ) {
         this.name = name;
         this.aka = Array.isArray(aka) ? aka.slice() : [];
@@ -106,6 +109,10 @@ export class RopewikiPageView {
         this.bannerImage = bannerImage;
         this.betaSections = Array.isArray(betaSections) ? betaSections : [];
         this.miniMap = miniMap;
+        this.coordinates =
+            coordinates != null
+                ? { lat: coordinates.lat, lon: coordinates.lon }
+                : null;
     }
 
     /**
@@ -145,6 +152,7 @@ export class RopewikiPageView {
         RopewikiPageView.assertNullableBannerImage(r, 'bannerImage');
         RopewikiPageView.assertBetaSectionsArray(r, 'betaSections');
         RopewikiPageView.assertNullableMiniMap(r, 'miniMap');
+        RopewikiPageView.assertNullableCoordinates(r, 'coordinates');
 
         (r as Record<string, unknown>).latestRevisionDate = new Date(
             r.latestRevisionDate as string,
@@ -218,6 +226,44 @@ export class RopewikiPageView {
                 `RopewikiPageView.${key} must be a PageMiniMap object or null, got: ${typeof v}`,
             );
         }
+    }
+
+    private static parseCoordinateComponent(value: unknown): number | null {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            return value;
+        }
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (trimmed === '') return null;
+            const n = Number(trimmed);
+            if (Number.isFinite(n)) return n;
+        }
+        return null;
+    }
+
+    private static assertNullableCoordinates(
+        obj: Record<string, unknown>,
+        key: string,
+    ): void {
+        const v = obj[key];
+        if (v === null || v === undefined) {
+            (obj as Record<string, unknown>)[key] = null;
+            return;
+        }
+        if (typeof v !== 'object' || v === null || Array.isArray(v)) {
+            throw new Error(
+                `RopewikiPageView.${key} must be { lat, lon } or null, got: ${typeof v}`,
+            );
+        }
+        const o = v as Record<string, unknown>;
+        const lat = RopewikiPageView.parseCoordinateComponent(o.lat);
+        const lon = RopewikiPageView.parseCoordinateComponent(o.lon);
+        if (lat === null || lon === null) {
+            throw new Error(
+                `RopewikiPageView.${key}.lat and .lon must be finite numbers or numeric strings`,
+            );
+        }
+        (obj as Record<string, unknown>)[key] = { lat, lon };
     }
 
     private static assertNumber(obj: Record<string, unknown>, key: string): void {

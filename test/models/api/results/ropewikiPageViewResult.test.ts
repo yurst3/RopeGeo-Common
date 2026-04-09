@@ -36,6 +36,7 @@ function validResult(): Record<string, unknown> {
         bannerImage: null,
         betaSections: [],
         miniMap: null,
+        coordinates: null,
     };
 }
 
@@ -100,6 +101,52 @@ describe('RopewikiPageViewResult', () => {
             const result = validResult();
             const parsed = RopewikiPageViewResult.fromResult(result);
             expect(parsed.result.miniMap).toBeNull();
+        });
+
+        it('parses coordinates when null', () => {
+            const result = validResult();
+            const parsed = RopewikiPageViewResult.fromResult(result);
+            expect(parsed.result.coordinates).toBeNull();
+        });
+
+        it('parses coordinates when omitted (normalized to null)', () => {
+            const result = validResult();
+            delete (result as Record<string, unknown>).coordinates;
+            const parsed = RopewikiPageViewResult.fromResult(result);
+            expect(parsed.result.coordinates).toBeNull();
+        });
+
+        it('parses valid numeric coordinates', () => {
+            const result = {
+                ...validResult(),
+                coordinates: { lat: 37.7749, lon: -122.4194 },
+            };
+            const parsed = RopewikiPageViewResult.fromResult(result);
+            expect(parsed.result.coordinates).toEqual({ lat: 37.7749, lon: -122.4194 });
+        });
+
+        it('parses coordinates from numeric strings', () => {
+            const result = {
+                ...validResult(),
+                coordinates: { lat: '37.7749', lon: '-122.4194' },
+            };
+            const parsed = RopewikiPageViewResult.fromResult(result);
+            expect(parsed.result.coordinates).toEqual({ lat: 37.7749, lon: -122.4194 });
+        });
+
+        it('throws when coordinates is not object or null', () => {
+            expect(() =>
+                RopewikiPageViewResult.fromResult({ ...validResult(), coordinates: 'nope' }),
+            ).toThrow(/RopewikiPageView\.coordinates must be \{ lat, lon \} or null/);
+        });
+
+        it('throws when coordinates lat/lon are not usable', () => {
+            expect(() =>
+                RopewikiPageViewResult.fromResult({
+                    ...validResult(),
+                    coordinates: { lat: NaN, lon: 0 },
+                }),
+            ).toThrow(/RopewikiPageView\.coordinates\.lat and \.lon must be finite/);
         });
 
         it('parses valid PageMiniMap', () => {

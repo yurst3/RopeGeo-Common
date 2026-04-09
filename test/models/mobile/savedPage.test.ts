@@ -54,6 +54,7 @@ const validPageViewWire = {
     bannerImage: null,
     betaSections: [],
     miniMap: null,
+    coordinates: null,
 };
 
 function freshValidPageViewWire(): Record<string, unknown> {
@@ -115,5 +116,20 @@ describe('SavedPage', () => {
         const view = RopewikiPageView.fromResult(freshValidPageViewWire());
         const saved = SavedPage.fromRopewikiPageView(view, RouteType.Canyon, 'page-abc');
         expect(saved.applyDownloadedImagesToPageView(view)).toBe(view);
+    });
+
+    it('applyDownloadedImagesToPageView preserves coordinates', () => {
+        const wire = freshValidPageViewWire();
+        wire.coordinates = { lat: 40.1, lon: -111.2 };
+        const view = RopewikiPageView.fromResult(wire);
+        const saved = new SavedPage(
+            view.toPagePreview('page-abc'),
+            RouteType.Canyon,
+            1,
+            null,
+            {},
+        );
+        const patched = saved.applyDownloadedImagesToPageView(view);
+        expect(patched.coordinates).toEqual({ lat: 40.1, lon: -111.2 });
     });
 });

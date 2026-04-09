@@ -42,6 +42,7 @@ const validRopewikiPageViewResult = {
     bannerImage: null,
     betaSections: [],
     miniMap: null,
+    coordinates: null,
 };
 
 const validRopewikiRegionViewResult = {
