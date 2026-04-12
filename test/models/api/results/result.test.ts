@@ -2,13 +2,11 @@ import { describe, it, expect } from '@jest/globals';
 import { Result, ResultType } from '../../../../src/models/api/results/result';
 import { RopewikiPageViewResult } from '../../../../src/models/api/results/ropewikiPageViewResult';
 import { RopewikiRegionViewResult } from '../../../../src/models/api/results/ropewikiRegionViewResult';
-import { RopewikiRegionBoundsResult } from '../../../../src/models/api/results/ropewikiRegionBoundsResult';
 import { RoutePreviewResult } from '../../../../src/models/api/results/routePreviewResult';
 import { RopewikiPageLinkPreviewResult } from '../../../../src/models/api/results/ropewikiPageLinkPreviewResult';
 import { LinkPreview } from '../../../../src/models/linkPreview/linkPreview';
 import { RopewikiPageView } from '../../../../src/models/api/endpoints/ropewikiPageView';
 import { RopewikiRegionView } from '../../../../src/models/api/endpoints/ropewikiRegionView';
-import { Bounds } from '../../../../src/models/minimap/bounds';
 import { PagePreview } from '../../../../src/models/previews/pagePreview';
 import { MiniMapType } from '../../../../src/models/minimap/miniMapType';
 
@@ -60,17 +58,12 @@ const validRopewikiRegionViewResult = {
     externalLink: 'https://example.com/region',
     miniMap: {
         miniMapType: MiniMapType.GeoJson,
+        title: 'Root',
+        bounds: null,
         routesParams: {
             region: { source: 'ropewiki', id: 'c3d4e5f6-a7b8-9012-cdef-123456789012' },
         },
     },
-};
-
-const validRopewikiRegionBounds = {
-    north: 41,
-    south: 40,
-    east: -110,
-    west: -112,
 };
 
 const validLinkPreviewResult = {
@@ -130,7 +123,7 @@ describe('Result', () => {
             it('throws if resultType is missing', () => {
                 expect(() =>
                     Result.fromResponseBody({
-                        result: validRopewikiRegionBounds,
+                        result: validRopewikiPageViewResult,
                     }),
                 ).toThrow('Response body must have resultType');
             });
@@ -139,19 +132,19 @@ describe('Result', () => {
                 expect(() =>
                     Result.fromResponseBody({
                         resultType: 123,
-                        result: validRopewikiRegionBounds,
+                        result: validRopewikiPageViewResult,
                     }),
                 ).toThrow(/resultType must be one of/);
                 expect(() =>
                     Result.fromResponseBody({
                         resultType: true,
-                        result: validRopewikiRegionBounds,
+                        result: validRopewikiPageViewResult,
                     }),
                 ).toThrow(/resultType must be one of/);
                 expect(() =>
                     Result.fromResponseBody({
                         resultType: {},
-                        result: validRopewikiRegionBounds,
+                        result: validRopewikiPageViewResult,
                     }),
                 ).toThrow(/resultType must be one of/);
             });
@@ -160,13 +153,13 @@ describe('Result', () => {
                 expect(() =>
                     Result.fromResponseBody({
                         resultType: 'other',
-                        result: validRopewikiRegionBounds,
+                        result: validRopewikiPageViewResult,
                     }),
                 ).toThrow(/resultType must be one of/);
                 expect(() =>
                     Result.fromResponseBody({
                         resultType: '',
-                        result: validRopewikiRegionBounds,
+                        result: validRopewikiPageViewResult,
                     }),
                 ).toThrow(/resultType must be one of/);
             });
@@ -174,7 +167,7 @@ describe('Result', () => {
             it('throws if result is missing', () => {
                 expect(() =>
                     Result.fromResponseBody({
-                        resultType: ResultType.RopewikiRegionBounds,
+                        resultType: ResultType.RopewikiPageView,
                     }),
                 ).toThrow('Response body must have result');
             });
@@ -207,18 +200,6 @@ describe('Result', () => {
                 expect((parsed.result as RopewikiRegionView).externalLink).toBe(
                     'https://example.com/region',
                 );
-            });
-
-            it('delegates to RopewikiRegionBoundsResult when resultType is ropewikiRegionBounds', () => {
-                const body = {
-                    resultType: ResultType.RopewikiRegionBounds,
-                    result: validRopewikiRegionBounds,
-                };
-                const parsed = Result.fromResponseBody(body);
-                expect(parsed).toBeInstanceOf(RopewikiRegionBoundsResult);
-                expect(parsed.resultType).toBe(ResultType.RopewikiRegionBounds);
-                expect(parsed.result).toBeInstanceOf(Bounds);
-                expect((parsed.result as Bounds).north).toBe(41);
             });
 
             it('delegates to RoutePreviewResult when resultType is routePreview', () => {

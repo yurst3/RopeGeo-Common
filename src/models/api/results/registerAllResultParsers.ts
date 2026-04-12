@@ -7,7 +7,6 @@ import './ropewikiPageViewResult';
 import './ropewikiPageLinkPreviewResult';
 import './ropewikiRegionViewResult';
 import './routeResult';
-import './ropewikiRegionBoundsResult';
 import './routePreviewResult';
 import './searchResults';
 import './ropewikiRegionPreviewsResult';

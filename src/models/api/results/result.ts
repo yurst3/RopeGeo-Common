@@ -1,11 +1,10 @@
 /**
- * Discriminator for single-result API response types (e.g. getRopewikiPageView, region bounds).
+ * Discriminator for single-result API response types (e.g. getRopewikiPageView).
  * Used in response body so consumers can identify the result shape.
  */
 export enum ResultType {
     RopewikiPageView = 'ropewikiPageView',
     RopewikiRegionView = 'ropewikiRegionView',
-    RopewikiRegionBounds = 'ropewikiRegionBounds',
     RoutePreview = 'routePreview',
     RopewikiPageLinkPreview = 'ropewikiPageLinkPreview',
 }

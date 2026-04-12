@@ -11,8 +11,8 @@ export class PageMiniMap extends MiniMap {
     tilesTemplate: string;
     bounds: Bounds;
 
-    constructor(layerId: string, tilesTemplate: string, bounds: Bounds) {
-        super();
+    constructor(layerId: string, tilesTemplate: string, bounds: Bounds, title: string) {
+        super(title);
         this.layerId = layerId;
         this.tilesTemplate = tilesTemplate;
         this.bounds = bounds;
@@ -28,6 +28,7 @@ export class PageMiniMap extends MiniMap {
                 `PageMiniMap.miniMapType must be "${MiniMapType.TilesTemplate}", got: ${JSON.stringify(r.miniMapType)}`,
             );
         }
+        const title = MiniMap.assertNonEmptyTitle(r.title, 'PageMiniMap.title');
         const layerId = r.layerId;
         if (typeof layerId !== 'string' || layerId.length === 0) {
             throw new Error(
@@ -50,6 +51,6 @@ export class PageMiniMap extends MiniMap {
             );
         }
         const bounds = Bounds.fromResult(r.bounds);
-        return new PageMiniMap(layerId, tilesTemplate, bounds);
+        return new PageMiniMap(layerId, tilesTemplate, bounds, title);
     }
 }

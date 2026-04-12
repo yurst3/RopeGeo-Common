@@ -1,5 +1,8 @@
 import { BetaSectionImage } from '../betaSections/betaSectionImage';
 import { AcaDifficulty } from '../difficulty/acaDifficulty';
+import { DownloadedCenteredRegionMiniMap } from '../minimap/downloadedCenteredRegionMiniMap';
+import { DownloadedPageMiniMap } from '../minimap/downloadedPageMiniMap';
+import { MiniMapType } from '../minimap/miniMapType';
 import { PagePreview } from '../previews/pagePreview';
 import { RouteType } from '../routes/route';
 import { RopewikiPageView } from '../api/endpoints/ropewikiPageView';
@@ -64,7 +67,7 @@ export class SavedPage {
 
     readonly downloadedImages: Record<string, ImageVersions> | null;
 
-    readonly downloadedMapData: string | null;
+    readonly downloadedMiniMap: DownloadedPageMiniMap | DownloadedCenteredRegionMiniMap | null;
 
     constructor(
         preview: PagePreview,
@@ -72,14 +75,14 @@ export class SavedPage {
         savedAt: number,
         downloadedPageView: string | null = null,
         downloadedImages: Record<string, ImageVersions> | null = null,
-        downloadedMapData: string | null = null,
+        downloadedMiniMap: DownloadedPageMiniMap | DownloadedCenteredRegionMiniMap | null = null,
     ) {
         this.preview = preview;
         this.routeType = routeType;
         this.savedAt = savedAt;
         this.downloadedPageView = downloadedPageView;
         this.downloadedImages = downloadedImages;
-        this.downloadedMapData = downloadedMapData;
+        this.downloadedMiniMap = downloadedMiniMap;
     }
 
     static fromJsonString(jsonString: string): SavedPage {
@@ -103,22 +106,24 @@ export class SavedPage {
         assertRouteType(o.routeType);
         assertFiniteNumber(o.savedAt, 'savedAt');
         const preview = PagePreview.fromResult(o.preview);
+        if ('downloadedMapData' in o && o.downloadedMapData != null) {
+            throw new Error(
+                'SavedPage: legacy key "downloadedMapData" is no longer supported; re-download the page',
+            );
+        }
         const downloadedPageView =
             'downloadedPageView' in o && o.downloadedPageView != null
                 ? String(o.downloadedPageView)
                 : null;
         const downloadedImages = SavedPage.parseDownloadedImages(o.downloadedImages);
-        const downloadedMapData =
-            'downloadedMapData' in o && o.downloadedMapData != null
-                ? String(o.downloadedMapData)
-                : null;
+        const downloadedMiniMap = SavedPage.parseDownloadedMiniMap(o.downloadedMiniMap);
         return new SavedPage(
             preview,
             o.routeType,
             o.savedAt as number,
             downloadedPageView,
             downloadedImages,
-            downloadedMapData,
+            downloadedMiniMap,
         );
     }
 
@@ -200,8 +205,29 @@ export class SavedPage {
             savedAt: this.savedAt,
             downloadedPageView: this.downloadedPageView,
             downloadedImages: imagesPlain,
-            downloadedMapData: this.downloadedMapData,
+            downloadedMiniMap:
+                this.downloadedMiniMap == null ? null : this.downloadedMiniMap.toPlain(),
         });
+    }
+
+    private static parseDownloadedMiniMap(
+        raw: unknown,
+    ): DownloadedPageMiniMap | DownloadedCenteredRegionMiniMap | null {
+        if (raw == null || raw === undefined) return null;
+        if (typeof raw !== 'object') {
+            throw new Error('SavedPage.downloadedMiniMap must be an object or null');
+        }
+        const o = raw as Record<string, unknown>;
+        const t = o.miniMapType;
+        if (t === MiniMapType.DownloadedTilesTemplate) {
+            return DownloadedPageMiniMap.fromResult(raw);
+        }
+        if (t === MiniMapType.DownloadedCenteredGeojson) {
+            return DownloadedCenteredRegionMiniMap.fromResult(raw);
+        }
+        throw new Error(
+            `SavedPage.downloadedMiniMap: unsupported miniMapType ${JSON.stringify(t)}`,
+        );
     }
 
     private static parseDownloadedImages(raw: unknown): Record<string, ImageVersions> | null {

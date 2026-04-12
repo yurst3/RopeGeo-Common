@@ -4,4 +4,7 @@
 export enum MiniMapType {
     GeoJson = 'geojson',
     TilesTemplate = 'tilesTemplate',
+    CenteredGeojson = 'centeredGeojson',
+    DownloadedTilesTemplate = 'downloadedTilesTemplate',
+    DownloadedCenteredGeojson = 'downloadedCenteredGeojson',
 }

@@ -1,5 +1,8 @@
 import { describe, it, expect } from '@jest/globals';
 import { PageDataSource } from '../../../src/models/pageDataSource';
+import { Bounds } from '../../../src/models/minimap/bounds';
+import { DownloadedPageMiniMap } from '../../../src/models/minimap/downloadedPageMiniMap';
+import { MiniMapType } from '../../../src/models/minimap/miniMapType';
 import { RouteType } from '../../../src/models/routes/route';
 import { RopewikiPageView } from '../../../src/models/api/endpoints/ropewikiPageView';
 import { SavedPage } from '../../../src/models/mobile/savedPage';
@@ -77,7 +80,48 @@ describe('SavedPage', () => {
         expect(again.savedAt).toBe(1700000000000);
         expect(again.downloadedPageView).toBeNull();
         expect(again.downloadedImages).toBeNull();
-        expect(again.downloadedMapData).toBeNull();
+        expect(again.downloadedMiniMap).toBeNull();
+    });
+
+    it('round-trips downloadedMiniMap', () => {
+        const dm = new DownloadedPageMiniMap(
+            'layer-1',
+            'file:///tiles/{z}/{x}/{y}.pbf',
+            new Bounds(40, 39, -110, -111),
+            'Offline route',
+        );
+        const base = SavedPage.fromJsonString(
+            JSON.stringify({
+                preview: validPreviewWire,
+                routeType: RouteType.Canyon,
+                savedAt: 1700000000000,
+            }),
+        );
+        const sp = new SavedPage(
+            base.preview,
+            base.routeType,
+            base.savedAt,
+            base.downloadedPageView,
+            base.downloadedImages,
+            dm,
+        );
+        const again = SavedPage.fromJsonString(sp.toString());
+        expect(again.downloadedMiniMap).toBeInstanceOf(DownloadedPageMiniMap);
+        expect(again.downloadedMiniMap!.miniMapType).toBe(MiniMapType.DownloadedTilesTemplate);
+        expect(again.downloadedMiniMap!.title).toBe('Offline route');
+    });
+
+    it('throws on legacy downloadedMapData string', () => {
+        expect(() =>
+            SavedPage.fromJsonString(
+                JSON.stringify({
+                    preview: validPreviewWire,
+                    routeType: RouteType.Canyon,
+                    savedAt: 1,
+                    downloadedMapData: '/old/path',
+                }),
+            ),
+        ).toThrow(/legacy key "downloadedMapData"/);
     });
 
     it('throws on invalid JSON', () => {

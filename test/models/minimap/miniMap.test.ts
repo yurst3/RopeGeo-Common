@@ -4,31 +4,69 @@ import { PageMiniMap } from '../../../src/models/minimap/pageMiniMap';
 import { MiniMap } from '../../../src/models/minimap/miniMap';
 import { MiniMapType } from '../../../src/models/minimap/miniMapType';
 import { RegionMiniMap } from '../../../src/models/minimap/regionMiniMap';
+import { CenteredRegionMiniMap } from '../../../src/models/minimap/centeredRegionMiniMap';
+import { DownloadedPageMiniMap } from '../../../src/models/minimap/downloadedPageMiniMap';
 
 const MAP_REGION_ID = 'c3d4e5f6-a7b8-9012-cdef-123456789012';
+const ROUTE_ID = '38f5c3fa-7248-41ed-815e-8b9e6aae5d61';
+
+function regionPayload(bounds: Record<string, number> | null) {
+    return {
+        miniMapType: MiniMapType.GeoJson,
+        title: 'North America',
+        bounds,
+        routesParams: {
+            region: { source: 'ropewiki', id: MAP_REGION_ID },
+        },
+    };
+}
 
 describe('MiniMap', () => {
     describe('fromResult', () => {
         it('delegates to RegionMiniMap', () => {
-            const m = MiniMap.fromResult({
-                miniMapType: MiniMapType.GeoJson,
-                routesParams: {
-                    region: { source: 'ropewiki', id: MAP_REGION_ID },
-                },
-            });
+            const m = MiniMap.fromResult(regionPayload({ north: 40, south: 38, east: -108, west: -110 }));
             expect(m).toBeInstanceOf(RegionMiniMap);
             expect(m.miniMapType).toBe(MiniMapType.GeoJson);
+            expect(m.title).toBe('North America');
         });
 
         it('delegates to PageMiniMap', () => {
             const m = MiniMap.fromResult({
                 miniMapType: MiniMapType.TilesTemplate,
-                layerId: '38f5c3fa-7248-41ed-815e-8b9e6aae5d61',
+                title: 'Page route',
+                layerId: ROUTE_ID,
                 tilesTemplate: 'https://x.com/t/{z}/{x}/{y}.pbf',
                 bounds: { north: 40, south: 38, east: -108, west: -110 },
             });
             expect(m).toBeInstanceOf(PageMiniMap);
             expect(m.miniMapType).toBe(MiniMapType.TilesTemplate);
+        });
+
+        it('delegates to CenteredRegionMiniMap', () => {
+            const m = MiniMap.fromResult({
+                miniMapType: MiniMapType.CenteredGeojson,
+                title: 'Centered',
+                centeredRouteId: ROUTE_ID,
+                routesParams: {
+                    region: { source: 'ropewiki', id: MAP_REGION_ID },
+                },
+            });
+            expect(m).toBeInstanceOf(CenteredRegionMiniMap);
+            expect(m.miniMapType).toBe(MiniMapType.CenteredGeojson);
+        });
+
+        it('rejects downloadedTilesTemplate', () => {
+            expect(() =>
+                MiniMap.fromResult(
+                    DownloadedPageMiniMap.fromResult({
+                        miniMapType: MiniMapType.DownloadedTilesTemplate,
+                        title: 'L',
+                        layerId: ROUTE_ID,
+                        downloadedTilesTemplate: 'file:///t/{z}/{x}/{y}.pbf',
+                        bounds: { north: 40, south: 38, east: -108, west: -110 },
+                    }),
+                ),
+            ).toThrow(/MiniMap\.fromResult does not accept/);
         });
 
         it('throws when result is not an object', () => {
@@ -48,21 +86,51 @@ describe('RegionMiniMap', () => {
         region: { source: 'ropewiki', id: MAP_REGION_ID },
     };
 
-    it('fromResult parses valid payload', () => {
+    it('fromResult parses valid payload with bounds object', () => {
         const m = RegionMiniMap.fromResult({
             miniMapType: MiniMapType.GeoJson,
+            title: 'R',
+            bounds: { north: 41, south: 40, east: -110, west: -112 },
             routesParams: validRoutes,
         });
         expect(m.routesParams.region).toEqual({
             id: MAP_REGION_ID,
             source: PageDataSource.Ropewiki,
         });
+        expect(m.bounds).not.toBeNull();
+        expect(m.bounds!.north).toBe(41);
+    });
+
+    it('fromResult parses null bounds', () => {
+        const m = RegionMiniMap.fromResult(regionPayload(null));
+        expect(m.bounds).toBeNull();
+    });
+
+    it('throws when bounds key is missing', () => {
+        expect(() =>
+            RegionMiniMap.fromResult({
+                miniMapType: MiniMapType.GeoJson,
+                title: 'R',
+                routesParams: validRoutes,
+            } as Record<string, unknown>),
+        ).toThrow(/RegionMiniMap\.bounds must be present/);
+    });
+
+    it('throws when title missing', () => {
+        expect(() =>
+            RegionMiniMap.fromResult({
+                miniMapType: MiniMapType.GeoJson,
+                bounds: null,
+                routesParams: validRoutes,
+            } as Record<string, unknown>),
+        ).toThrow(/RegionMiniMap\.title/);
     });
 
     it('throws when miniMapType wrong', () => {
         expect(() =>
             RegionMiniMap.fromResult({
                 miniMapType: MiniMapType.TilesTemplate,
+                title: 'T',
                 layerId: 'x',
                 tilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
                 bounds: { north: 1, south: 0, east: 1, west: 0 },
@@ -72,7 +140,11 @@ describe('RegionMiniMap', () => {
 
     it('throws when routesParams missing', () => {
         expect(() =>
-            RegionMiniMap.fromResult({ miniMapType: MiniMapType.GeoJson }),
+            RegionMiniMap.fromResult({
+                miniMapType: MiniMapType.GeoJson,
+                title: 'R',
+                bounds: null,
+            } as Record<string, unknown>),
         ).toThrow(/RegionMiniMap\.routesParams must be an object/);
     });
 
@@ -80,6 +152,8 @@ describe('RegionMiniMap', () => {
         expect(() =>
             RegionMiniMap.fromResult({
                 miniMapType: MiniMapType.GeoJson,
+                title: 'R',
+                bounds: null,
                 routesParams: { region: { source: 'ropewiki' } },
             }),
         ).toThrow();
@@ -92,22 +166,38 @@ describe('PageMiniMap', () => {
     it('fromResult parses valid payload', () => {
         const m = PageMiniMap.fromResult({
             miniMapType: MiniMapType.TilesTemplate,
+            title: 'T',
             layerId: '38f5c3fa-7248-41ed-815e-8b9e6aae5d61',
             tilesTemplate: 'https://api.example.com/tiles/u/{z}/{x}/{y}.pbf',
             bounds: validBounds,
         });
         expect(m.layerId).toBe('38f5c3fa-7248-41ed-815e-8b9e6aae5d61');
         expect(m.bounds.north).toBe(39.5);
+        expect(m.title).toBe('T');
+    });
+
+    it('throws when title empty', () => {
+        expect(() =>
+            PageMiniMap.fromResult({
+                miniMapType: MiniMapType.TilesTemplate,
+                title: '  ',
+                layerId: 'id',
+                tilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
+                bounds: validBounds,
+            }),
+        ).toThrow(/PageMiniMap\.title/);
     });
 
     it('throws when miniMapType wrong', () => {
         expect(() =>
             PageMiniMap.fromResult({
                 miniMapType: MiniMapType.GeoJson,
+                title: 'R',
                 routesParams: {
                     region: { source: 'ropewiki', id: MAP_REGION_ID },
                 },
-            }),
+                bounds: null,
+            } as Record<string, unknown>),
         ).toThrow(/PageMiniMap\.miniMapType must be/);
     });
 
@@ -115,6 +205,7 @@ describe('PageMiniMap', () => {
         expect(() =>
             PageMiniMap.fromResult({
                 miniMapType: MiniMapType.TilesTemplate,
+                title: 'T',
                 layerId: '',
                 tilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
                 bounds: validBounds,
@@ -126,6 +217,7 @@ describe('PageMiniMap', () => {
         expect(() =>
             PageMiniMap.fromResult({
                 miniMapType: MiniMapType.TilesTemplate,
+                title: 'T',
                 layerId: 'id',
                 tilesTemplate: 'https://x/',
                 bounds: validBounds,

@@ -54,7 +54,6 @@ describe('ImageVersions', () => {
             downloadedImages: {
                 'img-1': { preview: null, banner: '/a/b.jpg', full: null },
             },
-            downloadedMapData: '/tmp/map/',
         });
         const sp = SavedPage.fromJsonString(json);
         expect(sp.downloadedImages?.['img-1']).toBeInstanceOf(ImageVersions);

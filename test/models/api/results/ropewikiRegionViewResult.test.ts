@@ -23,6 +23,8 @@ function validResult(): Record<string, unknown> {
         externalLink: 'https://example.com/region',
         miniMap: {
             miniMapType: MiniMapType.GeoJson,
+            title: 'Root',
+            bounds: null,
             routesParams: {
                 region: { source: 'ropewiki', id: RID },
             },
@@ -48,6 +50,8 @@ describe('RopewikiRegionViewResult', () => {
                 externalLink: 'https://example.com',
                 miniMap: RegionMiniMap.fromResult({
                     miniMapType: MiniMapType.GeoJson,
+                    title: 'R',
+                    bounds: null,
                     routesParams: {
                         region: { source: 'ropewiki', id: RID },
                     },

@@ -3,7 +3,7 @@ import { Difficulty } from '../../difficulty/difficulty';
 import { PermitStatus } from '../../permitStatus';
 import { BetaSection } from '../../betaSections/betaSection';
 import { BetaSectionImage } from '../../betaSections/betaSectionImage';
-import { MiniMap } from '../../minimap/miniMap';
+import { CenteredRegionMiniMap } from '../../minimap/centeredRegionMiniMap';
 import { MiniMapType } from '../../minimap/miniMapType';
 import { PageMiniMap } from '../../minimap/pageMiniMap';
 import { PageDataSource } from '../../pageDataSource';
@@ -43,8 +43,8 @@ export class RopewikiPageView {
     latestRevisionDate: Date;
     bannerImage: BetaSectionImage | null;
     betaSections: BetaSection[];
-    /** Minimap for the page route (tiles template + bounds when present), or null. */
-    miniMap: MiniMap | null;
+    /** Minimap for the page route (tiles or centered GeoJSON fallback), or null. */
+    miniMap: PageMiniMap | CenteredRegionMiniMap | null;
     /** Page centroid in WGS84 degrees when known; otherwise null (same convention as search and Route). */
     coordinates: { lat: number; lon: number } | null;
 
@@ -77,7 +77,7 @@ export class RopewikiPageView {
         latestRevisionDate: Date,
         bannerImage: BetaSectionImage | null,
         betaSections: BetaSection[],
-        miniMap: MiniMap | null,
+        miniMap: PageMiniMap | CenteredRegionMiniMap | null,
         coordinates: { lat: number; lon: number } | null,
     ) {
         this.name = name;
@@ -161,7 +161,7 @@ export class RopewikiPageView {
             r.difficulty,
         );
         if (r.miniMap != null && r.miniMap !== undefined) {
-            (r as Record<string, unknown>).miniMap = PageMiniMap.fromResult(r.miniMap);
+            (r as Record<string, unknown>).miniMap = RopewikiPageView.parsePageMiniMap(r.miniMap);
         } else {
             (r as Record<string, unknown>).miniMap = null;
         }
@@ -223,9 +223,28 @@ export class RopewikiPageView {
         if (v === null || v === undefined) return;
         if (typeof v !== 'object') {
             throw new Error(
-                `RopewikiPageView.${key} must be a PageMiniMap object or null, got: ${typeof v}`,
+                `RopewikiPageView.${key} must be a PageMiniMap, CenteredRegionMiniMap object, or null, got: ${typeof v}`,
             );
         }
+    }
+
+    private static parsePageMiniMap(
+        raw: unknown,
+    ): PageMiniMap | CenteredRegionMiniMap {
+        if (raw == null || typeof raw !== 'object') {
+            throw new Error('RopewikiPageView.miniMap must be an object when non-null');
+        }
+        const o = raw as Record<string, unknown>;
+        const t = o.miniMapType;
+        if (t === MiniMapType.TilesTemplate) {
+            return PageMiniMap.fromResult(raw);
+        }
+        if (t === MiniMapType.CenteredGeojson) {
+            return CenteredRegionMiniMap.fromResult(raw);
+        }
+        throw new Error(
+            `RopewikiPageView.miniMap must be PageMiniMap or CenteredRegionMiniMap; got miniMapType ${JSON.stringify(t)}`,
+        );
     }
 
     private static parseCoordinateComponent(value: unknown): number | null {

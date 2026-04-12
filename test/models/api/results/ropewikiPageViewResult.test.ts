@@ -3,6 +3,7 @@ import { RopewikiPageViewResult } from '../../../../src/models/api/results/ropew
 import { RopewikiPageView } from '../../../../src/models/api/endpoints/ropewikiPageView';
 import { ResultType } from '../../../../src/models/api/results/result';
 import { MiniMapType } from '../../../../src/models/minimap/miniMapType';
+import { CenteredRegionMiniMap } from '../../../../src/models/minimap/centeredRegionMiniMap';
 import type { PageMiniMap } from '../../../../src/models/minimap/pageMiniMap';
 
 function validResult(): Record<string, unknown> {
@@ -47,6 +48,21 @@ function validTilesMiniMap() {
         tilesTemplate:
             'https://api.webscraper.ropegeo.com/mapdata/tiles/38f5c3fa-7248-41ed-815e-8b9e6aae5d61/{z}/{x}/{y}.pbf',
         bounds: { north: 39.5, south: 38.1, east: -108.2, west: -110.0 },
+        title: 'Route One',
+    };
+}
+
+const MAP_REGION_ID = 'c3d4e5f6-a7b8-9012-cdef-123456789012';
+const CENTERED_ROUTE_ID = '38f5c3fa-7248-41ed-815e-8b9e6aae5d61';
+
+function validCenteredMiniMap() {
+    return {
+        miniMapType: MiniMapType.CenteredGeojson,
+        title: 'Route One',
+        centeredRouteId: CENTERED_ROUTE_ID,
+        routesParams: {
+            region: { source: 'ropewiki', id: MAP_REGION_ID },
+        },
     };
 }
 
@@ -157,26 +173,41 @@ describe('RopewikiPageViewResult', () => {
             expect(mm.layerId).toBe('38f5c3fa-7248-41ed-815e-8b9e6aae5d61');
             expect(mm.tilesTemplate).toContain('{z}');
             expect(mm.bounds.north).toBe(39.5);
+            expect(mm.title).toBe('Route One');
+        });
+
+        it('parses valid CenteredRegionMiniMap', () => {
+            const result = { ...validResult(), miniMap: validCenteredMiniMap() };
+            const parsed = RopewikiPageViewResult.fromResult(result);
+            expect(parsed.result.miniMap).toBeInstanceOf(CenteredRegionMiniMap);
+            const cm = parsed.result.miniMap as CenteredRegionMiniMap;
+            expect(cm.centeredRouteId).toBe(CENTERED_ROUTE_ID);
+            expect(cm.title).toBe('Route One');
+            expect(cm.routesParams.region!.id).toBe(MAP_REGION_ID);
         });
 
         it('throws when miniMap is not object or null', () => {
             expect(() =>
                 RopewikiPageViewResult.fromResult({ ...validResult(), miniMap: 'invalid' }),
-            ).toThrow(/RopewikiPageView\.miniMap must be a PageMiniMap object or null/);
+            ).toThrow(
+                /RopewikiPageView\.miniMap must be a PageMiniMap, CenteredRegionMiniMap object, or null/,
+            );
         });
 
-        it('throws when miniMap is region shape (wrong type for page)', () => {
+        it('throws when miniMap is region geojson shape (wrong type for page)', () => {
             expect(() =>
                 RopewikiPageViewResult.fromResult({
                     ...validResult(),
                     miniMap: {
                         miniMapType: MiniMapType.GeoJson,
+                        title: 'R',
+                        bounds: null,
                         routesParams: {
-                            region: { source: 'ropewiki', id: 'x' },
+                            region: { source: 'ropewiki', id: MAP_REGION_ID },
                         },
                     },
                 }),
-            ).toThrow(/PageMiniMap\.miniMapType must be/);
+            ).toThrow(/RopewikiPageView\.miniMap must be PageMiniMap or CenteredRegionMiniMap/);
         });
 
         it('throws when tilesTemplate string is missing {z}, {x}, or {y}', () => {
@@ -186,6 +217,7 @@ describe('RopewikiPageViewResult', () => {
                     miniMap: {
                         miniMapType: MiniMapType.TilesTemplate,
                         layerId: 'id',
+                        title: 'T',
                         tilesTemplate: 'https://example.com/tiles/{z}/{x}.pbf',
                         bounds: { north: 39, south: 38, east: -108, west: -110 },
                     },
@@ -200,6 +232,7 @@ describe('RopewikiPageViewResult', () => {
                     miniMap: {
                         miniMapType: MiniMapType.TilesTemplate,
                         layerId: 'id',
+                        title: 'T',
                         tilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
                         bounds: { north: 39, south: 38, east: -108 },
                     },

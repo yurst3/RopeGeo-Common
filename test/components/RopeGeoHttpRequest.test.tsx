@@ -1,10 +1,10 @@
 /** @jest-environment jsdom */
 
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
-import { render, waitFor, cleanup, act } from '@testing-library/react';
-import { Bounds } from '../../src/models/minimap/bounds';
+import { render, waitFor, cleanup } from '@testing-library/react';
 import { ResultType } from '../../src/models/api/results/result';
-import '../../src/models/api/results/ropewikiRegionBoundsResult';
+import '../../src/models/api/results/ropewikiPageViewResult';
+import { RopewikiPageView } from '../../src/models/api/endpoints/ropewikiPageView';
 import {
     Method,
     RopeGeoHttpRequest,
@@ -14,10 +14,41 @@ import { mockJsonResponse, requestUrl } from '../helpers/jestFetch';
 
 const BASE = 'https://api.webscraper.ropegeo.com';
 
-function boundsResponseJson(): Record<string, unknown> {
+function pageViewResponseJson(): Record<string, unknown> {
     return {
-        resultType: ResultType.RopewikiRegionBounds,
-        result: { north: 41, south: 40, east: -110, west: -112 },
+        resultType: ResultType.RopewikiPageView,
+        result: {
+            name: 'Test Page',
+            aka: [],
+            url: 'https://ropewiki.com/page',
+            quality: 4,
+            userVotes: 10,
+            regions: [{ id: 'r1', name: 'Region' }],
+            difficulty: { technical: null, water: null, time: null, additionalRisk: null },
+            permit: null,
+            rappelCount: null,
+            jumps: null,
+            vehicle: null,
+            rappelLongest: null,
+            shuttleTime: null,
+            overallLength: null,
+            descentLength: null,
+            exitLength: null,
+            approachLength: null,
+            overallTime: null,
+            approachTime: null,
+            descentTime: null,
+            exitTime: null,
+            approachElevGain: null,
+            descentElevGain: null,
+            exitElevGain: null,
+            months: [],
+            latestRevisionDate: '2024-01-01T00:00:00.000Z',
+            bannerImage: null,
+            betaSections: [],
+            miniMap: null,
+            coordinates: null,
+        },
     };
 }
 
@@ -66,16 +97,16 @@ describe('RopeGeoHttpRequest', () => {
 
     it('GET: parses Result body and exposes result as data', async () => {
         fetchMock.mockResolvedValue(
-            mockJsonResponse(true, 200, JSON.stringify(boundsResponseJson())),
+            mockJsonResponse(true, 200, JSON.stringify(pageViewResponseJson())),
         );
 
-        let latest: Args<Bounds> | undefined;
+        let latest: Args<RopewikiPageView> | undefined;
         render(
-            <TestHost<Bounds>
-                path="/ropewiki/region/:id/bounds"
+            <TestHost<RopewikiPageView>
+                path="/ropewiki/page/:id"
                 pathParams={{ id: 'abc-uuid-here-0001' }}
                 onRender={(a) => {
-                    latest = a as Args<Bounds>;
+                    latest = a as Args<RopewikiPageView>;
                 }}
             />,
         );
@@ -86,25 +117,25 @@ describe('RopeGeoHttpRequest', () => {
         expect(fetchMock).toHaveBeenCalledTimes(1);
         const url = requestUrl(fetchMock.mock.calls[0]![0]);
         expect(url.startsWith(BASE)).toBe(true);
-        expect(url).toContain('/ropewiki/region/abc-uuid-here-0001/bounds');
+        expect(url).toContain('/ropewiki/page/abc-uuid-here-0001');
         expect(latest?.errors).toBeNull();
-        expect(latest?.data).toBeInstanceOf(Bounds);
-        expect(latest?.data?.north).toBe(41);
+        expect(latest?.data).toBeInstanceOf(RopewikiPageView);
+        expect(latest?.data?.name).toBe('Test Page');
     });
 
     it('buildUrl adds query params (skips empty and undefined)', async () => {
         fetchMock.mockResolvedValue(
-            mockJsonResponse(true, 200, JSON.stringify(boundsResponseJson())),
+            mockJsonResponse(true, 200, JSON.stringify(pageViewResponseJson())),
         );
 
-        let latest: Args<Bounds> | undefined;
+        let latest: Args<RopewikiPageView> | undefined;
         render(
-            <TestHost<Bounds>
-                path="/ropewiki/region/:id/bounds"
+            <TestHost<RopewikiPageView>
+                path="/ropewiki/page/:id"
                 pathParams={{ id: 'rid' }}
                 queryParams={{ a: '1', b: '', c: undefined, flag: true }}
                 onRender={(a) => {
-                    latest = a as Args<Bounds>;
+                    latest = a as Args<RopewikiPageView>;
                 }}
             />,
         );
@@ -123,12 +154,12 @@ describe('RopeGeoHttpRequest', () => {
     it('sets errors on non-OK HTTP', async () => {
         fetchMock.mockResolvedValue(mockJsonResponse(false, 404, 'missing'));
 
-        let latest: Args<Bounds> | undefined;
+        let latest: Args<RopewikiPageView> | undefined;
         render(
-            <TestHost<Bounds>
+            <TestHost<RopewikiPageView>
                 path="/x"
                 onRender={(a) => {
-                    latest = a as Args<Bounds>;
+                    latest = a as Args<RopewikiPageView>;
                 }}
             />,
         );
@@ -143,12 +174,12 @@ describe('RopeGeoHttpRequest', () => {
     it('empty 200 body leaves data null without error', async () => {
         fetchMock.mockResolvedValue(mockJsonResponse(true, 200, ''));
 
-        let latest: Args<Bounds> | undefined;
+        let latest: Args<RopewikiPageView> | undefined;
         render(
-            <TestHost<Bounds>
+            <TestHost<RopewikiPageView>
                 path="/x"
                 onRender={(a) => {
-                    latest = a as Args<Bounds>;
+                    latest = a as Args<RopewikiPageView>;
                 }}
             />,
         );
@@ -165,12 +196,12 @@ describe('RopeGeoHttpRequest', () => {
         try {
             fetchMock.mockResolvedValue(mockJsonResponse(true, 200, 'not-json'));
 
-            let latest: Args<Bounds> | undefined;
+            let latest: Args<RopewikiPageView> | undefined;
             render(
-                <TestHost<Bounds>
+                <TestHost<RopewikiPageView>
                     path="/x"
                     onRender={(a) => {
-                        latest = a as Args<Bounds>;
+                        latest = a as Args<RopewikiPageView>;
                     }}
                 />,
             );
@@ -187,18 +218,18 @@ describe('RopeGeoHttpRequest', () => {
 
     it('POST sends JSON body', async () => {
         fetchMock.mockResolvedValue(
-            mockJsonResponse(true, 200, JSON.stringify(boundsResponseJson())),
+            mockJsonResponse(true, 200, JSON.stringify(pageViewResponseJson())),
         );
 
-        let latest: Args<Bounds> | undefined;
+        let latest: Args<RopewikiPageView> | undefined;
         render(
-            <TestHost<Bounds>
+            <TestHost<RopewikiPageView>
                 method={Method.POST}
-                path="/ropewiki/region/:id/bounds"
+                path="/ropewiki/page/:id"
                 pathParams={{ id: 'r1' }}
                 body={{ foo: 'bar' }}
                 onRender={(a) => {
-                    latest = a as Args<Bounds>;
+                    latest = a as Args<RopewikiPageView>;
                 }}
             />,
         );
@@ -213,17 +244,17 @@ describe('RopeGeoHttpRequest', () => {
 
     it('GET does not attach body even when body prop is set', async () => {
         fetchMock.mockResolvedValue(
-            mockJsonResponse(true, 200, JSON.stringify(boundsResponseJson())),
+            mockJsonResponse(true, 200, JSON.stringify(pageViewResponseJson())),
         );
 
-        let latest: Args<Bounds> | undefined;
+        let latest: Args<RopewikiPageView> | undefined;
         render(
-            <TestHost<Bounds>
+            <TestHost<RopewikiPageView>
                 method={Method.GET}
                 path="/x"
                 body={{ skip: true }}
                 onRender={(a) => {
-                    latest = a as Args<Bounds>;
+                    latest = a as Args<RopewikiPageView>;
                 }}
             />,
         );

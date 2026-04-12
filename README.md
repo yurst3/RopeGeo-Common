@@ -149,7 +149,7 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
-| `RoutesGeojson` | N/A | GeoJSON FeatureCollection of routes (features only; use region bounds API for bbox). | `import { RoutesGeojson } from 'ropegeo-common/models'` |
+| `RoutesGeojson` | N/A | GeoJSON FeatureCollection of routes (features only; region bbox is on `RegionMiniMap.bounds` in GET /ropewiki/region/{id}). | `import { RoutesGeojson } from 'ropegeo-common/models'` |
 | `RouteResult` | `PaginationResults` | Page of GET /routes (`RouteGeoJsonFeature[]`, `total`, `page`, `resultType` `route`). | `import { RouteResult } from 'ropegeo-common/models'` |
 
 ### Route preview API (`src/models/api/results/`)
@@ -190,12 +190,6 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 | `RopewikiRegionView` | N/A | Region detail view payload. | `import { RopewikiRegionView } from 'ropegeo-common/models'` |
 | `RopewikiRegionViewResult` | `Result` | API result wrapping region view. | `import { RopewikiRegionViewResult } from 'ropegeo-common/models'` |
 
-### Ropewiki region bounds API (`src/models/api/results/`)
-
-| Name | Base class | Description | Import |
-| --- | --- | --- | --- |
-| `RopewikiRegionBoundsResult` | `Result` | GET /ropewiki/region/{id}/bounds (`Bounds` over route coordinates). | `import { RopewikiRegionBoundsResult } from 'ropegeo-common/models'` |
-
 ### Ropewiki region previews API (`src/models/api/params/`, `src/models/api/results/`)
 
 | Name | Base class | Description | Import |
@@ -228,9 +222,12 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 | --- | --- | --- | --- |
 | `Bounds` | N/A | Geographic bounding box. | `import { Bounds } from 'ropegeo-common/models'` |
 | `MiniMapType` | N/A | Minimap discriminator (e.g. GeoJSON). | `import { MiniMapType } from 'ropegeo-common/models'` |
-| `MiniMap` | N/A | Abstract base for page/region minimaps. | `import { MiniMap } from 'ropegeo-common/models'` |
-| `RegionMiniMap` | `MiniMap` | Region minimap payload. | `import { RegionMiniMap } from 'ropegeo-common/models'` |
-| `PageMiniMap` | `MiniMap` | Page minimap payload. | `import { PageMiniMap } from 'ropegeo-common/models'` |
+| `MiniMap` | N/A | Abstract base for minimaps; `fromResult` parses API wire types only. | `import { MiniMap } from 'ropegeo-common/models'` |
+| `RegionMiniMap` | `MiniMap` | Region minimap (`geojson`): `routesParams`, `bounds` (or null), `title`. | `import { RegionMiniMap } from 'ropegeo-common/models'` |
+| `PageMiniMap` | `MiniMap` | Page minimap (`tilesTemplate`): tiles URL, `bounds`, `title`. | `import { PageMiniMap } from 'ropegeo-common/models'` |
+| `CenteredRegionMiniMap` | `MiniMap` | Page fallback (`centeredGeojson`): region-scoped `routesParams`, `centeredRouteId`, `title`. | `import { CenteredRegionMiniMap } from 'ropegeo-common/models'` |
+| `DownloadedPageMiniMap` | `MiniMap` | Saved-page offline tiles (`downloadedTilesTemplate`); persisted via `SavedPage`. | `import { DownloadedPageMiniMap } from 'ropegeo-common/models'` |
+| `DownloadedCenteredRegionMiniMap` | `MiniMap` | Saved-page offline routes file (`downloadedCenteredGeojson`); persisted via `SavedPage`. | `import { DownloadedCenteredRegionMiniMap } from 'ropegeo-common/models'` |
 
 ### Link preview (`src/models/linkPreview/`)
 
@@ -273,7 +270,7 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 | `ImageVersion` | N/A | Enum of cached image variant kinds. | `import { ImageVersion } from 'ropegeo-common/models'` |
 | `VERSION_FORMAT` | N/A | Format constant for version strings. | `import { VERSION_FORMAT } from 'ropegeo-common/models'` |
 | `ImageVersions` | N/A | Map of image URLs by `ImageVersion`; `fromResult` for persisted JSON. | `import { ImageVersions } from 'ropegeo-common/models'` |
-| `SavedPage` | N/A | Offline saved page record (`PagePreview` + metadata). | `import { SavedPage } from 'ropegeo-common/models'` |
+| `SavedPage` | N/A | Offline saved page record (`PagePreview` + optional `downloadedMiniMap` for offline minimaps). | `import { SavedPage } from 'ropegeo-common/models'` |
 
 ### React components (`src/components/`)
 

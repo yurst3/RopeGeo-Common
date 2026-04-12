@@ -1,6 +1,5 @@
 import { BetaSection } from '../../betaSections/betaSection';
 import { RegionMiniMap } from '../../minimap/regionMiniMap';
-import { MiniMap } from '../../minimap/miniMap';
 
 /**
  * Region view for getRopewikiRegionView (GET /ropewiki/region/{id}).
@@ -25,14 +24,14 @@ export class RopewikiRegionView {
     /** When the region was last synced (from updatedAt). */
     syncDate: Date;
     externalLink: string;
-    miniMap: MiniMap | null;
+    miniMap: RegionMiniMap | null;
 
     constructor(
         name: string,
         latestRevisionDate: Date,
         url: string,
         updatedAt: Date,
-        miniMap: MiniMap | null,
+        miniMap: RegionMiniMap | null,
         regions?: { name: string; id: string }[],
         rawPageCount?: number | null,
         truePageCount?: number | null,
@@ -231,7 +230,7 @@ export class RopewikiRegionView {
         if (v === null || v === undefined) return;
         if (typeof v !== 'object') {
             throw new Error(
-                `RopewikiRegionView.${key} must be a MiniMap object or null, got: ${typeof v}`,
+                `RopewikiRegionView.${key} must be a RegionMiniMap object or null, got: ${typeof v}`,
             );
         }
     }
