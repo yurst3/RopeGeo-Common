@@ -3,8 +3,16 @@
  */
 export enum MiniMapType {
     GeoJson = 'geojson',
-    TilesTemplate = 'tilesTemplate',
-    CenteredGeojson = 'centeredGeojson',
-    DownloadedTilesTemplate = 'downloadedTilesTemplate',
-    DownloadedCenteredGeojson = 'downloadedCenteredGeojson',
+    OnlineTilesTemplate = 'onlineTilesTemplate',
+    OfflineTilesTemplate = 'offlineTilesTemplate',
+    OnlineCenteredGeojson = 'onlineCenteredGeojson',
+    OfflineCenteredGeojson = 'offlineCenteredGeojson',
+    /** @deprecated Use OnlineTilesTemplate. */
+    TilesTemplate = 'onlineTilesTemplate',
+    /** @deprecated Use OnlineCenteredGeojson. */
+    CenteredGeojson = 'onlineCenteredGeojson',
+    /** @deprecated Use OfflineTilesTemplate. */
+    DownloadedTilesTemplate = 'offlineTilesTemplate',
+    /** @deprecated Use OfflineCenteredGeojson. */
+    DownloadedCenteredGeojson = 'offlineCenteredGeojson',
 }

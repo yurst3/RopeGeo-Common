@@ -4,10 +4,18 @@ import { RopewikiPageView } from '../../../../src/models/api/endpoints/ropewikiP
 import { ResultType } from '../../../../src/models/api/results/result';
 import { MiniMapType } from '../../../../src/models/minimap/miniMapType';
 import { CenteredRegionMiniMap } from '../../../../src/models/minimap/centeredRegionMiniMap';
-import type { PageMiniMap } from '../../../../src/models/minimap/pageMiniMap';
+import { OnlinePageMiniMap } from '../../../../src/models/minimap/onlinePageMiniMap';
+import { OnlineCenteredRegionMiniMap } from '../../../../src/models/minimap/onlineCenteredRegionMiniMap';
+import '../../../../src/models/pageViews/registerPageViewParsers';
+import '../../../../src/models/minimap/registerMiniMapParsers';
+import '../../../../src/models/betaSections/registerBetaSectionParsers';
 
 function validResult(): Record<string, unknown> {
     return {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        routeType: 'Canyon',
+        pageViewType: 'ropewiki',
+        fetchType: 'online',
         name: 'Test Page',
         aka: [],
         url: 'https://ropewiki.com/page',
@@ -44,8 +52,9 @@ function validResult(): Record<string, unknown> {
 function validTilesMiniMap() {
     return {
         miniMapType: MiniMapType.TilesTemplate,
+        fetchType: 'online',
         layerId: '38f5c3fa-7248-41ed-815e-8b9e6aae5d61',
-        tilesTemplate:
+        onlineTilesTemplate:
             'https://api.webscraper.ropegeo.com/mapdata/tiles/38f5c3fa-7248-41ed-815e-8b9e6aae5d61/{z}/{x}/{y}.pbf',
         bounds: { north: 39.5, south: 38.1, east: -108.2, west: -110.0 },
         title: 'Route One',
@@ -58,6 +67,7 @@ const CENTERED_ROUTE_ID = '38f5c3fa-7248-41ed-815e-8b9e6aae5d61';
 function validCenteredMiniMap() {
     return {
         miniMapType: MiniMapType.CenteredGeojson,
+        fetchType: 'online',
         title: 'Route One',
         centeredRouteId: CENTERED_ROUTE_ID,
         routesParams: {
@@ -169,9 +179,9 @@ describe('RopewikiPageViewResult', () => {
             const result = { ...validResult(), miniMap: validTilesMiniMap() };
             const parsed = RopewikiPageViewResult.fromResult(result);
             expect(parsed.result.miniMap).not.toBeNull();
-            const mm = parsed.result.miniMap as PageMiniMap;
+            const mm = parsed.result.miniMap as OnlinePageMiniMap;
             expect(mm.layerId).toBe('38f5c3fa-7248-41ed-815e-8b9e6aae5d61');
-            expect(mm.tilesTemplate).toContain('{z}');
+            expect(mm.onlineTilesTemplate).toContain('{z}');
             expect(mm.bounds.north).toBe(39.5);
             expect(mm.title).toBe('Route One');
         });
@@ -180,7 +190,7 @@ describe('RopewikiPageViewResult', () => {
             const result = { ...validResult(), miniMap: validCenteredMiniMap() };
             const parsed = RopewikiPageViewResult.fromResult(result);
             expect(parsed.result.miniMap).toBeInstanceOf(CenteredRegionMiniMap);
-            const cm = parsed.result.miniMap as CenteredRegionMiniMap;
+            const cm = parsed.result.miniMap as OnlineCenteredRegionMiniMap;
             expect(cm.centeredRouteId).toBe(CENTERED_ROUTE_ID);
             expect(cm.title).toBe('Route One');
             expect(cm.routesParams.region!.id).toBe(MAP_REGION_ID);
@@ -190,7 +200,7 @@ describe('RopewikiPageViewResult', () => {
             expect(() =>
                 RopewikiPageViewResult.fromResult({ ...validResult(), miniMap: 'invalid' }),
             ).toThrow(
-                /RopewikiPageView\.miniMap must be a PageMiniMap, CenteredRegionMiniMap object, or null/,
+                /OnlineRopewikiPageView\.miniMap must be object or null/,
             );
         });
 
@@ -207,7 +217,7 @@ describe('RopewikiPageViewResult', () => {
                         },
                     },
                 }),
-            ).toThrow(/RopewikiPageView\.miniMap must be PageMiniMap or CenteredRegionMiniMap/);
+            ).toThrow(/OnlineRopewikiPageView\.miniMap must be online page\/centered minimap/);
         });
 
         it('throws when tilesTemplate string is missing {z}, {x}, or {y}', () => {
@@ -216,13 +226,14 @@ describe('RopewikiPageViewResult', () => {
                     ...validResult(),
                     miniMap: {
                         miniMapType: MiniMapType.TilesTemplate,
+                        fetchType: 'online',
                         layerId: 'id',
                         title: 'T',
-                        tilesTemplate: 'https://example.com/tiles/{z}/{x}.pbf',
+                        onlineTilesTemplate: 'https://example.com/tiles/{z}/{x}.pbf',
                         bounds: { north: 39, south: 38, east: -108, west: -110 },
                     },
                 }),
-            ).toThrow(/PageMiniMap\.tilesTemplate must contain/);
+            ).toThrow(/OnlinePageMiniMap\.onlineTilesTemplate must contain/);
         });
 
         it('throws when bounds object is invalid inside miniMap', () => {
@@ -231,9 +242,10 @@ describe('RopewikiPageViewResult', () => {
                     ...validResult(),
                     miniMap: {
                         miniMapType: MiniMapType.TilesTemplate,
+                        fetchType: 'online',
                         layerId: 'id',
                         title: 'T',
-                        tilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
+                        onlineTilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
                         bounds: { north: 39, south: 38, east: -108 },
                     },
                 }),

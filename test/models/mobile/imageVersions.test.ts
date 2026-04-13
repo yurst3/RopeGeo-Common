@@ -1,14 +1,16 @@
 import { describe, it, expect } from '@jest/globals';
 import { PageDataSource } from '../../../src/models/pageDataSource';
-import { RouteType } from '../../../src/models/routes/route';
 import {
     ImageVersion,
     VERSION_FORMAT,
     ImageVersions,
 } from '../../../src/models/mobile/imageVersions';
 import { SavedPage } from '../../../src/models/mobile/savedPage';
+import '../../../src/models/previews/registerPreviewParsers';
 
 const validPreviewWire = {
+    previewType: 'page',
+    fetchType: 'online',
     id: 'page-1',
     source: PageDataSource.Ropewiki,
     imageUrl: null,
@@ -45,33 +47,27 @@ describe('ImageVersions', () => {
         ).toThrow(/unknown key "extra"/);
     });
 
-    it('round-trips sparse nulls via SavedPage', () => {
-        const json = JSON.stringify({
-            preview: validPreviewWire,
-            routeType: RouteType.Canyon,
-            savedAt: 1700000000000,
-            downloadedPageView: '/tmp/page.json',
-            downloadedImages: {
-                'img-1': { preview: null, banner: '/a/b.jpg', full: null },
-            },
+    it('round-trips sparse nulls via ImageVersions.toPlain/fromResult', () => {
+        const iv = ImageVersions.fromResult({
+            preview: null,
+            banner: '/a/b.jpg',
+            full: null,
         });
-        const sp = SavedPage.fromJsonString(json);
-        expect(sp.downloadedImages?.['img-1']).toBeInstanceOf(ImageVersions);
-        expect(sp.downloadedImages?.['img-1'][ImageVersion.banner]).toBe('/a/b.jpg');
-        expect(sp.downloadedImages?.['img-1'][ImageVersion.preview] ?? null).toBeNull();
-        const again = SavedPage.fromJsonString(sp.toString());
-        expect(again.downloadedImages?.['img-1'][ImageVersion.banner]).toBe('/a/b.jpg');
+        expect(iv[ImageVersion.banner]).toBe('/a/b.jpg');
+        expect(iv[ImageVersion.preview] ?? null).toBeNull();
+        const again = ImageVersions.fromResult(iv.toPlain());
+        expect(again[ImageVersion.banner]).toBe('/a/b.jpg');
     });
 
-    it('migrates legacy string map values to ImageVersions', () => {
+    it('SavedPage round-trip preserves preview schema', () => {
         const json = JSON.stringify({
             preview: validPreviewWire,
-            routeType: RouteType.Canyon,
-            savedAt: 1,
-            downloadedImages: { 'img-1': '/old/path.jpg' },
+            savedAt: 1700000000000,
+            downloadedPageViewPath: '/tmp/page.json',
         });
         const sp = SavedPage.fromJsonString(json);
-        expect(sp.downloadedImages?.['img-1'][ImageVersion.banner]).toBe('/old/path.jpg');
-        expect(sp.downloadedImages?.['img-1'][ImageVersion.preview] ?? null).toBeNull();
+        expect(sp.downloadedPageViewPath).toBe('/tmp/page.json');
+        const again = SavedPage.fromJsonString(sp.toString());
+        expect(again.preview.id).toBe('page-1');
     });
 });

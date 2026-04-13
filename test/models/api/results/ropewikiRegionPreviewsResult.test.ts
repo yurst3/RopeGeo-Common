@@ -4,6 +4,7 @@ import { Preview } from '../../../../src/models/previews/preview';
 import type { RegionPreview } from '../../../../src/models/previews/regionPreview';
 import { RegionPreviewsCursor } from '../../../../src/models/api/params/cursors/regionPreviewsCursor';
 import { RopewikiRegionPreviewsResult } from '../../../../src/models/api/results/ropewikiRegionPreviewsResult';
+import '../../../../src/models/previews/registerPreviewParsers';
 
 describe('RopewikiRegionPreviewsResult', () => {
     describe('constructor', () => {

@@ -1,13 +1,14 @@
 import { describe, it, expect } from '@jest/globals';
 import { Preview, PreviewType } from '../../../src/models/previews/preview';
-import { PagePreview } from '../../../src/models/previews/pagePreview';
+import { OnlinePagePreview } from '../../../src/models/previews/onlinePagePreview';
 import { RegionPreview } from '../../../src/models/previews/regionPreview';
 import { AcaDifficulty } from '../../../src/models';
 import { PageDataSource } from '../../../src/models/pageDataSource';
+import '../../../src/models/previews/registerPreviewParsers';
 
-function samplePagePreview(): PagePreview {
+function samplePagePreview(): OnlinePagePreview {
     const difficulty = new AcaDifficulty(null, null, null, null);
-    return new PagePreview(
+    return new OnlinePagePreview(
         'page-id',
         PageDataSource.Ropewiki,
         null,
@@ -87,6 +88,7 @@ describe('Preview', () => {
         it('validates and returns PagePreview for previewType page', () => {
             const plain = {
                 previewType: 'page',
+                fetchType: 'online',
                 id: 'p1',
                 title: 'Page 1',
                 source: 'ropewiki',

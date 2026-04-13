@@ -2,9 +2,14 @@ import { describe, it, expect } from '@jest/globals';
 import { BetaSection } from '../../../src/models/betaSections/betaSection';
 import { BetaSectionImage } from '../../../src/models/betaSections/betaSectionImage';
 import { DownloadBytes } from '../../../src/models/betaSections/downloadBytes';
+import { OnlineBetaSection } from '../../../src/models/betaSections/onlineBetaSection';
+import { OnlineBetaSectionImage } from '../../../src/models/betaSections/onlineBetaSectionImage';
+import { OfflineBetaSection } from '../../../src/models/betaSections/offlineBetaSection';
+import '../../../src/models/betaSections/registerBetaSectionParsers';
 
 function validImageBody(): Record<string, unknown> {
     return {
+        fetchType: 'online',
         order: 0,
         id: '550e8400-e29b-41d4-a716-446655440001',
         bannerUrl: 'https://example.com/banner.jpg',
@@ -18,6 +23,7 @@ function validImageBody(): Record<string, unknown> {
 
 function getValidBody(): Record<string, unknown> {
     return {
+        fetchType: 'online',
         order: 0,
         title: 'Approach',
         text: 'Beta text here.',
@@ -29,7 +35,7 @@ function getValidBody(): Record<string, unknown> {
 describe('BetaSection', () => {
     describe('constructor', () => {
         it('sets all properties', () => {
-            const img = new BetaSectionImage(
+            const img = new OnlineBetaSectionImage(
                 0,
                 'img-local-id',
                 'https://a.com/banner.jpg',
@@ -39,7 +45,7 @@ describe('BetaSection', () => {
                 new Date('2024-01-01Z'),
                 new DownloadBytes(0, 1, 2),
             );
-            const section = new BetaSection(
+            const section = new OnlineBetaSection(
                 1,
                 'Descent',
                 'Descent beta.',
@@ -55,7 +61,7 @@ describe('BetaSection', () => {
         });
 
         it('defaults images to empty array when omitted', () => {
-            const section = new BetaSection(
+            const section = new OnlineBetaSection(
                 0,
                 'Title',
                 'Text',
@@ -66,7 +72,7 @@ describe('BetaSection', () => {
 
         it('normalizes latestRevisionDate to Date', () => {
             const d = new Date('2024-06-01T00:00:00Z');
-            const section = new BetaSection(0, '', '', d);
+            const section = new OnlineBetaSection(0, '', '', d);
             expect(section.latestRevisionDate).toBeInstanceOf(Date);
             expect(section.latestRevisionDate.getTime()).toBe(d.getTime());
         });
@@ -74,7 +80,7 @@ describe('BetaSection', () => {
 
     describe('fromResponseBody', () => {
         it('returns instance with validated and parsed fields', () => {
-            const section = BetaSection.fromResponseBody(getValidBody());
+            const section = OnlineBetaSection.fromResponseBody(getValidBody());
             expect(section).toBeInstanceOf(BetaSection);
             expect(section.order).toBe(0);
             expect(section.title).toBe('Approach');
@@ -88,7 +94,7 @@ describe('BetaSection', () => {
 
         it('accepts empty images array', () => {
             const body = { ...getValidBody(), images: [] };
-            const section = BetaSection.fromResponseBody(body);
+            const section = OnlineBetaSection.fromResponseBody(body);
             expect(section.images).toEqual([]);
         });
 
@@ -157,6 +163,39 @@ describe('BetaSection', () => {
             ).toThrow(
                 'BetaSection.latestRevisionDate must be an ISO 8601 date string',
             );
+        });
+
+        it('parses offline section shape', () => {
+            const section = OfflineBetaSection.fromResponseBody({
+                fetchType: 'offline',
+                order: 1,
+                title: 'Offline',
+                text: 'Saved section',
+                latestRevisionDate: '2024-01-15T12:00:00Z',
+                images: [
+                    {
+                        fetchType: 'offline',
+                        order: 0,
+                        id: '550e8400-e29b-41d4-a716-446655440001',
+                        downloadedBannerPath: '/tmp/banner.avif',
+                        downloadedFullPath: '/tmp/full.avif',
+                        linkUrl: 'https://example.com/page',
+                        caption: null,
+                        latestRevisionDate: '2024-01-15T12:00:00Z',
+                    },
+                ],
+            });
+            expect(section).toBeInstanceOf(OfflineBetaSection);
+            expect(section.images).toHaveLength(1);
+        });
+
+        it('throws when fetchType mismatches parser', () => {
+            expect(() =>
+                OfflineBetaSection.fromResponseBody({
+                    ...getValidBody(),
+                    fetchType: 'online',
+                }),
+            ).toThrow(/fetchType must be "offline"/);
         });
     });
 });

@@ -91,6 +91,7 @@ describe('RopewikiRegionViewResult', () => {
                 ...validResult(),
                 regions: [{ id: 'r1', name: 'World' }],
                 overview: {
+                    fetchType: 'online',
                     order: 1,
                     title: 'Overview',
                     text: 'Overview text.',

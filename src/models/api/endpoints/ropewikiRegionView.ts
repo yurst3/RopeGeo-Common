@@ -1,4 +1,4 @@
-import { BetaSection } from '../../betaSections/betaSection';
+import { OnlineBetaSection } from '../../betaSections/onlineBetaSection';
 import { RegionMiniMap } from '../../minimap/regionMiniMap';
 
 /**
@@ -17,7 +17,7 @@ export class RopewikiRegionView {
     pageCount: number;
     /** Pages in this region and all descendants (truePageCountWithDescendents). Default 0. */
     totalPageCount: number;
-    overview: BetaSection | null;
+    overview: OnlineBetaSection | null;
     bestMonths: string[];
     isMajorRegion: boolean;
     latestRevisionDate: Date;
@@ -50,7 +50,7 @@ export class RopewikiRegionView {
         const revDate = new Date(latestRevisionDate);
         this.overview =
             overview != null && overview !== ''
-                ? new BetaSection(1, 'Overview', overview, revDate, [])
+                ? new OnlineBetaSection(1, 'Overview', overview, revDate, [])
                 : null;
         this.bestMonths = Array.isArray(bestMonths) ? bestMonths : [];
         this.isMajorRegion = isMajorRegion ?? false;
@@ -89,7 +89,10 @@ export class RopewikiRegionView {
         (r as Record<string, unknown>).overview =
             r.overview == null || r.overview === undefined
                 ? null
-                : BetaSection.fromResponseBody(r.overview);
+                : OnlineBetaSection.fromResponseBody({
+                    ...(r.overview as Record<string, unknown>),
+                    fetchType: 'online',
+                });
         if (r.miniMap == null || r.miniMap === undefined) {
             (r as Record<string, unknown>).miniMap = null;
         } else {

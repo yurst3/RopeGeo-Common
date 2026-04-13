@@ -205,6 +205,7 @@ describe('RopewikiRegionView', () => {
                 pageCount: 120,
                 totalPageCount: 380,
                 overview: {
+                    fetchType: 'online',
                     order: 1,
                     title: 'Overview',
                     text: 'Canyoneering regions.',
@@ -337,7 +338,13 @@ describe('RopewikiRegionView', () => {
             expect(() =>
                 RopewikiRegionView.fromResult({
                     ...getValidBody(),
-                    overview: { order: 1, title: 'Overview', text: 'Text', images: [] },
+                    overview: {
+                        fetchType: 'online',
+                        order: 1,
+                        title: 'Overview',
+                        text: 'Text',
+                        images: [],
+                    },
                     // missing latestRevisionDate
                 }),
             ).toThrow('BetaSection.latestRevisionDate must be an ISO 8601 date string');

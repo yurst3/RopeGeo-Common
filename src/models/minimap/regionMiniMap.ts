@@ -1,6 +1,6 @@
 import { RoutesParams } from '../api/params/routesParams';
 import { Bounds } from './bounds';
-import { MiniMap } from './miniMap';
+import { MiniMap, registerMiniMapParser } from './miniMap';
 import { MiniMapType } from './miniMapType';
 
 /**
@@ -8,6 +8,7 @@ import { MiniMapType } from './miniMapType';
  */
 export class RegionMiniMap extends MiniMap {
     readonly miniMapType = MiniMapType.GeoJson;
+    readonly fetchType = 'online' as const;
     routesParams: RoutesParams;
     /** Null when the region subtree has no route coordinates to bound. */
     bounds: Bounds | null;
@@ -28,6 +29,11 @@ export class RegionMiniMap extends MiniMap {
                 `RegionMiniMap.miniMapType must be "${MiniMapType.GeoJson}", got: ${JSON.stringify(r.miniMapType)}`,
             );
         }
+        if (r.fetchType !== undefined && r.fetchType !== 'online') {
+            throw new Error(
+                `RegionMiniMap.fetchType must be "online" when provided, got: ${JSON.stringify(r.fetchType)}`,
+            );
+        }
         if (!('bounds' in r)) {
             throw new Error('RegionMiniMap.bounds must be present (Bounds object or null)');
         }
@@ -44,3 +50,5 @@ export class RegionMiniMap extends MiniMap {
         return new RegionMiniMap(routesParams, bounds, title);
     }
 }
+
+registerMiniMapParser(MiniMapType.GeoJson, (result) => RegionMiniMap.fromResult(result));

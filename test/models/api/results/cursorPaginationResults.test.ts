@@ -9,9 +9,11 @@ import { RopewikiRegionImagesResult } from '../../../../src/models/api/results/r
 import { Preview } from '../../../../src/models/previews/preview';
 import { RopewikiRegionImageView } from '../../../../src/models/api/endpoints/ropewikiRegionImageView';
 import { SearchCursor } from '../../../../src/models/api/params/cursors/searchCursor';
+import '../../../../src/models/previews/registerPreviewParsers';
 
 const validPageItem = {
     previewType: 'page',
+    fetchType: 'online',
     id: 'p1',
     title: 'Page 1',
     source: 'ropewiki',

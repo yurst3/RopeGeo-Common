@@ -1,64 +1,65 @@
+import { FetchType } from '../fetchType';
 import { DownloadBytes } from './downloadBytes';
 
-/**
- * Generic beta section image (e.g. order, id, bannerUrl, fullUrl, linkUrl, caption, latestRevisionDate, downloadBytes).
- */
-export class BetaSectionImage {
+const betaSectionImageParsers = new Map<FetchType, (result: unknown) => BetaSectionImage>();
+
+export function registerBetaSectionImageParser(
+    fetchType: FetchType,
+    parse: (result: unknown) => BetaSectionImage,
+): void {
+    betaSectionImageParsers.set(fetchType, parse);
+}
+
+export abstract class BetaSectionImage {
+    abstract readonly fetchType: FetchType;
     order: number;
     /** Ropewiki image row UUID; keys offline file maps. */
     id: string;
-    bannerUrl: string | null;
-    fullUrl: string | null;
     linkUrl: string;
     caption: string | null;
     latestRevisionDate: Date;
-    /** Byte sizes per rendition; null when not provided by API. */
-    downloadBytes: DownloadBytes | null;
 
-    constructor(
+    protected constructor(
         order: number,
         id: string,
-        bannerUrl: string | null,
-        fullUrl: string | null,
         linkUrl: string,
         caption: string | null,
         latestRevisionDate: Date,
-        downloadBytes: DownloadBytes | null,
     ) {
         this.order = order;
         this.id = id;
-        this.bannerUrl = bannerUrl;
-        this.fullUrl = fullUrl;
         this.linkUrl = linkUrl;
         this.caption = caption;
         this.latestRevisionDate = new Date(latestRevisionDate);
-        this.downloadBytes = downloadBytes;
     }
 
-    /**
-     * Validates result has BetaSectionImage fields and returns a BetaSectionImage instance.
-     */
-    static fromResult(result: unknown): BetaSectionImage {
+    static fromResult(result: unknown, fetchType?: FetchType): BetaSectionImage {
         if (result == null || typeof result !== 'object') {
             throw new Error('BetaSectionImage result must be an object');
         }
         const r = result as Record<string, unknown>;
-        BetaSectionImage.assertNumber(r, 'order');
-        BetaSectionImage.assertNonEmptyString(r, 'id');
-        BetaSectionImage.assertStringOrNull(r, 'bannerUrl');
-        BetaSectionImage.assertStringOrNull(r, 'fullUrl');
-        BetaSectionImage.assertString(r, 'linkUrl');
-        BetaSectionImage.assertStringOrNull(r, 'caption');
-        BetaSectionImage.assertIso8601DateString(r, 'latestRevisionDate');
-        BetaSectionImage.assertDownloadBytesOrNull(r, 'downloadBytes');
-        (r as Record<string, unknown>).latestRevisionDate = new Date(
-            r.latestRevisionDate as string,
-        );
-        Object.setPrototypeOf(r, BetaSectionImage.prototype);
-        return r as unknown as BetaSectionImage;
+        const rawFetchType = r.fetchType;
+        const resolvedFetchType = fetchType ?? rawFetchType;
+        if (resolvedFetchType !== 'online' && resolvedFetchType !== 'offline') {
+            throw new Error(
+                `BetaSectionImage.fetchType must be "online" or "offline", got: ${JSON.stringify(rawFetchType)}`,
+            );
+        }
+        if (fetchType != null && rawFetchType !== undefined && rawFetchType !== fetchType) {
+            throw new Error(
+                `BetaSectionImage.fetchType mismatch: expected ${JSON.stringify(fetchType)}, got: ${JSON.stringify(rawFetchType)}`,
+            );
+        }
+        const parser = betaSectionImageParsers.get(resolvedFetchType);
+        if (parser == null) {
+            throw new Error(
+                `No BetaSectionImage parser registered for fetchType ${JSON.stringify(resolvedFetchType)}`,
+            );
+        }
+        return parser(result);
     }
 
-    private static assertNumber(obj: Record<string, unknown>, key: string): void {
+    protected static assertNumber(obj: Record<string, unknown>, key: string): void {
         const v = obj[key];
         if (typeof v !== 'number' || Number.isNaN(v)) {
             throw new Error(
@@ -67,7 +68,7 @@ export class BetaSectionImage {
         }
     }
 
-    private static assertNonEmptyString(obj: Record<string, unknown>, key: string): void {
+    protected static assertNonEmptyString(obj: Record<string, unknown>, key: string): void {
         const v = obj[key];
         if (typeof v !== 'string' || v.trim() === '') {
             throw new Error(
@@ -76,7 +77,7 @@ export class BetaSectionImage {
         }
     }
 
-    private static assertString(obj: Record<string, unknown>, key: string): void {
+    protected static assertString(obj: Record<string, unknown>, key: string): void {
         const v = obj[key];
         if (typeof v !== 'string') {
             throw new Error(
@@ -85,7 +86,7 @@ export class BetaSectionImage {
         }
     }
 
-    private static assertStringOrNull(
+    protected static assertStringOrNull(
         obj: Record<string, unknown>,
         key: string,
     ): void {
@@ -97,7 +98,7 @@ export class BetaSectionImage {
         }
     }
 
-    private static assertDownloadBytesOrNull(
+    protected static assertDownloadBytesOrNull(
         obj: Record<string, unknown>,
         key: string,
     ): void {
@@ -109,7 +110,7 @@ export class BetaSectionImage {
         (obj as Record<string, unknown>)[key] = DownloadBytes.fromResult(v);
     }
 
-    private static assertIso8601DateString(
+    protected static assertIso8601DateString(
         obj: Record<string, unknown>,
         key: string,
     ): void {
@@ -125,5 +126,24 @@ export class BetaSectionImage {
                 `BetaSectionImage.${key} must be a valid ISO 8601 date string, got: ${v}`,
             );
         }
+    }
+
+    protected static normalizeCommonFields(
+        obj: Record<string, unknown>,
+        context: string,
+        expectedFetchType: FetchType,
+    ): void {
+        BetaSectionImage.assertNumber(obj, 'order');
+        BetaSectionImage.assertNonEmptyString(obj, 'id');
+        BetaSectionImage.assertString(obj, 'linkUrl');
+        BetaSectionImage.assertStringOrNull(obj, 'caption');
+        BetaSectionImage.assertIso8601DateString(obj, 'latestRevisionDate');
+        const rawFetchType = obj.fetchType;
+        if (rawFetchType !== expectedFetchType) {
+            throw new Error(
+                `${context}.fetchType must be "${expectedFetchType}", got: ${JSON.stringify(rawFetchType)}`,
+            );
+        }
+        obj.latestRevisionDate = new Date(obj.latestRevisionDate as string);
     }
 }

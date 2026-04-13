@@ -12,6 +12,9 @@ import {
     PagePreview,
     type GetRopewikiPagePreviewRow,
 } from '../../../src/models/previews/pagePreview';
+import { OnlinePagePreview } from '../../../src/models/previews/onlinePagePreview';
+import { OfflinePagePreview } from '../../../src/models/previews/offlinePagePreview';
+import '../../../src/models/previews/registerPreviewParsers';
 
 describe('PagePreview', () => {
     const baseRow: GetRopewikiPagePreviewRow = {
@@ -95,6 +98,69 @@ describe('PagePreview', () => {
         it('passes mapData through', () => {
             const preview = PagePreview.fromDbRow(baseRow, 'map-data-id');
             expect(preview.mapData).toBe('map-data-id');
+        });
+    });
+
+    describe('fromResult', () => {
+        const basePreview = {
+            previewType: 'page' as const,
+            id: 'page-1',
+            source: PageDataSource.Ropewiki,
+            rating: 4.5,
+            ratingCount: 10,
+            title: 'Test Page',
+            regions: ['Region'],
+            aka: [],
+            difficulty: {
+                technical: '2',
+                water: 'C',
+                time: 'III',
+                additionalRisk: 'PG',
+            },
+            mapData: null,
+            externalLink: 'https://ropewiki.com/page',
+            permit: null,
+        };
+
+        it('parses online preview when fetchType is online', () => {
+            const preview = PagePreview.fromResult({
+                ...basePreview,
+                fetchType: 'online',
+                imageUrl: null,
+            });
+            expect(preview).toBeInstanceOf(OnlinePagePreview);
+        });
+
+        it('parses offline preview when fetchType is offline', () => {
+            const preview = PagePreview.fromResult({
+                ...basePreview,
+                fetchType: 'offline',
+                downloadedImagePath: '/tmp/preview.avif',
+            });
+            expect(preview).toBeInstanceOf(OfflinePagePreview);
+        });
+
+        it('throws on fetchType mismatch when explicit fetchType is provided', () => {
+            expect(() =>
+                PagePreview.fromResult(
+                    {
+                        ...basePreview,
+                        fetchType: 'offline',
+                        downloadedImagePath: null,
+                    },
+                    'online',
+                ),
+            ).toThrow(/fetchType mismatch/);
+        });
+
+        it('throws when offline downloadedImagePath is wrong type', () => {
+            expect(() =>
+                PagePreview.fromResult({
+                    ...basePreview,
+                    fetchType: 'offline',
+                    downloadedImagePath: 42,
+                }),
+            ).toThrow(/downloadedImagePath must be string or null/);
         });
     });
 });

@@ -18,6 +18,10 @@ function pageViewResponseJson(): Record<string, unknown> {
     return {
         resultType: ResultType.RopewikiPageView,
         result: {
+            id: '550e8400-e29b-41d4-a716-446655440000',
+            routeType: 'Canyon',
+            pageViewType: 'ropewiki',
+            fetchType: 'online',
             name: 'Test Page',
             aka: [],
             url: 'https://ropewiki.com/page',

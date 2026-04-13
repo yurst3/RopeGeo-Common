@@ -5,6 +5,7 @@ import type { RegionPreview } from '../../../../src/models/previews/regionPrevie
 import { CursorType } from '../../../../src/models/api/params/cursors/cursor';
 import { SearchCursor } from '../../../../src/models/api/params/cursors/searchCursor';
 import { SearchResults } from '../../../../src/models/api/results/searchResults';
+import '../../../../src/models/previews/registerPreviewParsers';
 
 describe('SearchCursor', () => {
     describe('constructor', () => {
@@ -202,6 +203,7 @@ describe('SearchResults', () => {
         it('fromResponseBody validates body and applies Preview.prototype', () => {
             const plain = {
                 previewType: 'page',
+                fetchType: 'online',
                 id: 'p1',
                 title: 'Page 1',
                 source: 'ropewiki',

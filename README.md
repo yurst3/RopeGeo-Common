@@ -65,6 +65,8 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 | --- | --- | --- | --- |
 | `PageDataSource` | N/A | Where linked page content comes from (e.g. Ropewiki). | `import { PageDataSource } from 'ropegeo-common/models'` |
 | `PermitStatus` | N/A | Permit state for a canyon page (Yes, No, Restricted, Closed). | `import { PermitStatus } from 'ropegeo-common/models'` |
+| `FetchType` | N/A | Online/offline discriminator type (`'online' \| 'offline'`). | `import type { FetchType } from 'ropegeo-common/models'` |
+| `PageViewType` | N/A | Discriminator enum for page view families (currently Ropewiki). | `import { PageViewType } from 'ropegeo-common/models'` |
 
 ### Difficulty (`src/models/difficulty/`)
 
@@ -134,7 +136,9 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 | `PreviewType` | N/A | Discriminator for search hit kind (page vs region). | `import { PreviewType } from 'ropegeo-common/models'` |
 | `Preview` | N/A | Abstract union base for search/route preview payloads. | `import { Preview } from 'ropegeo-common/models'` |
 | `GetRopewikiPagePreviewRow` | N/A | DB row shape for building `PagePreview` from Ropewiki. | `import type { GetRopewikiPagePreviewRow } from 'ropegeo-common/models'` |
-| `PagePreview` | `Preview` | Page preview (route preview and search hits). | `import { PagePreview } from 'ropegeo-common/models'` |
+| `PagePreview` | `Preview` | Abstract page preview base; dispatches to online/offline variants by `fetchType`. | `import { PagePreview } from 'ropegeo-common/models'` |
+| `OnlinePagePreview` | `PagePreview` | API-backed page preview with `imageUrl` and `fetchType: "online"`. | `import { OnlinePagePreview } from 'ropegeo-common/models'` |
+| `OfflinePagePreview` | `PagePreview` | Persisted page preview with `downloadedImagePath` and `fetchType: "offline"`. | `import { OfflinePagePreview } from 'ropegeo-common/models'` |
 | `RegionPreview` | `Preview` | Region search preview. | `import { RegionPreview } from 'ropegeo-common/models'` |
 
 ### Route domain (`src/models/routes/`)
@@ -162,7 +166,12 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
-| `RopewikiPageView` | N/A | Full Ropewiki page view (sections, images, minimap). | `import { RopewikiPageView } from 'ropegeo-common/models'` |
+| `RopewikiPageView` | `BaseRopewikiPageView` | Backward-compatible alias exported as the online page view class. | `import { RopewikiPageView } from 'ropegeo-common/models'` |
+| `BaseRopewikiPageView` | N/A | Abstract Ropewiki page view base with shared validation/fields. | `import { BaseRopewikiPageView } from 'ropegeo-common/models'` |
+| `OnlineRopewikiPageView` | `BaseRopewikiPageView` | Online Ropewiki page view with API image URLs and online minimap variants. | `import { OnlineRopewikiPageView } from 'ropegeo-common/models'` |
+| `OfflineRopewikiPageView` | `BaseRopewikiPageView` | Offline Ropewiki page view with downloaded paths and offline minimap variants. | `import { OfflineRopewikiPageView } from 'ropegeo-common/models'` |
+| `OnlinePageView` | N/A | Interface for online page-view behavior (`toOffline`, `toSavedPage`, etc.). | `import type { OnlinePageView } from 'ropegeo-common/models'` |
+| `OfflinePageView` | N/A | Interface for offline page-view behavior (`toPagePreview`). | `import type { OfflinePageView } from 'ropegeo-common/models'` |
 | `RopewikiPageViewResult` | `Result` | API result wrapping `RopewikiPageView`. | `import { RopewikiPageViewResult } from 'ropegeo-common/models'` |
 
 ### Page link preview API (`src/models/api/results/`)
@@ -210,10 +219,14 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
-| `BetaSectionImage` | N/A | Image in a beta section (URLs, pagination bytes). | `import { BetaSectionImage } from 'ropegeo-common/models'` |
+| `BetaSectionImage` | N/A | Abstract beta-section image base; dispatches by `fetchType`. | `import { BetaSectionImage } from 'ropegeo-common/models'` |
+| `OnlineBetaSectionImage` | `BetaSectionImage` | API image with remote URLs and optional `downloadBytes`. | `import { OnlineBetaSectionImage } from 'ropegeo-common/models'` |
+| `OfflineBetaSectionImage` | `BetaSectionImage` | Persisted image with downloaded banner/full paths. | `import { OfflineBetaSectionImage } from 'ropegeo-common/models'` |
 | `RopewikiImageView` | N/A | Type alias of `BetaSectionImage` for Ropewiki page view typings. | `import type { RopewikiImageView } from 'ropegeo-common/models'` |
 | `DownloadBytes` | N/A | Preview/banner/full byte sizes for downloads. | `import { DownloadBytes } from 'ropegeo-common/models'` |
-| `BetaSection` | N/A | Beta section with images. | `import { BetaSection } from 'ropegeo-common/models'` |
+| `BetaSection` | N/A | Abstract beta section base; dispatches by `fetchType`. | `import { BetaSection } from 'ropegeo-common/models'` |
+| `OnlineBetaSection` | `BetaSection` | API section with online images (`OnlineBetaSectionImage[]`). | `import { OnlineBetaSection } from 'ropegeo-common/models'` |
+| `OfflineBetaSection` | `BetaSection` | Persisted section with offline images (`OfflineBetaSectionImage[]`). | `import { OfflineBetaSection } from 'ropegeo-common/models'` |
 | `RopewikiBetaSectionView` | N/A | Type alias of `BetaSection` for Ropewiki page view typings. | `import type { RopewikiBetaSectionView } from 'ropegeo-common/models'` |
 
 ### Minimap (`src/models/minimap/`)
@@ -224,10 +237,12 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 | `MiniMapType` | N/A | Minimap discriminator (e.g. GeoJSON). | `import { MiniMapType } from 'ropegeo-common/models'` |
 | `MiniMap` | N/A | Abstract base for minimaps; `fromResult` parses API wire types only. | `import { MiniMap } from 'ropegeo-common/models'` |
 | `RegionMiniMap` | `MiniMap` | Region minimap (`geojson`): `routesParams`, `bounds` (or null), `title`. | `import { RegionMiniMap } from 'ropegeo-common/models'` |
-| `PageMiniMap` | `MiniMap` | Page minimap (`tilesTemplate`): tiles URL, `bounds`, `title`. | `import { PageMiniMap } from 'ropegeo-common/models'` |
-| `CenteredRegionMiniMap` | `MiniMap` | Page fallback (`centeredGeojson`): region-scoped `routesParams`, `centeredRouteId`, `title`. | `import { CenteredRegionMiniMap } from 'ropegeo-common/models'` |
-| `DownloadedPageMiniMap` | `MiniMap` | Saved-page offline tiles (`downloadedTilesTemplate`); persisted via `SavedPage`. | `import { DownloadedPageMiniMap } from 'ropegeo-common/models'` |
-| `DownloadedCenteredRegionMiniMap` | `MiniMap` | Saved-page offline routes file (`downloadedCenteredGeojson`); persisted via `SavedPage`. | `import { DownloadedCenteredRegionMiniMap } from 'ropegeo-common/models'` |
+| `PageMiniMap` | `MiniMap` | Abstract base for page minimaps (online/offline tile templates). | `import { PageMiniMap } from 'ropegeo-common/models'` |
+| `OnlinePageMiniMap` | `PageMiniMap` | API page tiles template (`onlineTilesTemplate`, `fetchType: "online"`). | `import { OnlinePageMiniMap } from 'ropegeo-common/models'` |
+| `OfflinePageMiniMap` | `PageMiniMap` | Persisted local tiles template (`offlineTilesTemplate`, `fetchType: "offline"`). | `import { OfflinePageMiniMap } from 'ropegeo-common/models'` |
+| `CenteredRegionMiniMap` | `MiniMap` | Abstract base for centered region minimaps (online routes params / offline geojson path). | `import { CenteredRegionMiniMap } from 'ropegeo-common/models'` |
+| `OnlineCenteredRegionMiniMap` | `CenteredRegionMiniMap` | API centered-route fallback (`routesParams`, `fetchType: "online"`). | `import { OnlineCenteredRegionMiniMap } from 'ropegeo-common/models'` |
+| `OfflineCenteredRegionMiniMap` | `CenteredRegionMiniMap` | Persisted local centered-route geojson (`downloadedGeojson`, `fetchType: "offline"`). | `import { OfflineCenteredRegionMiniMap } from 'ropegeo-common/models'` |
 
 ### Link preview (`src/models/linkPreview/`)
 
@@ -270,7 +285,7 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 | `ImageVersion` | N/A | Enum of cached image variant kinds. | `import { ImageVersion } from 'ropegeo-common/models'` |
 | `VERSION_FORMAT` | N/A | Format constant for version strings. | `import { VERSION_FORMAT } from 'ropegeo-common/models'` |
 | `ImageVersions` | N/A | Map of image URLs by `ImageVersion`; `fromResult` for persisted JSON. | `import { ImageVersions } from 'ropegeo-common/models'` |
-| `SavedPage` | N/A | Offline saved page record (`PagePreview` + optional `downloadedMiniMap` for offline minimaps). | `import { SavedPage } from 'ropegeo-common/models'` |
+| `SavedPage` | N/A | Saved page record (`OnlinePagePreview` or `OfflinePagePreview`) with optional `downloadedPageViewPath`. | `import { SavedPage } from 'ropegeo-common/models'` |
 
 ### React components (`src/components/`)
 

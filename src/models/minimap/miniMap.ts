@@ -3,9 +3,17 @@ import { MiniMapType } from './miniMapType';
 /** `MiniMap.fromResult` accepts only wire shapes produced by the WebScraper API. */
 const API_MINI_MAP_TYPES: ReadonlySet<string> = new Set([
     MiniMapType.GeoJson,
-    MiniMapType.TilesTemplate,
-    MiniMapType.CenteredGeojson,
+    MiniMapType.OnlineTilesTemplate,
+    MiniMapType.OnlineCenteredGeojson,
 ]);
+const miniMapParsers = new Map<MiniMapType, (result: unknown) => MiniMap>();
+
+export function registerMiniMapParser(
+    miniMapType: MiniMapType,
+    parse: (result: unknown) => MiniMap,
+): void {
+    miniMapParsers.set(miniMapType, parse);
+}
 
 /**
  * Base type for region/page minimap payloads. Use {@link MiniMap.fromResult} to parse API `miniMapType` values.
@@ -53,25 +61,12 @@ export abstract class MiniMap {
                 `MiniMap.miniMapType must be one of [${[...API_MINI_MAP_TYPES].join(', ')}], got: ${JSON.stringify(t)}`,
             );
         }
-        switch (t as MiniMapType) {
-            case MiniMapType.GeoJson: {
-                const { RegionMiniMap } =
-                    require('./regionMiniMap') as typeof import('./regionMiniMap');
-                return RegionMiniMap.fromResult(result);
-            }
-            case MiniMapType.TilesTemplate: {
-                const { PageMiniMap } =
-                    require('./pageMiniMap') as typeof import('./pageMiniMap');
-                return PageMiniMap.fromResult(result);
-            }
-            case MiniMapType.CenteredGeojson: {
-                const { CenteredRegionMiniMap } =
-                    require('./centeredRegionMiniMap') as typeof import('./centeredRegionMiniMap');
-                return CenteredRegionMiniMap.fromResult(result);
-            }
-            default: {
-                throw new Error(`MiniMap.fromResult: unhandled API miniMapType ${JSON.stringify(t)}`);
-            }
+        const parser = miniMapParsers.get(t as MiniMapType);
+        if (parser === undefined) {
+            throw new Error(
+                `No MiniMap parser registered for miniMapType ${JSON.stringify(t)}`,
+            );
         }
+        return parser(result);
     }
 }

@@ -1,50 +1,61 @@
+import { FetchType } from '../fetchType';
 import { BetaSectionImage } from './betaSectionImage';
 
-/**
- * Generic beta section (e.g. order, title, text, images, latestRevisionDate).
- */
-export class BetaSection {
+const betaSectionParsers = new Map<FetchType, (body: unknown) => BetaSection>();
+
+export function registerBetaSectionParser(
+    fetchType: FetchType,
+    parse: (body: unknown) => BetaSection,
+): void {
+    betaSectionParsers.set(fetchType, parse);
+}
+
+export abstract class BetaSection {
+    abstract readonly fetchType: FetchType;
     order: number;
     title: string;
     text: string;
-    images: BetaSectionImage[];
     latestRevisionDate: Date;
 
-    constructor(
+    protected constructor(
         order: number,
         title: string,
         text: string,
         latestRevisionDate: Date,
-        images?: BetaSectionImage[],
     ) {
         this.order = order;
         this.title = title;
         this.text = text;
-        this.images = Array.isArray(images) ? images : [];
         this.latestRevisionDate = new Date(latestRevisionDate);
     }
 
-    /**
-     * Validates response body has BetaSection fields and returns a BetaSection instance.
-     */
-    static fromResponseBody(body: unknown): BetaSection {
+    static fromResponseBody(body: unknown, fetchType?: FetchType): BetaSection {
         if (body == null || typeof body !== 'object') {
             throw new Error('BetaSection body must be an object');
         }
         const r = body as Record<string, unknown>;
-        BetaSection.assertNumber(r, 'order');
-        BetaSection.assertString(r, 'title');
-        BetaSection.assertString(r, 'text');
-        BetaSection.assertImagesArray(r, 'images');
-        BetaSection.assertIso8601DateString(r, 'latestRevisionDate');
-        (r as Record<string, unknown>).latestRevisionDate = new Date(
-            r.latestRevisionDate as string,
-        );
-        Object.setPrototypeOf(r, BetaSection.prototype);
-        return r as unknown as BetaSection;
+        const rawFetchType = r.fetchType;
+        const resolvedFetchType = fetchType ?? rawFetchType;
+        if (resolvedFetchType !== 'online' && resolvedFetchType !== 'offline') {
+            throw new Error(
+                `BetaSection.fetchType must be "online" or "offline", got: ${JSON.stringify(rawFetchType)}`,
+            );
+        }
+        if (fetchType != null && rawFetchType !== undefined && rawFetchType !== fetchType) {
+            throw new Error(
+                `BetaSection.fetchType mismatch: expected ${JSON.stringify(fetchType)}, got: ${JSON.stringify(rawFetchType)}`,
+            );
+        }
+        const parser = betaSectionParsers.get(resolvedFetchType);
+        if (parser == null) {
+            throw new Error(
+                `No BetaSection parser registered for fetchType ${JSON.stringify(resolvedFetchType)}`,
+            );
+        }
+        return parser(body);
     }
 
-    private static assertNumber(obj: Record<string, unknown>, key: string): void {
+    protected static assertNumber(obj: Record<string, unknown>, key: string): void {
         const v = obj[key];
         if (typeof v !== 'number' || Number.isNaN(v)) {
             throw new Error(
@@ -53,7 +64,7 @@ export class BetaSection {
         }
     }
 
-    private static assertString(obj: Record<string, unknown>, key: string): void {
+    protected static assertString(obj: Record<string, unknown>, key: string): void {
         const v = obj[key];
         if (typeof v !== 'string') {
             throw new Error(
@@ -62,22 +73,7 @@ export class BetaSection {
         }
     }
 
-    private static assertImagesArray(
-        obj: Record<string, unknown>,
-        key: string,
-    ): void {
-        const v = obj[key];
-        if (!Array.isArray(v)) {
-            throw new Error(
-                `BetaSection.${key} must be an array, got: ${typeof v}`,
-            );
-        }
-        (obj as Record<string, unknown>)[key] = v.map((item) =>
-            BetaSectionImage.fromResult(item),
-        );
-    }
-
-    private static assertIso8601DateString(
+    protected static assertIso8601DateString(
         obj: Record<string, unknown>,
         key: string,
     ): void {
@@ -93,5 +89,34 @@ export class BetaSection {
                 `BetaSection.${key} must be a valid ISO 8601 date string, got: ${v}`,
             );
         }
+    }
+
+    protected static normalizeCommonFields(
+        obj: Record<string, unknown>,
+        context: string,
+        expectedFetchType: FetchType,
+    ): void {
+        BetaSection.assertNumber(obj, 'order');
+        BetaSection.assertString(obj, 'title');
+        BetaSection.assertString(obj, 'text');
+        BetaSection.assertIso8601DateString(obj, 'latestRevisionDate');
+        if (obj.fetchType !== expectedFetchType) {
+            throw new Error(
+                `${context}.fetchType must be "${expectedFetchType}", got: ${JSON.stringify(obj.fetchType)}`,
+            );
+        }
+        obj.latestRevisionDate = new Date(obj.latestRevisionDate as string);
+    }
+
+    protected static parseImagesArray(
+        obj: Record<string, unknown>,
+        key: string,
+        expectedFetchType: FetchType,
+    ): BetaSectionImage[] {
+        const v = obj[key];
+        if (!Array.isArray(v)) {
+            throw new Error(`BetaSection.${key} must be an array, got: ${typeof v}`);
+        }
+        return v.map((item) => BetaSectionImage.fromResult(item, expectedFetchType));
     }
 }

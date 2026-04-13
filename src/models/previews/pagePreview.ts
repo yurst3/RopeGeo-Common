@@ -3,7 +3,17 @@ import { Difficulty } from '../difficulty/difficulty';
 import { AcaDifficulty } from '../difficulty/acaDifficulty';
 import { PermitStatus } from '../permitStatus';
 import { PageDataSource } from '../pageDataSource';
-import { Preview, PreviewType } from './preview';
+import { FetchType } from '../fetchType';
+import { Preview, PreviewType, registerPreviewParser } from './preview';
+
+const pagePreviewParsers = new Map<FetchType, (result: unknown) => PagePreview>();
+
+export function registerPagePreviewParser(
+    fetchType: FetchType,
+    parse: (result: unknown) => PagePreview,
+): void {
+    pagePreviewParsers.set(fetchType, parse);
+}
 
 /**
  * Row shape returned by the getRopewikiPagePreview query.
@@ -29,15 +39,14 @@ export interface GetRopewikiPagePreviewRow {
  * Preview of a page linked to a route (e.g. Ropewiki page).
  * Used by GET /route/{routeId}/preview.
  */
-export class PagePreview extends Preview {
+export abstract class PagePreview extends Preview {
     /** Discriminator for search results: always 'page' */
     readonly previewType = PreviewType.Page;
+    abstract readonly fetchType: FetchType;
     /** Page identifier (e.g. RopewikiPage id) */
     id: string;
     /** Source of the page (e.g. ropewiki) */
     source: PageDataSource;
-    /** Banner image URL (e.g. first non–beta-section image for Ropewiki) */
-    imageUrl: string | null;
     /** Numeric rating (e.g. quality for Ropewiki) */
     rating: number | null;
     /** Number of votes (e.g. userVotes for Ropewiki) */
@@ -60,7 +69,6 @@ export class PagePreview extends Preview {
     constructor(
         id: string,
         source: PageDataSource,
-        imageUrl: string | null,
         rating: number | null,
         ratingCount: number | null,
         title: string,
@@ -74,7 +82,6 @@ export class PagePreview extends Preview {
         super();
         this.id = id;
         this.source = source;
-        this.imageUrl = imageUrl;
         this.rating = rating;
         this.ratingCount = ratingCount;
         this.title = title;
@@ -94,38 +101,69 @@ export class PagePreview extends Preview {
         mapData: string | null,
         regions?: string[],
         aka?: string[],
-    ): PagePreview {
+    ): import('./onlinePagePreview').OnlinePagePreview {
         const difficulty = new AcaDifficulty(
             row.technicalRating,
             row.waterRating,
             row.timeRating,
             row.riskRating,
         );
-        return new PagePreview(
-            row.pageId,
-            PageDataSource.Ropewiki,
-            row.bannerFileUrl ?? null,
-            row.quality != null ? Number(row.quality) : null,
-            row.userVotes ?? null,
-            row.title,
-            regions ?? [row.regionName],
-            aka ?? [],
-            difficulty,
-            mapData,
-            row.url ?? null,
-            PagePreview.parsePermit(row.permits),
-        );
+        return PagePreview.fromResult(
+            {
+                previewType: PreviewType.Page,
+                fetchType: 'online',
+                id: row.pageId,
+                source: PageDataSource.Ropewiki,
+                imageUrl: row.bannerFileUrl ?? null,
+                rating: row.quality != null ? Number(row.quality) : null,
+                ratingCount: row.userVotes ?? null,
+                title: row.title,
+                regions: regions ?? [row.regionName],
+                aka: aka ?? [],
+                difficulty,
+                mapData,
+                externalLink: row.url ?? null,
+                permit: PagePreview.parsePermit(row.permits),
+            },
+            'online',
+        ) as import('./onlinePagePreview').OnlinePagePreview;
     }
 
     /**
      * Validates result has page preview fields and applies PagePreview.prototype.
      * Expects difficulty as plain object with technical, water, time, additionalRisk (optional).
      */
-    static fromResult(result: unknown): PagePreview {
+    static fromResult(result: unknown, fetchType?: FetchType): PagePreview {
         if (result == null || typeof result !== 'object') {
             throw new Error('PagePreview result must be an object');
         }
         const r = result as Record<string, unknown>;
+        const rawFetchType = r.fetchType;
+        const resolvedFetchType = fetchType ?? rawFetchType;
+        if (resolvedFetchType !== 'online' && resolvedFetchType !== 'offline') {
+            throw new Error(
+                `PagePreview.fetchType must be "online" or "offline", got: ${JSON.stringify(rawFetchType)}`,
+            );
+        }
+        if (fetchType != null && rawFetchType !== undefined && rawFetchType !== fetchType) {
+            throw new Error(
+                `PagePreview.fetchType mismatch: expected ${JSON.stringify(fetchType)}, got: ${JSON.stringify(rawFetchType)}`,
+            );
+        }
+        const parser = pagePreviewParsers.get(resolvedFetchType);
+        if (parser == null) {
+            throw new Error(
+                `No PagePreview parser registered for fetchType ${JSON.stringify(resolvedFetchType)}`,
+            );
+        }
+        return parser(result);
+    }
+
+    protected static validateCommonFields(
+        r: Record<string, unknown>,
+        expectedFetchType: FetchType,
+        context: string,
+    ): void {
         PagePreview.assertString(r, 'id');
         PagePreview.assertString(r, 'title');
         PagePreview.assertSource(r, 'source');
@@ -134,39 +172,41 @@ export class PagePreview extends Preview {
         PagePreview.assertDifficulty(r, 'difficulty');
         PagePreview.assertNullableString(r, 'mapData');
         PagePreview.assertNullableString(r, 'externalLink');
-        PagePreview.assertNullableString(r, 'imageUrl');
         PagePreview.assertNullableNumber(r, 'rating');
         PagePreview.assertNullableNumber(r, 'ratingCount');
         PagePreview.assertPermit(r, 'permit');
+        if (r.fetchType !== expectedFetchType) {
+            throw new Error(
+                `${context}.fetchType must be "${expectedFetchType}", got: ${JSON.stringify(r.fetchType)}`,
+            );
+        }
         (r as Record<string, unknown>).difficulty = Difficulty.fromResult(
             r.difficulty,
         );
-        Object.setPrototypeOf(r, PagePreview.prototype);
-        return r as unknown as PagePreview;
     }
 
-    private static assertString(obj: Record<string, unknown>, key: string): void {
+    protected static assertString(obj: Record<string, unknown>, key: string): void {
         const v = obj[key];
         if (typeof v !== 'string') {
             throw new Error(`PagePreview.${key} must be a string, got: ${typeof v}`);
         }
     }
 
-    private static assertNullableString(obj: Record<string, unknown>, key: string): void {
+    protected static assertNullableString(obj: Record<string, unknown>, key: string): void {
         const v = obj[key];
         if (v !== null && v !== undefined && typeof v !== 'string') {
             throw new Error(`PagePreview.${key} must be string or null, got: ${typeof v}`);
         }
     }
 
-    private static assertNullableNumber(obj: Record<string, unknown>, key: string): void {
+    protected static assertNullableNumber(obj: Record<string, unknown>, key: string): void {
         const v = obj[key];
         if (v !== null && v !== undefined && (typeof v !== 'number' || Number.isNaN(v))) {
             throw new Error(`PagePreview.${key} must be number or null, got: ${typeof v}`);
         }
     }
 
-    private static assertSource(obj: Record<string, unknown>, key: string): void {
+    protected static assertSource(obj: Record<string, unknown>, key: string): void {
         const v = obj[key];
         if (v !== PageDataSource.Ropewiki) {
             throw new Error(
@@ -175,7 +215,7 @@ export class PagePreview extends Preview {
         }
     }
 
-    private static assertStringArray(obj: Record<string, unknown>, key: string): void {
+    protected static assertStringArray(obj: Record<string, unknown>, key: string): void {
         const v = obj[key];
         if (!Array.isArray(v)) {
             throw new Error(`PagePreview.${key} must be an array, got: ${typeof v}`);
@@ -187,7 +227,7 @@ export class PagePreview extends Preview {
         }
     }
 
-    private static assertDifficulty(obj: Record<string, unknown>, key: string): void {
+    protected static assertDifficulty(obj: Record<string, unknown>, key: string): void {
         const v = obj[key];
         if (v == null || typeof v !== 'object') {
             throw new Error(`PagePreview.${key} must be an object`);
@@ -213,7 +253,7 @@ export class PagePreview extends Preview {
         }
     }
 
-    private static assertPermit(obj: Record<string, unknown>, key: string): void {
+    protected static assertPermit(obj: Record<string, unknown>, key: string): void {
         const v = obj[key];
         if (v !== null && v !== undefined && typeof v !== 'string') {
             throw new Error(`PagePreview.${key} must be string or null, got: ${typeof v}`);
@@ -229,3 +269,5 @@ export class PagePreview extends Preview {
         return Object.values(PermitStatus).includes(trimmed as PermitStatus) ? (trimmed as PermitStatus) : null;
     }
 }
+
+registerPreviewParser(PreviewType.Page, (result) => PagePreview.fromResult(result));

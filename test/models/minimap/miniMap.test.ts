@@ -5,7 +5,8 @@ import { MiniMap } from '../../../src/models/minimap/miniMap';
 import { MiniMapType } from '../../../src/models/minimap/miniMapType';
 import { RegionMiniMap } from '../../../src/models/minimap/regionMiniMap';
 import { CenteredRegionMiniMap } from '../../../src/models/minimap/centeredRegionMiniMap';
-import { DownloadedPageMiniMap } from '../../../src/models/minimap/downloadedPageMiniMap';
+import { OfflinePageMiniMap } from '../../../src/models/minimap/offlinePageMiniMap';
+import '../../../src/models/minimap/registerMiniMapParsers';
 
 const MAP_REGION_ID = 'c3d4e5f6-a7b8-9012-cdef-123456789012';
 const ROUTE_ID = '38f5c3fa-7248-41ed-815e-8b9e6aae5d61';
@@ -33,9 +34,10 @@ describe('MiniMap', () => {
         it('delegates to PageMiniMap', () => {
             const m = MiniMap.fromResult({
                 miniMapType: MiniMapType.TilesTemplate,
+                fetchType: 'online',
                 title: 'Page route',
                 layerId: ROUTE_ID,
-                tilesTemplate: 'https://x.com/t/{z}/{x}/{y}.pbf',
+                onlineTilesTemplate: 'https://x.com/t/{z}/{x}/{y}.pbf',
                 bounds: { north: 40, south: 38, east: -108, west: -110 },
             });
             expect(m).toBeInstanceOf(PageMiniMap);
@@ -45,6 +47,7 @@ describe('MiniMap', () => {
         it('delegates to CenteredRegionMiniMap', () => {
             const m = MiniMap.fromResult({
                 miniMapType: MiniMapType.CenteredGeojson,
+                fetchType: 'online',
                 title: 'Centered',
                 centeredRouteId: ROUTE_ID,
                 routesParams: {
@@ -58,11 +61,12 @@ describe('MiniMap', () => {
         it('rejects downloadedTilesTemplate', () => {
             expect(() =>
                 MiniMap.fromResult(
-                    DownloadedPageMiniMap.fromResult({
+                    OfflinePageMiniMap.fromResult({
                         miniMapType: MiniMapType.DownloadedTilesTemplate,
+                        fetchType: 'offline',
                         title: 'L',
                         layerId: ROUTE_ID,
-                        downloadedTilesTemplate: 'file:///t/{z}/{x}/{y}.pbf',
+                        offlineTilesTemplate: 'file:///t/{z}/{x}/{y}.pbf',
                         bounds: { north: 40, south: 38, east: -108, west: -110 },
                     }),
                 ),
@@ -166,9 +170,10 @@ describe('PageMiniMap', () => {
     it('fromResult parses valid payload', () => {
         const m = PageMiniMap.fromResult({
             miniMapType: MiniMapType.TilesTemplate,
+            fetchType: 'online',
             title: 'T',
             layerId: '38f5c3fa-7248-41ed-815e-8b9e6aae5d61',
-            tilesTemplate: 'https://api.example.com/tiles/u/{z}/{x}/{y}.pbf',
+            onlineTilesTemplate: 'https://api.example.com/tiles/u/{z}/{x}/{y}.pbf',
             bounds: validBounds,
         });
         expect(m.layerId).toBe('38f5c3fa-7248-41ed-815e-8b9e6aae5d61');
@@ -180,12 +185,13 @@ describe('PageMiniMap', () => {
         expect(() =>
             PageMiniMap.fromResult({
                 miniMapType: MiniMapType.TilesTemplate,
+                fetchType: 'online',
                 title: '  ',
                 layerId: 'id',
-                tilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
+                onlineTilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
                 bounds: validBounds,
             }),
-        ).toThrow(/PageMiniMap\.title/);
+        ).toThrow(/OnlinePageMiniMap\.title/);
     });
 
     it('throws when miniMapType wrong', () => {
@@ -205,23 +211,50 @@ describe('PageMiniMap', () => {
         expect(() =>
             PageMiniMap.fromResult({
                 miniMapType: MiniMapType.TilesTemplate,
+                fetchType: 'online',
                 title: 'T',
                 layerId: '',
-                tilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
+                onlineTilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
                 bounds: validBounds,
             }),
-        ).toThrow(/PageMiniMap\.layerId/);
+        ).toThrow(/OnlinePageMiniMap\.layerId/);
     });
 
     it('throws when tilesTemplate missing placeholders', () => {
         expect(() =>
             PageMiniMap.fromResult({
                 miniMapType: MiniMapType.TilesTemplate,
+                fetchType: 'online',
                 title: 'T',
                 layerId: 'id',
-                tilesTemplate: 'https://x/',
+                onlineTilesTemplate: 'https://x/',
                 bounds: validBounds,
             }),
-        ).toThrow(/PageMiniMap\.tilesTemplate must contain/);
+        ).toThrow(/OnlinePageMiniMap\.onlineTilesTemplate must contain/);
+    });
+
+    it('parses offline page minimap', () => {
+        const m = PageMiniMap.fromResult({
+            miniMapType: MiniMapType.OfflineTilesTemplate,
+            fetchType: 'offline',
+            title: 'Offline',
+            layerId: ROUTE_ID,
+            offlineTilesTemplate: 'file:///tiles/{z}/{x}/{y}.pbf',
+            bounds: validBounds,
+        });
+        expect(m).toBeInstanceOf(OfflinePageMiniMap);
+    });
+
+    it('validates offline page minimap template', () => {
+        expect(() =>
+            PageMiniMap.fromResult({
+                miniMapType: MiniMapType.OfflineTilesTemplate,
+                fetchType: 'offline',
+                title: 'Offline',
+                layerId: ROUTE_ID,
+                offlineTilesTemplate: '/tiles/no-placeholders.pbf',
+                bounds: validBounds,
+            }),
+        ).toThrow(/OfflinePageMiniMap\.offlineTilesTemplate must contain/);
     });
 });

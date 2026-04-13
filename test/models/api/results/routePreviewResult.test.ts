@@ -1,10 +1,13 @@
 import { describe, it, expect } from '@jest/globals';
 import { RoutePreviewResult } from '../../../../src/models/api/results/routePreviewResult';
 import { PagePreview } from '../../../../src/models/previews/pagePreview';
+import { OnlinePagePreview } from '../../../../src/models/previews/onlinePagePreview';
 import { ResultType } from '../../../../src/models/api/results/result';
+import '../../../../src/models/previews/registerPreviewParsers';
 
 const validPagePreviewItem = {
     previewType: 'page' as const,
+    fetchType: 'online' as const,
     id: 'p1',
     title: 'Page 1',
     source: 'ropewiki' as const,
@@ -22,7 +25,7 @@ const validPagePreviewItem = {
 describe('RoutePreviewResult', () => {
     describe('constructor', () => {
         it('sets result and resultType', () => {
-            const previews: PagePreview[] = [];
+            const previews: OnlinePagePreview[] = [];
             const r = new RoutePreviewResult(previews);
             expect(r.result).toBe(previews);
             expect(r.resultType).toBe(ResultType.RoutePreview);

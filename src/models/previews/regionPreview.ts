@@ -1,5 +1,5 @@
 import { PageDataSource } from '../pageDataSource';
-import { Preview, PreviewType } from './preview';
+import { Preview, PreviewType, registerPreviewParser } from './preview';
 
 export class RegionPreview extends Preview {
     readonly previewType = PreviewType.Region;
@@ -91,3 +91,5 @@ export class RegionPreview extends Preview {
         }
     }
 }
+
+registerPreviewParser(PreviewType.Region, (result) => RegionPreview.fromResult(result));

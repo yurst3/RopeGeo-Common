@@ -1,6 +1,15 @@
 import type { PagePreview } from './pagePreview';
 import type { RegionPreview } from './regionPreview';
 
+const previewParsers = new Map<PreviewType, (result: unknown) => Preview>();
+
+export function registerPreviewParser(
+    previewType: PreviewType,
+    parse: (result: unknown) => Preview,
+): void {
+    previewParsers.set(previewType, parse);
+}
+
 export enum PreviewType {
     Page = 'page',
     Region = 'region',
@@ -37,11 +46,12 @@ export abstract class Preview {
                 `Preview result must have previewType "page" or "region", got: ${JSON.stringify(previewType)}`,
             );
         }
-        if (previewType === PreviewType.Page) {
-            const { PagePreview: PagePreviewClass } = require('./pagePreview');
-            return PagePreviewClass.fromResult(result);
+        const parser = previewParsers.get(previewType);
+        if (parser == null) {
+            throw new Error(
+                `No Preview parser registered for previewType ${JSON.stringify(previewType)}`,
+            );
         }
-        const { RegionPreview: RegionPreviewClass } = require('./regionPreview');
-        return RegionPreviewClass.fromResult(result);
+        return parser(result);
     }
 }

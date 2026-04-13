@@ -1,9 +1,13 @@
 import { describe, it, expect } from '@jest/globals';
 import { BetaSectionImage } from '../../../src/models/betaSections/betaSectionImage';
 import { DownloadBytes } from '../../../src/models/betaSections/downloadBytes';
+import { OnlineBetaSectionImage } from '../../../src/models/betaSections/onlineBetaSectionImage';
+import { OfflineBetaSectionImage } from '../../../src/models/betaSections/offlineBetaSectionImage';
+import '../../../src/models/betaSections/registerBetaSectionParsers';
 
 function getValidBody(): Record<string, unknown> {
     return {
+        fetchType: 'online',
         order: 0,
         id: '550e8400-e29b-41d4-a716-446655440000',
         bannerUrl: 'https://example.com/banner.jpg',
@@ -19,7 +23,7 @@ describe('BetaSectionImage', () => {
     describe('constructor', () => {
         it('sets all properties', () => {
             const db = new DownloadBytes(1, 2, 3);
-            const img = new BetaSectionImage(
+            const img = new OnlineBetaSectionImage(
                 1,
                 'img-id-1',
                 'https://example.com/banner.jpg',
@@ -41,7 +45,7 @@ describe('BetaSectionImage', () => {
 
         it('normalizes latestRevisionDate to Date', () => {
             const d = new Date('2024-06-01T00:00:00Z');
-            const img = new BetaSectionImage(
+            const img = new OnlineBetaSectionImage(
                 0,
                 'id',
                 null,
@@ -59,7 +63,7 @@ describe('BetaSectionImage', () => {
 
     describe('fromResult', () => {
         it('returns instance with validated and parsed fields', () => {
-            const img = BetaSectionImage.fromResult(getValidBody());
+            const img = OnlineBetaSectionImage.fromResult(getValidBody());
             expect(img).toBeInstanceOf(BetaSectionImage);
             expect(img.order).toBe(0);
             expect(img.id).toBe('550e8400-e29b-41d4-a716-446655440000');
@@ -75,7 +79,7 @@ describe('BetaSectionImage', () => {
         });
 
         it('accepts null values for bannerUrl, fullUrl, caption, and downloadBytes', () => {
-            const img = BetaSectionImage.fromResult({
+            const img = OnlineBetaSectionImage.fromResult({
                 ...getValidBody(),
                 bannerUrl: null,
                 fullUrl: null,
@@ -174,6 +178,23 @@ describe('BetaSectionImage', () => {
                     downloadBytes: { preview: -1, banner: 0, full: 0 },
                 }),
             ).toThrow('DownloadBytes.preview must be a finite non-negative number');
+        });
+
+        it('parses offline image shape', () => {
+            const img = BetaSectionImage.fromResult(
+                {
+                    fetchType: 'offline',
+                    order: 0,
+                    id: '550e8400-e29b-41d4-a716-446655440000',
+                    downloadedBannerPath: '/tmp/banner.avif',
+                    downloadedFullPath: '/tmp/full.avif',
+                    linkUrl: 'https://example.com/page',
+                    caption: null,
+                    latestRevisionDate: '2024-01-15T12:00:00Z',
+                },
+                'offline',
+            );
+            expect(img).toBeInstanceOf(OfflineBetaSectionImage);
         });
     });
 });

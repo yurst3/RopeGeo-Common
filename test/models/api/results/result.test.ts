@@ -11,6 +11,10 @@ import { PagePreview } from '../../../../src/models/previews/pagePreview';
 import { MiniMapType } from '../../../../src/models/minimap/miniMapType';
 
 const validRopewikiPageViewResult = {
+    id: '550e8400-e29b-41d4-a716-446655440000',
+    routeType: 'Canyon',
+    pageViewType: 'ropewiki',
+    fetchType: 'online',
     name: 'Test Page',
     aka: [],
     url: 'https://ropewiki.com/page',
@@ -76,6 +80,7 @@ const validLinkPreviewResult = {
 
 const validPagePreviewItem = {
     previewType: 'page' as const,
+    fetchType: 'online' as const,
     id: 'p1',
     title: 'Page 1',
     source: 'ropewiki' as const,
