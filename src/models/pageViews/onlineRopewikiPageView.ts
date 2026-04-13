@@ -120,7 +120,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
         const getVersions = (id: string): ImageVersions => {
             const versions = downloadedImageVersions[id];
             if (versions == null) {
-                throw new Error(`OnlineRopewikiPageView.toOffline missing downloaded image for id ${id}`);
+                return new ImageVersions({});
             }
             return versions;
         };

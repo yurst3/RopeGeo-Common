@@ -117,13 +117,17 @@ describe('RopewikiPageView models', () => {
         expect(tuples.map((t) => t[0])).toEqual([IMAGE_ID_A, IMAGE_ID_B]);
     });
 
-    it('toOffline throws when a required image is missing', () => {
+    it('toOffline maps missing image ids to null offline paths (1:1 online/offline images)', () => {
         const page = OnlineRopewikiPageView.fromResult(onlineResult());
-        expect(() =>
-            page.toOffline({
-                [IMAGE_ID_A]: new ImageVersions({ banner: '/tmp/a-banner.avif', full: '/tmp/a-full.avif' }),
-            }),
-        ).toThrow(/missing downloaded image/);
+        const offline = page.toOffline({
+            [IMAGE_ID_A]: new ImageVersions({ banner: '/tmp/a-banner.avif', full: '/tmp/a-full.avif' }),
+        });
+        expect(offline.bannerImage?.downloadedBannerPath).toBe('/tmp/a-banner.avif');
+        expect(offline.bannerImage?.downloadedFullPath).toBe('/tmp/a-full.avif');
+        const sectionImage = offline.betaSections[0]?.images[0];
+        expect(sectionImage).toBeDefined();
+        expect(sectionImage?.downloadedBannerPath).toBeNull();
+        expect(sectionImage?.downloadedFullPath).toBeNull();
     });
 
     it('toOffline throws when minimap exists but downloaded minimap is omitted', () => {
@@ -160,6 +164,18 @@ describe('RopewikiPageView models', () => {
         });
         expect(offline).toBeInstanceOf(OfflineRopewikiPageView);
         expect(offline.bannerImage?.downloadedBannerPath).toBe('/tmp/a-banner.avif');
+    });
+
+    it('toOffline preserves null rendition paths when download produced no file', () => {
+        const page = OnlineRopewikiPageView.fromResult(onlineResult());
+        const offline = page.toOffline({
+            [IMAGE_ID_A]: new ImageVersions({ banner: '/tmp/a-banner.avif', full: null }),
+            [IMAGE_ID_B]: new ImageVersions({ banner: null, full: '/tmp/b-full.avif' }),
+        });
+        expect(offline.bannerImage?.downloadedFullPath).toBeNull();
+        const sectionImage = offline.betaSections[0]?.images[0];
+        expect(sectionImage?.downloadedBannerPath).toBeNull();
+        expect(sectionImage?.downloadedFullPath).toBe('/tmp/b-full.avif');
     });
 
     it('offline parser validates offline miniMap type', () => {
