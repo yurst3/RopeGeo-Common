@@ -1,6 +1,13 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import {
+  installNetworkRequestPolicyTimers,
+  isAbortError,
+  mergeParentSignalWithDeadline,
+  NETWORK_REQUEST_TIMED_OUT_MESSAGE,
+  resolveRequestTimeoutMs,
+} from "../helpers/networkRequestPolicy";
+import {
   type PaginationParams,
   PaginationResults,
 } from "../models";
@@ -42,12 +49,6 @@ function getResponseBody(raw: unknown): unknown {
   return raw;
 }
 
-function isAbortError(e: unknown): boolean {
-  if (e instanceof DOMException && e.name === "AbortError") return true;
-  if (e instanceof Error && e.name === "AbortError") return true;
-  return false;
-}
-
 function sumReceived(pagesByNum: Map<number, PaginationResults>): number {
   let sum = 0;
   for (const p of pagesByNum.values()) {
@@ -84,6 +85,11 @@ export type RopeGeoPaginationHttpRequestProps<T = unknown> = {
    * @default 10
    */
   batchSize?: number;
+  /**
+   * Per-request deadline in seconds (page 1 countdown + each later page fetch). Defaults to the
+   * package default when omitted.
+   */
+  timeoutAfterSeconds?: number;
   children: (args: {
     loading: boolean;
     received: number;
@@ -95,6 +101,8 @@ export type RopeGeoPaginationHttpRequestProps<T = unknown> = {
     data: T[] | null;
     /** Set when `data` is `null` after a terminal failure; cleared only when all pages succeed. */
     errors: Error | null;
+    /** Timeout countdown for the first page request only; `null` when not applicable. */
+    timeoutCountdown: number | null;
   }) => ReactNode;
 };
 
@@ -111,6 +119,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
   pathParams,
   queryParams,
   batchSize = 10,
+  timeoutAfterSeconds,
   children,
 }: RopeGeoPaginationHttpRequestProps<T>) {
   const [loading, setLoading] = useState(true);
@@ -118,6 +127,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
   const [total, setTotal] = useState<number | null>(null);
   const [data, setData] = useState<T[] | null>(null);
   const [errors, setErrors] = useState<Error | null>(null);
+  const [timeoutCountdown, setTimeoutCountdown] = useState<number | null>(null);
 
   const pathParamsKey = JSON.stringify(pathParams ?? null);
   const queryParamsKey = queryParams.toQueryString();
@@ -127,19 +137,20 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
     let cancelled = false;
     const abortController = new AbortController();
     const { signal } = abortController;
+    const timeoutMs = resolveRequestTimeoutMs(timeoutAfterSeconds);
 
     setLoading(true);
     setReceived(0);
     setTotal(null);
     setData(null);
     setErrors(null);
+    setTimeoutCountdown(null);
 
     const baseUrl = SERVICE_BASE_URL[service];
     const resolvedPath = resolvePath(path, pathParams);
     const baseInit: RequestInit = {
       method,
       headers: { "Content-Type": "application/json" },
-      signal,
     };
 
     (async () => {
@@ -154,42 +165,92 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
           : resolvedPath;
         const url = new URL(fullPath, baseUrl).toString();
 
-        const res = await fetch(url, baseInit);
-        const text = await res.text();
+        let pageOnePolicyDispose: (() => void) | null = null;
+        const pageOneTimedOutRef = { current: false };
 
-        if (!res.ok) {
-          abortController.abort();
-          throw new Error(`HTTP ${res.status}: ${text || res.statusText}`);
+        if (pageNum === 1) {
+          const startedAt = Date.now();
+          pageOnePolicyDispose = installNetworkRequestPolicyTimers(
+            startedAt,
+            timeoutMs,
+            {
+              isActive: () => !cancelled,
+              onTimeoutCountdown: (seconds) => {
+                if (!cancelled) setTimeoutCountdown(seconds);
+              },
+              onClearTimeoutCountdown: () => {
+                if (!cancelled) setTimeoutCountdown(null);
+              },
+              onHardTimeout: () => {
+                pageOneTimedOutRef.current = true;
+                abortController.abort();
+              },
+            }
+          );
         }
 
-        if (text.length === 0) {
-          abortController.abort();
-          throw new Error("Empty response body");
+        let merged: ReturnType<typeof mergeParentSignalWithDeadline> | null = null;
+        let signalForFetch: AbortSignal;
+        if (pageNum === 1) {
+          signalForFetch = signal;
+        } else {
+          merged = mergeParentSignalWithDeadline(signal, timeoutMs);
+          signalForFetch = merged.signal;
         }
 
-        let raw: unknown;
         try {
-          raw = JSON.parse(text) as unknown;
-        } catch (parseError) {
-          abortController.abort();
-          console.error("[RopeGeoPaginationHttpRequest] Invalid JSON response", {
-            url,
-            status: res.status,
-            responseText: text.slice(0, 500),
-            parseError:
-              parseError instanceof Error
-                ? parseError.message
-                : String(parseError),
-          });
-          throw new Error("Invalid JSON response");
-        }
+          const res = await fetch(url, { ...baseInit, signal: signalForFetch });
+          const text = await res.text();
 
-        try {
-          return PaginationResults.fromResponseBody(getResponseBody(raw));
-        } catch (e) {
-          abortController.abort();
-          const msg = e instanceof Error ? e.message : String(e);
-          throw new Error(msg);
+          if (!res.ok) {
+            abortController.abort();
+            throw new Error(`HTTP ${res.status}: ${text || res.statusText}`);
+          }
+
+          if (text.length === 0) {
+            abortController.abort();
+            throw new Error("Empty response body");
+          }
+
+          let raw: unknown;
+          try {
+            raw = JSON.parse(text) as unknown;
+          } catch (parseError) {
+            abortController.abort();
+            console.error("[RopeGeoPaginationHttpRequest] Invalid JSON response", {
+              url,
+              status: res.status,
+              responseText: text.slice(0, 500),
+              parseError:
+                parseError instanceof Error
+                  ? parseError.message
+                  : String(parseError),
+            });
+            throw new Error("Invalid JSON response");
+          }
+
+          try {
+            return PaginationResults.fromResponseBody(getResponseBody(raw));
+          } catch (e) {
+            abortController.abort();
+            const msg = e instanceof Error ? e.message : String(e);
+            throw new Error(msg);
+          }
+        } catch (err) {
+          if (pageNum !== 1 && merged != null && merged.consumeDidTimeout()) {
+            abortController.abort();
+            throw new Error(NETWORK_REQUEST_TIMED_OUT_MESSAGE);
+          }
+          if (pageNum === 1 && pageOneTimedOutRef.current) {
+            throw new Error(NETWORK_REQUEST_TIMED_OUT_MESSAGE);
+          }
+          throw err;
+        } finally {
+          pageOnePolicyDispose?.();
+          merged?.dispose();
+          if (pageNum === 1 && !cancelled) {
+            setTimeoutCountdown(null);
+          }
         }
       };
 
@@ -267,6 +328,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
     queryParamsKey,
     queryParams,
     effectiveBatch,
+    timeoutAfterSeconds,
   ]);
 
   return (
@@ -277,6 +339,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
         total,
         data,
         errors,
+        timeoutCountdown,
       })}
     </>
   );

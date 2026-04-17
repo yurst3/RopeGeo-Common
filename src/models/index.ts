@@ -137,5 +137,11 @@ export { RopewikiRegionImagesParams } from './api/params/ropewikiRegionImagesPar
 export { RopewikiRegionImagesResult } from './api/results/ropewikiRegionImagesResult';
 export { RoutePreviewResult } from './api/results/routePreviewResult';
 export { ImageVersion, VERSION_FORMAT, ImageVersions } from './mobile/imageVersions';
-export { SavedPage } from './mobile/savedPage';
+export {
+    SavedPage,
+    SAVED_PAGES_STORAGE_KEY,
+    DOWNLOADED_ROUTE_PREVIEWS_STORAGE_KEY,
+    type SavedPagesStorageMap,
+    type DownloadedRoutePreviewsStorageMap,
+} from './mobile/savedPage';
 export type { FetchType } from './fetchType';

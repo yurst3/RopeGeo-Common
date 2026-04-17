@@ -1,6 +1,12 @@
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  installNetworkRequestPolicyTimers,
+  isAbortError,
+  NETWORK_REQUEST_TIMED_OUT_MESSAGE,
+  resolveRequestTimeoutMs,
+} from "../helpers/networkRequestPolicy";
+import {
   type CursorPaginationParams,
   CursorPaginationResults,
 } from "../models";
@@ -49,6 +55,11 @@ export type RopeGeoCursorPaginationHttpRequestProps<T = unknown> = {
   pathParams?: Record<string, string>;
   queryParams: CursorPaginationParams;
   /**
+   * Request deadline in seconds for each fetch (initial and `loadMore`). Defaults to the package
+   * default when omitted.
+   */
+  timeoutAfterSeconds?: number;
+  /**
    * Response body is parsed via CursorPaginationResults.fromResponseBody (must include resultType).
    * Parsed shape is ValidatedCursorPaginationResponse; children receive result.results as data.
    */
@@ -59,6 +70,7 @@ export type RopeGeoCursorPaginationHttpRequestProps<T = unknown> = {
     errors: Error | null;
     loadMore: () => void;
     hasMore: boolean;
+    timeoutCountdown: number | null;
   }) => ReactNode;
 };
 
@@ -68,6 +80,7 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
   path,
   pathParams,
   queryParams,
+  timeoutAfterSeconds,
   children,
 }: RopeGeoCursorPaginationHttpRequestProps<T>) {
   const [loading, setLoading] = useState(true);
@@ -75,7 +88,9 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
   const [data, setData] = useState<T[]>([]);
   const [params, setParams] = useState<CursorPaginationParams>(queryParams);
   const [errors, setErrors] = useState<Error | null>(null);
+  const [timeoutCountdown, setTimeoutCountdown] = useState<number | null>(null);
   const loadingMoreRef = useRef(false);
+  const loadMoreAbortRef = useRef<AbortController | null>(null);
 
   const hasMore = params.cursor != null;
 
@@ -92,15 +107,40 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
 
   useEffect(() => {
     let cancelled = false;
+    const abortController = new AbortController();
+    const timedOutRef = { current: false };
+    const requestStartedAt = Date.now();
+    const timeoutMs = resolveRequestTimeoutMs(timeoutAfterSeconds);
+
     setData([]);
     setParams(queryParams);
     setLoading(true);
     setErrors(null);
+    setTimeoutCountdown(null);
+
+    const policyDispose = installNetworkRequestPolicyTimers(
+      requestStartedAt,
+      timeoutMs,
+      {
+        isActive: () => !cancelled,
+        onTimeoutCountdown: (seconds) => {
+          if (!cancelled) setTimeoutCountdown(seconds);
+        },
+        onClearTimeoutCountdown: () => {
+          if (!cancelled) setTimeoutCountdown(null);
+        },
+        onHardTimeout: () => {
+          timedOutRef.current = true;
+          abortController.abort();
+        },
+      }
+    );
 
     const url = buildUrl(queryParams);
     const init: RequestInit = {
       method,
       headers: { "Content-Type": "application/json" },
+      signal: abortController.signal,
     };
 
     fetch(url, init)
@@ -142,23 +182,40 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
         }
       })
       .catch((err) => {
-        if (!cancelled) {
-          console.error("[RopeGeoCursorPaginationHttpRequest] Request failed", {
-            url,
-            error: err instanceof Error ? err.message : String(err),
-          });
-          setErrors(err instanceof Error ? err : new Error(String(err)));
+        if (cancelled) return;
+        if (timedOutRef.current) {
+          setErrors(new Error(NETWORK_REQUEST_TIMED_OUT_MESSAGE));
           setData([]);
+          return;
         }
+        if (isAbortError(err)) return;
+        console.error("[RopeGeoCursorPaginationHttpRequest] Request failed", {
+          url,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        setErrors(err instanceof Error ? err : new Error(String(err)));
+        setData([]);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        policyDispose();
+        if (!cancelled) {
+          setTimeoutCountdown(null);
+          setLoading(false);
+        }
       });
 
     return () => {
       cancelled = true;
+      policyDispose();
+      abortController.abort();
     };
-  }, [service, method, path, pathParams, queryParams, buildUrl]);
+  }, [service, method, path, pathParams, queryParams, buildUrl, timeoutAfterSeconds]);
+
+  useEffect(() => {
+    return () => {
+      loadMoreAbortRef.current?.abort();
+    };
+  }, []);
 
   const loadMore = useCallback(() => {
     if (params.cursor == null) return;
@@ -166,10 +223,38 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
     loadingMoreRef.current = true;
     setLoadingMore(true);
 
+    const outer = new AbortController();
+    loadMoreAbortRef.current = outer;
+    const timedOutRef = { current: false };
+    const requestStartedAt = Date.now();
+    const timeoutMs = resolveRequestTimeoutMs(timeoutAfterSeconds);
+    const policyDispose = installNetworkRequestPolicyTimers(
+      requestStartedAt,
+      timeoutMs,
+      {
+        isActive: () => loadMoreAbortRef.current === outer,
+        onTimeoutCountdown: (seconds) => {
+          if (loadMoreAbortRef.current === outer) {
+            setTimeoutCountdown(seconds);
+          }
+        },
+        onClearTimeoutCountdown: () => {
+          if (loadMoreAbortRef.current === outer) {
+            setTimeoutCountdown(null);
+          }
+        },
+        onHardTimeout: () => {
+          timedOutRef.current = true;
+          outer.abort();
+        },
+      }
+    );
+
     const url = buildUrl(params);
     const init: RequestInit = {
       method,
       headers: { "Content-Type": "application/json" },
+      signal: outer.signal,
     };
 
     fetch(url, init)
@@ -194,21 +279,30 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
             responseText: text.slice(0, 500),
             parseError: parseError instanceof Error ? parseError.message : String(parseError),
           });
-          // keep existing data and params
         }
       })
       .catch((err) => {
+        if (loadMoreAbortRef.current !== outer) return;
+        if (timedOutRef.current) {
+          console.error("[RopeGeoCursorPaginationHttpRequest] loadMore: timed out", { url });
+          return;
+        }
+        if (isAbortError(err)) return;
         console.error("[RopeGeoCursorPaginationHttpRequest] loadMore: Request failed", {
           url,
           error: err instanceof Error ? err.message : String(err),
         });
-        // keep existing data and params
       })
       .finally(() => {
+        policyDispose();
+        if (loadMoreAbortRef.current === outer) {
+          setTimeoutCountdown(null);
+          loadMoreAbortRef.current = null;
+        }
         loadingMoreRef.current = false;
         setLoadingMore(false);
       });
-  }, [params, method, buildUrl]);
+  }, [params, method, buildUrl, timeoutAfterSeconds]);
 
   return (
     <>
@@ -219,6 +313,7 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
         errors,
         loadMore,
         hasMore,
+        timeoutCountdown,
       })}
     </>
   );

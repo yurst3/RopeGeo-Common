@@ -3,6 +3,26 @@ import { OfflinePagePreview } from '../previews/offlinePagePreview';
 import { OnlinePagePreview } from '../previews/onlinePagePreview';
 import { PagePreview } from '../previews/pagePreview';
 
+/** AsyncStorage key for the saved-pages map (see {@link SavedPagesStorageMap}). */
+export const SAVED_PAGES_STORAGE_KEY = 'ropegeo:savedPages';
+
+/**
+ * AsyncStorage key for offline route preview rows keyed by route id
+ * (see {@link DownloadedRoutePreviewsStorageMap}).
+ */
+export const DOWNLOADED_ROUTE_PREVIEWS_STORAGE_KEY = 'ropegeo:downloadedRoutePreviews';
+
+/**
+ * Persisted value for {@link SAVED_PAGES_STORAGE_KEY}: page id → JSON string from {@link SavedPage#toString}.
+ */
+export type SavedPagesStorageMap = Record<string, string>;
+
+/**
+ * Persisted value for {@link DOWNLOADED_ROUTE_PREVIEWS_STORAGE_KEY}. Entries are removed when a route
+ * has no previews; array elements are validated with {@link OfflinePagePreview.fromResult}.
+ */
+export type DownloadedRoutePreviewsStorageMap = Record<string, unknown[]>;
+
 const STORAGE_KEYS = ['preview', 'savedAt'] as const;
 
 function assertFiniteNumber(value: unknown, name: string): asserts value is number {

@@ -1,6 +1,19 @@
 export { httpRequest } from './httpRequest';
 export { default as ProgressLogger } from './progressLogger';
 export { timeoutAfter } from './timeoutAfter';
+export {
+    NETWORK_REQUEST_DEFAULT_TIMEOUT_SECONDS,
+    NETWORK_REQUEST_HARD_TIMEOUT_MS,
+    NETWORK_REQUEST_SLOW_THRESHOLD_MS,
+    NETWORK_REQUEST_TIMED_OUT_MESSAGE,
+    installNetworkRequestPolicyTimers,
+    isAbortError,
+    isNetworkRequestTimeoutError,
+    mergeParentSignalWithDeadline,
+    resolveRequestTimeoutMs,
+    type MergedDeadlineHandles,
+    type NetworkRequestPolicyTimerCallbacks,
+} from './networkRequestPolicy';
 
 export { getS3Client, resetS3ClientForTests } from './s3/getS3Client';
 export { default as listS3Objects, type S3ObjectEntry } from './s3/listS3Objects';

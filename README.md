@@ -24,6 +24,17 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 | `httpRequest` | HTTP client wrapper: headers, throws on non-OK responses, optional Lambda proxy routing. | `import { httpRequest } from 'ropegeo-common/helpers'` |
 | `ProgressLogger` | Progress logging utility. | `import { ProgressLogger } from 'ropegeo-common/helpers'` |
 | `timeoutAfter` | Promise helper that rejects after a timeout. | `import { timeoutAfter } from 'ropegeo-common/helpers'` |
+| `NETWORK_REQUEST_DEFAULT_TIMEOUT_SECONDS` | Default request deadline in seconds when `timeoutAfterSeconds` is omitted on components. | `import { NETWORK_REQUEST_DEFAULT_TIMEOUT_SECONDS } from 'ropegeo-common/helpers'` |
+| `NETWORK_REQUEST_HARD_TIMEOUT_MS` | Default deadline in ms (`NETWORK_REQUEST_DEFAULT_TIMEOUT_SECONDS * 1000`); used by `resolveRequestTimeoutMs` and `mergeParentSignalWithDeadline` default. | `import { NETWORK_REQUEST_HARD_TIMEOUT_MS } from 'ropegeo-common/helpers'` |
+| `NETWORK_REQUEST_SLOW_THRESHOLD_MS` | Suggested delay (15s) before *showing* slow-network UI; countdown ticks still emit from t=0 for consumers that compare elapsed time. | `import { NETWORK_REQUEST_SLOW_THRESHOLD_MS } from 'ropegeo-common/helpers'` |
+| `NETWORK_REQUEST_TIMED_OUT_MESSAGE` | Exact timeout error string for classification. | `import { NETWORK_REQUEST_TIMED_OUT_MESSAGE } from 'ropegeo-common/helpers'` |
+| `resolveRequestTimeoutMs` | Converts optional `timeoutAfterSeconds` to ms or returns the default deadline. | `import { resolveRequestTimeoutMs } from 'ropegeo-common/helpers'` |
+| `installNetworkRequestPolicyTimers` | Emits whole-second countdown until `hardTimeoutMs`, then invokes hard-timeout callback (single in-flight request). | `import { installNetworkRequestPolicyTimers } from 'ropegeo-common/helpers'` |
+| `mergeParentSignalWithDeadline` | Merges a parent `AbortSignal` with a per-request deadline (used for follow-up pagination fetches). | `import { mergeParentSignalWithDeadline } from 'ropegeo-common/helpers'` |
+| `isNetworkRequestTimeoutError` | Returns true when an error is the standardized timeout message. | `import { isNetworkRequestTimeoutError } from 'ropegeo-common/helpers'` |
+| `isAbortError` | Returns true for `AbortError` / DOMException abort failures. | `import { isAbortError } from 'ropegeo-common/helpers'` |
+| `MergedDeadlineHandles` | Handles returned by `mergeParentSignalWithDeadline` (`signal`, `dispose`, `consumeDidTimeout`). | `import type { MergedDeadlineHandles } from 'ropegeo-common/helpers'` |
+| `NetworkRequestPolicyTimerCallbacks` | Callback bundle for `installNetworkRequestPolicyTimers`. | `import type { NetworkRequestPolicyTimerCallbacks } from 'ropegeo-common/helpers'` |
 
 ### S3 helpers (`src/helpers/s3/`)
 
@@ -286,14 +297,18 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 | `VERSION_FORMAT` | N/A | Format constant for version strings. | `import { VERSION_FORMAT } from 'ropegeo-common/models'` |
 | `ImageVersions` | N/A | Map of image URLs by `ImageVersion`; `fromResult` for persisted JSON. | `import { ImageVersions } from 'ropegeo-common/models'` |
 | `SavedPage` | N/A | Saved page record (`OnlinePagePreview` or `OfflinePagePreview`) with optional `downloadedPageViewPath`. | `import { SavedPage } from 'ropegeo-common/models'` |
+| `SAVED_PAGES_STORAGE_KEY` | N/A | AsyncStorage key for the saved-pages map (`ropegeo:savedPages`). | `import { SAVED_PAGES_STORAGE_KEY } from 'ropegeo-common/models'` |
+| `DOWNLOADED_ROUTE_PREVIEWS_STORAGE_KEY` | N/A | AsyncStorage key for offline route preview rows (`ropegeo:downloadedRoutePreviews`). | `import { DOWNLOADED_ROUTE_PREVIEWS_STORAGE_KEY } from 'ropegeo-common/models'` |
+| `SavedPagesStorageMap` | N/A | Type for the saved-pages record (`pageId` → `SavedPage` JSON string). | `import type { SavedPagesStorageMap } from 'ropegeo-common/models'` |
+| `DownloadedRoutePreviewsStorageMap` | N/A | Type for the offline route-preview index (`routeId` → serialized preview rows). | `import type { DownloadedRoutePreviewsStorageMap } from 'ropegeo-common/models'` |
 
 ### React components (`src/components/`)
 
 | Name | Description | Import |
 | --- | --- | --- |
-| `RopeGeoHttpRequest` | Single GET/POST wrapper; parses `Result.fromResponseBody`. | `import { RopeGeoHttpRequest, Method, Service } from 'ropegeo-common/components'` |
-| `RopeGeoCursorPaginationHttpRequest` | Cursor-paginated fetch with `loadMore`. | `import { RopeGeoCursorPaginationHttpRequest } from 'ropegeo-common/components'` |
-| `RopeGeoPaginationHttpRequest<T>` | Page-based fetch; each page validated with `PaginationResults.fromResponseBody`; concatenates `results` into `data` (`T[]` when complete, otherwise `null` with `errors`). | `import { RopeGeoPaginationHttpRequest } from 'ropegeo-common/components'` |
+| `RopeGeoHttpRequest` | Single GET/POST wrapper; parses `Result.fromResponseBody`; optional `timeoutAfterSeconds` (default from helpers) + `timeoutCountdown` children arg. | `import { RopeGeoHttpRequest, Method, Service } from 'ropegeo-common/components'` |
+| `RopeGeoCursorPaginationHttpRequest` | Cursor-paginated fetch with `loadMore`; optional `timeoutAfterSeconds`; `timeoutCountdown` on initial and `loadMore` requests. | `import { RopeGeoCursorPaginationHttpRequest } from 'ropegeo-common/components'` |
+| `RopeGeoPaginationHttpRequest<T>` | Page-based fetch; page 1 emits `timeoutCountdown`; later pages use the same per-fetch deadline; concatenates `results` into `data` (`T[]` when complete, otherwise `null` with `errors`). | `import { RopeGeoPaginationHttpRequest } from 'ropegeo-common/components'` |
 
 ---
 

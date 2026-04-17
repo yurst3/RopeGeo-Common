@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
-import { render, waitFor, cleanup } from '@testing-library/react';
+import { act, render, waitFor, cleanup } from '@testing-library/react';
 import { ResultType } from '../../src/models/api/results/result';
 import '../../src/models/api/results/ropewikiPageViewResult';
 import { RopewikiPageView } from '../../src/models/api/endpoints/ropewikiPageView';
@@ -10,6 +10,7 @@ import {
     RopeGeoHttpRequest,
     Service,
 } from '../../src/components/RopeGeoHttpRequest';
+import { NETWORK_REQUEST_TIMED_OUT_MESSAGE } from '../../src/helpers/networkRequestPolicy';
 import { mockJsonResponse, requestUrl } from '../helpers/jestFetch';
 
 const BASE = 'https://api.webscraper.ropegeo.com';
@@ -60,6 +61,7 @@ type Args<T> = {
     loading: boolean;
     data: T | null;
     errors: Error | null;
+    timeoutCountdown: number | null;
 };
 
 function TestHost<T>(props: {
@@ -68,6 +70,7 @@ function TestHost<T>(props: {
     pathParams?: Record<string, string>;
     queryParams?: Record<string, string | number | boolean | undefined>;
     body?: object;
+    timeoutAfterSeconds?: number;
     onRender: (a: Args<T>) => void;
 }) {
     return (
@@ -78,6 +81,7 @@ function TestHost<T>(props: {
             pathParams={props.pathParams}
             queryParams={props.queryParams}
             body={props.body}
+            timeoutAfterSeconds={props.timeoutAfterSeconds}
         >
             {(args) => {
                 props.onRender(args);
@@ -268,5 +272,101 @@ describe('RopeGeoHttpRequest', () => {
         });
         const init = fetchMock.mock.calls[0]![1] as RequestInit;
         expect(init.body).toBeUndefined();
+    });
+
+    it('emits timeoutCountdown from full default window then times out', async () => {
+        jest.useFakeTimers();
+        fetchMock.mockImplementation((_input, init?: RequestInit) => {
+            return new Promise<Response>((_resolve, reject) => {
+                const signal = init?.signal;
+                if (signal?.aborted) {
+                    reject(new DOMException('Aborted', 'AbortError'));
+                    return;
+                }
+                const onAbort = () => {
+                    reject(new DOMException('Aborted', 'AbortError'));
+                };
+                signal?.addEventListener('abort', onAbort, { once: true });
+            });
+        });
+
+        let latest: Args<RopewikiPageView> | undefined;
+        render(
+            <TestHost<RopewikiPageView>
+                path="/ropewiki/page/:id"
+                pathParams={{ id: 'slow' }}
+                onRender={(a) => {
+                    latest = a as Args<RopewikiPageView>;
+                }}
+            />,
+        );
+
+        await waitFor(() => {
+            expect(latest?.timeoutCountdown).toBe(30);
+        });
+
+        await act(async () => {
+            await jest.advanceTimersByTimeAsync(1000);
+        });
+        expect(latest?.timeoutCountdown).toBe(29);
+
+        await act(async () => {
+            await jest.advanceTimersByTimeAsync(29_000);
+            await Promise.resolve();
+        });
+        await waitFor(() => {
+            expect(latest?.loading).toBe(false);
+            expect(latest?.errors?.message).toBe(NETWORK_REQUEST_TIMED_OUT_MESSAGE);
+            expect(latest?.timeoutCountdown).toBeNull();
+        });
+
+        jest.useRealTimers();
+    });
+
+    it('honors timeoutAfterSeconds for deadline and countdown scale', async () => {
+        jest.useFakeTimers();
+        fetchMock.mockImplementation((_input, init?: RequestInit) => {
+            return new Promise<Response>((_resolve, reject) => {
+                const signal = init?.signal;
+                if (signal?.aborted) {
+                    reject(new DOMException('Aborted', 'AbortError'));
+                    return;
+                }
+                signal?.addEventListener(
+                    'abort',
+                    () => {
+                        reject(new DOMException('Aborted', 'AbortError'));
+                    },
+                    { once: true },
+                );
+            });
+        });
+
+        let latest: Args<RopewikiPageView> | undefined;
+        render(
+            <TestHost<RopewikiPageView>
+                path="/ropewiki/page/:id"
+                pathParams={{ id: 't5' }}
+                timeoutAfterSeconds={5}
+                onRender={(a) => {
+                    latest = a as Args<RopewikiPageView>;
+                }}
+            />,
+        );
+
+        await waitFor(() => {
+            expect(latest?.timeoutCountdown).toBe(5);
+        });
+
+        await act(async () => {
+            await jest.advanceTimersByTimeAsync(5_000);
+            await Promise.resolve();
+        });
+        await waitFor(() => {
+            expect(latest?.loading).toBe(false);
+            expect(latest?.errors?.message).toBe(NETWORK_REQUEST_TIMED_OUT_MESSAGE);
+        });
+
+        jest.useRealTimers();
     });
 });

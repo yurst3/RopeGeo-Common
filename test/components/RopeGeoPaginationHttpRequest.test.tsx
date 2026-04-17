@@ -65,6 +65,7 @@ type Args = {
     total: number | null;
     data: RouteGeoJsonFeature[] | null;
     errors: Error | null;
+    timeoutCountdown: number | null;
 };
 
 function TestHost(props: {

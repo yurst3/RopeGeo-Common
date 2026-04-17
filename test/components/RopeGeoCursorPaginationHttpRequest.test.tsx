@@ -46,6 +46,7 @@ type Args = {
     errors: Error | null;
     loadMore: () => void;
     hasMore: boolean;
+    timeoutCountdown: number | null;
 };
 
 function TestHost(props: {

@@ -1,5 +1,11 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import {
+  installNetworkRequestPolicyTimers,
+  isAbortError,
+  NETWORK_REQUEST_TIMED_OUT_MESSAGE,
+  resolveRequestTimeoutMs,
+} from "../helpers/networkRequestPolicy";
 import { Result } from "../models";
 
 export const Service = {
@@ -60,6 +66,11 @@ export type RopeGeoHttpRequestProps<T = unknown> = {
   queryParams?: Record<string, string | number | boolean | undefined>;
   body?: object;
   /**
+   * Request deadline in seconds (abort + timeout error). Defaults to the package default
+   * (`NETWORK_REQUEST_DEFAULT_TIMEOUT_SECONDS` from `ropegeo-common/helpers`) when omitted.
+   */
+  timeoutAfterSeconds?: number;
+  /**
    * Response body is parsed via Result.fromResponseBody (must include resultType and result).
    * Children receive the validated result.result as data (typed by T).
    */
@@ -67,6 +78,12 @@ export type RopeGeoHttpRequestProps<T = unknown> = {
     loading: boolean;
     data: T | null;
     errors: Error | null;
+    /**
+     * Whole seconds remaining until abort, emitted from request start through ~1s before timeout.
+     * `null` when idle or after completion/cleanup. UI may choose when to show a toast (e.g. only
+     * after `NETWORK_REQUEST_SLOW_THRESHOLD_MS` from `ropegeo-common/helpers`).
+     */
+    timeoutCountdown: number | null;
   }) => ReactNode;
 };
 
@@ -77,11 +94,13 @@ export function RopeGeoHttpRequest<T = unknown>({
   pathParams,
   queryParams,
   body,
+  timeoutAfterSeconds,
   children,
 }: RopeGeoHttpRequestProps<T>) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<T | null>(null);
   const [errors, setErrors] = useState<Error | null>(null);
+  const [timeoutCountdown, setTimeoutCountdown] = useState<number | null>(null);
 
   const pathParamsKey = JSON.stringify(pathParams ?? null);
   const queryParamsKey = JSON.stringify(queryParams ?? null);
@@ -94,17 +113,42 @@ export function RopeGeoHttpRequest<T = unknown>({
 
   useEffect(() => {
     let cancelled = false;
-    const baseUrl = SERVICE_BASE_URL[service];
-    const url = buildUrl(baseUrl, path, pathParams, queryParams);
+    const abortController = new AbortController();
+    const timedOutRef = { current: false };
+    const requestStartedAt = Date.now();
+    const timeoutMs = resolveRequestTimeoutMs(timeoutAfterSeconds);
 
     setLoading(true);
     setErrors(null);
+    setTimeoutCountdown(null);
+
+    const policyDispose = installNetworkRequestPolicyTimers(
+      requestStartedAt,
+      timeoutMs,
+      {
+        isActive: () => !cancelled,
+        onTimeoutCountdown: (seconds) => {
+          if (!cancelled) setTimeoutCountdown(seconds);
+        },
+        onClearTimeoutCountdown: () => {
+          if (!cancelled) setTimeoutCountdown(null);
+        },
+        onHardTimeout: () => {
+          timedOutRef.current = true;
+          abortController.abort();
+        },
+      }
+    );
+
+    const baseUrl = SERVICE_BASE_URL[service];
+    const url = buildUrl(baseUrl, path, pathParams, queryParams);
 
     const init: RequestInit = {
       method,
       headers: {
         "Content-Type": "application/json",
       },
+      signal: abortController.signal,
     };
     if (body != null && (method === Method.POST || method === Method.PUT)) {
       init.body = JSON.stringify(body);
@@ -146,23 +190,43 @@ export function RopeGeoHttpRequest<T = unknown>({
         }
       })
       .catch((err) => {
-        if (!cancelled) {
-          console.error("[RopeGeoHttpRequest] Request failed", {
-            url,
-            error: err instanceof Error ? err.message : String(err),
-          });
-          setErrors(err instanceof Error ? err : new Error(String(err)));
+        if (cancelled) return;
+        if (timedOutRef.current) {
+          setErrors(new Error(NETWORK_REQUEST_TIMED_OUT_MESSAGE));
           setData(null);
+          return;
         }
+        if (isAbortError(err)) return;
+        console.error("[RopeGeoHttpRequest] Request failed", {
+          url,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        setErrors(err instanceof Error ? err : new Error(String(err)));
+        setData(null);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        policyDispose();
+        if (!cancelled) {
+          setTimeoutCountdown(null);
+          setLoading(false);
+        }
       });
 
     return () => {
       cancelled = true;
+      policyDispose();
+      abortController.abort();
     };
-  }, [service, method, path, pathParamsKey, queryParamsKey, bodyKey]);
+  }, [service, method, path, pathParamsKey, queryParamsKey, bodyKey, timeoutAfterSeconds]);
 
-  return <>{children({ loading, data, errors })}</>;
+  return (
+    <>
+      {children({
+        loading,
+        data,
+        errors,
+        timeoutCountdown,
+      })}
+    </>
+  );
 }
