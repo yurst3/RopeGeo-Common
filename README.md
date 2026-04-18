@@ -11,7 +11,7 @@ npm install ropegeo-common
 ## Imports
 
 - **Models** — `import { … } from 'ropegeo-common/models'` (or `import type { … }` for symbols that are type-only in TypeScript). The package root `ropegeo-common` re-exports everything from `./models` for convenience. The subpath `ropegeo-common/classes` is kept as an alias of `./models` for older imports until dependents switch over.
-- **Helpers** — `import { … } from 'ropegeo-common/helpers'` (and `import type { … }` for helper types such as `GetS3ObjectResult`).
+- **Helpers** — `import { … } from 'ropegeo-common/helpers'` (and `import type { … }` for helper types such as `GetS3ObjectResult`). The full barrel includes Node-only modules (S3 folder upload uses `fs`); **React Native / Metro** should use **`ropegeo-common/helpers/network`** (sources under `src/helpers/network/`, barrel `index.ts`) for the request-timeout / abort helpers only (`NETWORK_REQUEST_*`, `installNetworkRequestPolicyTimers`, `mergeParentSignalWithDeadline`, `resolveRequestTimeoutMs`, `isAbortError`, `isNetworkRequestTimeoutError`, and related types).
 
 Helper tables use columns **Name**, **Description**, **Import**. Model tables add **Base class** after **Name** (`N/A` for enums, TypeScript-only type aliases, constants, registration functions, and classes without an exported superclass; otherwise the direct superclass).
 

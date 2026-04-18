@@ -10,7 +10,7 @@ import {
     RopeGeoHttpRequest,
     Service,
 } from '../../src/components/RopeGeoHttpRequest';
-import { NETWORK_REQUEST_TIMED_OUT_MESSAGE } from '../../src/helpers/networkRequestPolicy';
+import { NETWORK_REQUEST_TIMED_OUT_MESSAGE } from '../../src/helpers/network';
 import { mockJsonResponse, requestUrl } from '../helpers/jestFetch';
 
 const BASE = 'https://api.webscraper.ropegeo.com';

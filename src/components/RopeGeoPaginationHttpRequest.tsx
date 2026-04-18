@@ -6,7 +6,7 @@ import {
   mergeParentSignalWithDeadline,
   NETWORK_REQUEST_TIMED_OUT_MESSAGE,
   resolveRequestTimeoutMs,
-} from "../helpers/networkRequestPolicy";
+} from "../helpers/network";
 import {
   type PaginationParams,
   PaginationResults,

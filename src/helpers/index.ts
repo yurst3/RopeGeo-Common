@@ -13,7 +13,7 @@ export {
     resolveRequestTimeoutMs,
     type MergedDeadlineHandles,
     type NetworkRequestPolicyTimerCallbacks,
-} from './networkRequestPolicy';
+} from './network';
 
 export { getS3Client, resetS3ClientForTests } from './s3/getS3Client';
 export { default as listS3Objects, type S3ObjectEntry } from './s3/listS3Objects';
