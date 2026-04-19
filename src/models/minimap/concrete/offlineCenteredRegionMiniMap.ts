@@ -1,15 +1,14 @@
 import {
     CenteredRegionMiniMap,
     registerCenteredRegionMiniMapParser,
-} from './centeredRegionMiniMap';
-import { MiniMapType } from './miniMapType';
+} from '../abstract/centeredRegionMiniMap';
+import type { OfflineMiniMap } from '../abstract/offlineMiniMap';
 
 /** UUID v4 (same rule as {@link CenteredRegionMiniMap}). */
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export class OfflineCenteredRegionMiniMap extends CenteredRegionMiniMap {
+export class OfflineCenteredRegionMiniMap extends CenteredRegionMiniMap implements OfflineMiniMap {
     readonly fetchType = 'offline' as const;
-    readonly miniMapType = MiniMapType.OfflineCenteredGeojson;
     downloadedGeojson: string;
 
     constructor(downloadedGeojson: string, centeredRouteId: string, title: string) {
@@ -32,12 +31,7 @@ export class OfflineCenteredRegionMiniMap extends CenteredRegionMiniMap {
             throw new Error('OfflineCenteredRegionMiniMap result must be an object');
         }
         const r = result as Record<string, unknown>;
-        CenteredRegionMiniMap.validateCommonFields(
-            r,
-            MiniMapType.OfflineCenteredGeojson,
-            'offline',
-            'OfflineCenteredRegionMiniMap',
-        );
+        CenteredRegionMiniMap.validateCommonFields(r, 'offline', 'OfflineCenteredRegionMiniMap');
         const path = r.downloadedGeojson;
         if (typeof path !== 'string' || path.length === 0) {
             throw new Error(
@@ -55,7 +49,4 @@ export class OfflineCenteredRegionMiniMap extends CenteredRegionMiniMap {
     }
 }
 
-registerCenteredRegionMiniMapParser(MiniMapType.OfflineCenteredGeojson, (result) =>
-    OfflineCenteredRegionMiniMap.fromResult(result),
-);
-
+registerCenteredRegionMiniMapParser('offline', (res) => OfflineCenteredRegionMiniMap.fromResult(res));

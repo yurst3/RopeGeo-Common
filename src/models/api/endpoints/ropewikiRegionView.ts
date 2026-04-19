@@ -1,5 +1,5 @@
 import { OnlineBetaSection } from '../../betaSections/onlineBetaSection';
-import { RegionMiniMap } from '../../minimap/regionMiniMap';
+import { OnlineRegionMiniMap } from '../../minimap/concrete/onlineRegionMiniMap';
 
 /**
  * Region view for getRopewikiRegionView (GET /ropewiki/region/{id}).
@@ -24,14 +24,14 @@ export class RopewikiRegionView {
     /** When the region was last synced (from updatedAt). */
     syncDate: Date;
     externalLink: string;
-    miniMap: RegionMiniMap | null;
+    miniMap: OnlineRegionMiniMap | null;
 
     constructor(
         name: string,
         latestRevisionDate: Date,
         url: string,
         updatedAt: Date,
-        miniMap: RegionMiniMap | null,
+        miniMap: OnlineRegionMiniMap | null,
         regions?: { name: string; id: string }[],
         rawPageCount?: number | null,
         truePageCount?: number | null,
@@ -96,7 +96,7 @@ export class RopewikiRegionView {
         if (r.miniMap == null || r.miniMap === undefined) {
             (r as Record<string, unknown>).miniMap = null;
         } else {
-            (r as Record<string, unknown>).miniMap = RegionMiniMap.fromResult(r.miniMap);
+            (r as Record<string, unknown>).miniMap = OnlineRegionMiniMap.fromResult(r.miniMap);
         }
         Object.setPrototypeOf(r, RopewikiRegionView.prototype);
         return r as unknown as RopewikiRegionView;
@@ -233,7 +233,7 @@ export class RopewikiRegionView {
         if (v === null || v === undefined) return;
         if (typeof v !== 'object') {
             throw new Error(
-                `RopewikiRegionView.${key} must be a RegionMiniMap object or null, got: ${typeof v}`,
+                `RopewikiRegionView.${key} must be an OnlineRegionMiniMap object or null, got: ${typeof v}`,
             );
         }
     }

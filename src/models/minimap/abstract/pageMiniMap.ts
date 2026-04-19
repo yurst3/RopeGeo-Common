@@ -1,18 +1,15 @@
-import { Bounds } from './bounds';
-import { FetchType } from '../fetchType';
+import type { FetchType } from '../../fetchType';
+import { Bounds } from '../bounds';
 import { MiniMap } from './miniMap';
 import { MiniMapType } from './miniMapType';
 
-const pageMiniMapParsers = new Map<
-    MiniMapType.OnlineTilesTemplate | MiniMapType.OfflineTilesTemplate,
-    (result: unknown) => PageMiniMap
->();
+const pageMiniMapParsers = new Map<FetchType, (result: unknown) => PageMiniMap>();
 
 export function registerPageMiniMapParser(
-    miniMapType: MiniMapType.OnlineTilesTemplate | MiniMapType.OfflineTilesTemplate,
+    fetchType: FetchType,
     parse: (result: unknown) => PageMiniMap,
 ): void {
-    pageMiniMapParsers.set(miniMapType, parse);
+    pageMiniMapParsers.set(fetchType, parse);
 }
 
 /**
@@ -20,7 +17,7 @@ export function registerPageMiniMapParser(
  */
 export abstract class PageMiniMap extends MiniMap {
     abstract readonly fetchType: FetchType;
-    abstract readonly miniMapType: MiniMapType.OnlineTilesTemplate | MiniMapType.OfflineTilesTemplate;
+    readonly miniMapType = MiniMapType.Page;
     layerId: string;
     bounds: Bounds;
 
@@ -35,34 +32,32 @@ export abstract class PageMiniMap extends MiniMap {
             throw new Error('PageMiniMap result must be an object');
         }
         const r = result as Record<string, unknown>;
-        if (
-            r.miniMapType !== MiniMapType.OnlineTilesTemplate &&
-            r.miniMapType !== MiniMapType.OfflineTilesTemplate
-        ) {
+        if (r.miniMapType !== MiniMapType.Page) {
             throw new Error(
-                `PageMiniMap.miniMapType must be "${MiniMapType.OnlineTilesTemplate}" or "${MiniMapType.OfflineTilesTemplate}", got: ${JSON.stringify(r.miniMapType)}`,
+                `PageMiniMap.miniMapType must be "${MiniMapType.Page}", got: ${JSON.stringify(r.miniMapType)}`,
             );
         }
-        const parser = pageMiniMapParsers.get(
-            r.miniMapType as MiniMapType.OnlineTilesTemplate | MiniMapType.OfflineTilesTemplate,
-        );
-        if (parser == null) {
+        const ft = r.fetchType;
+        if (ft !== 'online' && ft !== 'offline') {
             throw new Error(
-                `No PageMiniMap parser registered for miniMapType ${JSON.stringify(r.miniMapType)}`,
+                `PageMiniMap.fetchType must be "online" or "offline", got: ${JSON.stringify(ft)}`,
             );
+        }
+        const parser = pageMiniMapParsers.get(ft);
+        if (parser == null) {
+            throw new Error(`No PageMiniMap parser registered for fetchType ${JSON.stringify(ft)}`);
         }
         return parser(result);
     }
 
     protected static validateCommonFields(
         r: Record<string, unknown>,
-        expectedType: MiniMapType.OnlineTilesTemplate | MiniMapType.OfflineTilesTemplate,
         expectedFetchType: FetchType,
         context: string,
     ): void {
-        if (r.miniMapType !== expectedType) {
+        if (r.miniMapType !== MiniMapType.Page) {
             throw new Error(
-                `${context}.miniMapType must be "${expectedType}", got: ${JSON.stringify(r.miniMapType)}`,
+                `${context}.miniMapType must be "${MiniMapType.Page}", got: ${JSON.stringify(r.miniMapType)}`,
             );
         }
         if (r.fetchType !== expectedFetchType) {

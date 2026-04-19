@@ -1,12 +1,10 @@
-import { Bounds } from './bounds';
-import { registerMiniMapParser } from './miniMap';
-import { MiniMapType } from './miniMapType';
+import { Bounds } from '../bounds';
+import type { OnlineMiniMap } from '../abstract/onlineMiniMap';
+import { PageMiniMap, registerPageMiniMapParser } from '../abstract/pageMiniMap';
 import { OfflinePageMiniMap } from './offlinePageMiniMap';
-import { PageMiniMap, registerPageMiniMapParser } from './pageMiniMap';
 
-export class OnlinePageMiniMap extends PageMiniMap {
+export class OnlinePageMiniMap extends PageMiniMap implements OnlineMiniMap {
     readonly fetchType = 'online' as const;
-    readonly miniMapType = MiniMapType.OnlineTilesTemplate;
     onlineTilesTemplate: string;
 
     constructor(layerId: string, onlineTilesTemplate: string, bounds: Bounds, title: string) {
@@ -23,22 +21,11 @@ export class OnlinePageMiniMap extends PageMiniMap {
             throw new Error('OnlinePageMiniMap result must be an object');
         }
         const r = result as Record<string, unknown>;
-        PageMiniMap.validateCommonFields(
-            r,
-            MiniMapType.OnlineTilesTemplate,
-            'online',
-            'OnlinePageMiniMap',
-        );
+        PageMiniMap.validateCommonFields(r, 'online', 'OnlinePageMiniMap');
         PageMiniMap.assertTemplate(r.onlineTilesTemplate, 'OnlinePageMiniMap.onlineTilesTemplate');
         Object.setPrototypeOf(r, OnlinePageMiniMap.prototype);
         return r as unknown as OnlinePageMiniMap;
     }
 }
 
-registerPageMiniMapParser(MiniMapType.OnlineTilesTemplate, (result) =>
-    OnlinePageMiniMap.fromResult(result),
-);
-registerMiniMapParser(MiniMapType.OnlineTilesTemplate, (result) =>
-    OnlinePageMiniMap.fromResult(result),
-);
-
+registerPageMiniMapParser('online', (res) => OnlinePageMiniMap.fromResult(res));

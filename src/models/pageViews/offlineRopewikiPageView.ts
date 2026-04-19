@@ -1,9 +1,9 @@
 import { BetaSection } from '../betaSections/betaSection';
 import { OfflineBetaSection } from '../betaSections/offlineBetaSection';
 import { OfflineBetaSectionImage } from '../betaSections/offlineBetaSectionImage';
-import { MiniMapType } from '../minimap/miniMapType';
-import { OfflineCenteredRegionMiniMap } from '../minimap/offlineCenteredRegionMiniMap';
-import { OfflinePageMiniMap } from '../minimap/offlinePageMiniMap';
+import { MiniMapType } from '../minimap/abstract/miniMapType';
+import { OfflineCenteredRegionMiniMap } from '../minimap/concrete/offlineCenteredRegionMiniMap';
+import { OfflinePageMiniMap } from '../minimap/concrete/offlinePageMiniMap';
 import { OfflinePagePreview } from '../previews/offlinePagePreview';
 import { PageDataSource } from '../pageDataSource';
 import { OfflinePageView } from './offlinePageView';
@@ -88,7 +88,7 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
 
     toPagePreview(): OfflinePagePreview {
         const mapData =
-            this.miniMap != null && this.miniMap.miniMapType === MiniMapType.OfflineTilesTemplate
+            this.miniMap != null && this.miniMap.miniMapType === MiniMapType.Page
                 ? (this.miniMap as OfflinePageMiniMap).layerId
                 : null;
         return new OfflinePagePreview(
@@ -128,9 +128,9 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
             r.miniMap = null;
         } else if (typeof r.miniMap === 'object') {
             const mm = r.miniMap as Record<string, unknown>;
-            if (mm.miniMapType === MiniMapType.OfflineTilesTemplate) {
+            if (mm.miniMapType === MiniMapType.Page && mm.fetchType === 'offline') {
                 r.miniMap = OfflinePageMiniMap.fromResult(r.miniMap);
-            } else if (mm.miniMapType === MiniMapType.OfflineCenteredGeojson) {
+            } else if (mm.miniMapType === MiniMapType.CenteredRegion && mm.fetchType === 'offline') {
                 r.miniMap = OfflineCenteredRegionMiniMap.fromResult(r.miniMap);
             } else {
                 throw new Error(

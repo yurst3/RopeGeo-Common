@@ -3,9 +3,9 @@ import { RopewikiPageView } from '../../../src/models/pageViews/ropewikiPageView
 import { OnlineRopewikiPageView } from '../../../src/models/pageViews/onlineRopewikiPageView';
 import { OfflineRopewikiPageView } from '../../../src/models/pageViews/offlineRopewikiPageView';
 import { ImageVersions } from '../../../src/models/mobile/imageVersions';
-import { OfflinePageMiniMap } from '../../../src/models/minimap/offlinePageMiniMap';
+import { OfflinePageMiniMap } from '../../../src/models/minimap/concrete/offlinePageMiniMap';
 import { Bounds } from '../../../src/models/minimap/bounds';
-import { MiniMapType } from '../../../src/models/minimap/miniMapType';
+import { MiniMapType } from '../../../src/models/minimap/abstract/miniMapType';
 import { OnlinePagePreview } from '../../../src/models/previews/onlinePagePreview';
 import '../../../src/models/pageViews/registerPageViewParsers';
 import '../../../src/models/betaSections/registerBetaSectionParsers';
@@ -133,7 +133,7 @@ describe('RopewikiPageView models', () => {
     it('toOffline throws when minimap exists but downloaded minimap is omitted', () => {
         const page = OnlineRopewikiPageView.fromResult(
             onlineResult({
-                miniMapType: MiniMapType.OnlineTilesTemplate,
+                miniMapType: MiniMapType.Page,
                 fetchType: 'online',
                 title: 'Map',
                 layerId: ROUTE_ID,
@@ -186,7 +186,7 @@ describe('RopewikiPageView models', () => {
                 bannerImage: null,
                 betaSections: [],
                 miniMap: {
-                    miniMapType: MiniMapType.OnlineTilesTemplate,
+                    miniMapType: MiniMapType.Page,
                     fetchType: 'online',
                     title: 'Map',
                     layerId: ROUTE_ID,
@@ -206,7 +206,7 @@ describe('RopewikiPageView models', () => {
     it('toOffline accepts downloaded minimap when online minimap exists', () => {
         const page = OnlineRopewikiPageView.fromResult(
             onlineResult({
-                miniMapType: MiniMapType.OnlineTilesTemplate,
+                miniMapType: MiniMapType.Page,
                 fetchType: 'online',
                 title: 'Map',
                 layerId: ROUTE_ID,

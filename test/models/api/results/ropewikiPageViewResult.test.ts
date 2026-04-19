@@ -2,10 +2,10 @@ import { describe, it, expect } from '@jest/globals';
 import { RopewikiPageViewResult } from '../../../../src/models/api/results/ropewikiPageViewResult';
 import { RopewikiPageView } from '../../../../src/models/api/endpoints/ropewikiPageView';
 import { ResultType } from '../../../../src/models/api/results/result';
-import { MiniMapType } from '../../../../src/models/minimap/miniMapType';
-import { CenteredRegionMiniMap } from '../../../../src/models/minimap/centeredRegionMiniMap';
-import { OnlinePageMiniMap } from '../../../../src/models/minimap/onlinePageMiniMap';
-import { OnlineCenteredRegionMiniMap } from '../../../../src/models/minimap/onlineCenteredRegionMiniMap';
+import { MiniMapType } from '../../../../src/models/minimap/abstract/miniMapType';
+import { CenteredRegionMiniMap } from '../../../../src/models/minimap/abstract/centeredRegionMiniMap';
+import { OnlinePageMiniMap } from '../../../../src/models/minimap/concrete/onlinePageMiniMap';
+import { OnlineCenteredRegionMiniMap } from '../../../../src/models/minimap/concrete/onlineCenteredRegionMiniMap';
 import '../../../../src/models/pageViews/registerPageViewParsers';
 import '../../../../src/models/minimap/registerMiniMapParsers';
 import '../../../../src/models/betaSections/registerBetaSectionParsers';
@@ -51,7 +51,7 @@ function validResult(): Record<string, unknown> {
 
 function validTilesMiniMap() {
     return {
-        miniMapType: MiniMapType.TilesTemplate,
+        miniMapType: MiniMapType.Page,
         fetchType: 'online',
         layerId: '38f5c3fa-7248-41ed-815e-8b9e6aae5d61',
         onlineTilesTemplate:
@@ -66,7 +66,7 @@ const CENTERED_ROUTE_ID = '38f5c3fa-7248-41ed-815e-8b9e6aae5d61';
 
 function validCenteredMiniMap() {
     return {
-        miniMapType: MiniMapType.CenteredGeojson,
+        miniMapType: MiniMapType.CenteredRegion,
         fetchType: 'online',
         title: 'Route One',
         centeredRouteId: CENTERED_ROUTE_ID,
@@ -209,7 +209,8 @@ describe('RopewikiPageViewResult', () => {
                 RopewikiPageViewResult.fromResult({
                     ...validResult(),
                     miniMap: {
-                        miniMapType: MiniMapType.GeoJson,
+                        miniMapType: MiniMapType.Region,
+                        fetchType: 'online',
                         title: 'R',
                         bounds: null,
                         routesParams: {
@@ -225,7 +226,7 @@ describe('RopewikiPageViewResult', () => {
                 RopewikiPageViewResult.fromResult({
                     ...validResult(),
                     miniMap: {
-                        miniMapType: MiniMapType.TilesTemplate,
+                        miniMapType: MiniMapType.Page,
                         fetchType: 'online',
                         layerId: 'id',
                         title: 'T',
@@ -241,7 +242,7 @@ describe('RopewikiPageViewResult', () => {
                 RopewikiPageViewResult.fromResult({
                     ...validResult(),
                     miniMap: {
-                        miniMapType: MiniMapType.TilesTemplate,
+                        miniMapType: MiniMapType.Page,
                         fetchType: 'online',
                         layerId: 'id',
                         title: 'T',

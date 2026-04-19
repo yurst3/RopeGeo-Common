@@ -1,30 +1,26 @@
-import { RoutesParams } from '../api/params/routesParams';
-import { FetchType } from '../fetchType';
+import { RoutesParams } from '../../api/params/routesParams';
+import type { FetchType } from '../../fetchType';
 import { MiniMap } from './miniMap';
 import { MiniMapType } from './miniMapType';
 
 /** UUID v4 (same rule as {@link RoutesParams} region id). */
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const centeredRegionMiniMapParsers = new Map<
-    MiniMapType.OnlineCenteredGeojson | MiniMapType.OfflineCenteredGeojson,
-    (result: unknown) => CenteredRegionMiniMap
->();
+
+const centeredRegionMiniMapParsers = new Map<FetchType, (result: unknown) => CenteredRegionMiniMap>();
 
 export function registerCenteredRegionMiniMapParser(
-    miniMapType: MiniMapType.OnlineCenteredGeojson | MiniMapType.OfflineCenteredGeojson,
+    fetchType: FetchType,
     parse: (result: unknown) => CenteredRegionMiniMap,
 ): void {
-    centeredRegionMiniMapParsers.set(miniMapType, parse);
+    centeredRegionMiniMapParsers.set(fetchType, parse);
 }
 
 /**
- * Page fallback minimap: centered route GeoJSON via getRoutes using {@link RoutesParams} (region scope).
+ * Page fallback minimap: centered route GeoJSON via getRoutes (online) or bundled local GeoJSON (offline).
  */
 export abstract class CenteredRegionMiniMap extends MiniMap {
     abstract readonly fetchType: FetchType;
-    abstract readonly miniMapType:
-        | MiniMapType.OnlineCenteredGeojson
-        | MiniMapType.OfflineCenteredGeojson;
+    readonly miniMapType = MiniMapType.CenteredRegion;
     centeredRouteId: string;
 
     protected constructor(centeredRouteId: string, title: string) {
@@ -37,22 +33,21 @@ export abstract class CenteredRegionMiniMap extends MiniMap {
             throw new Error('CenteredRegionMiniMap result must be an object');
         }
         const r = result as Record<string, unknown>;
-        if (
-            r.miniMapType !== MiniMapType.OnlineCenteredGeojson &&
-            r.miniMapType !== MiniMapType.OfflineCenteredGeojson
-        ) {
+        if (r.miniMapType !== MiniMapType.CenteredRegion) {
             throw new Error(
-                `CenteredRegionMiniMap.miniMapType must be "${MiniMapType.OnlineCenteredGeojson}" or "${MiniMapType.OfflineCenteredGeojson}", got: ${JSON.stringify(r.miniMapType)}`,
+                `CenteredRegionMiniMap.miniMapType must be "${MiniMapType.CenteredRegion}", got: ${JSON.stringify(r.miniMapType)}`,
             );
         }
-        const parser = centeredRegionMiniMapParsers.get(
-            r.miniMapType as
-                | MiniMapType.OnlineCenteredGeojson
-                | MiniMapType.OfflineCenteredGeojson,
-        );
+        const ft = r.fetchType;
+        if (ft !== 'online' && ft !== 'offline') {
+            throw new Error(
+                `CenteredRegionMiniMap.fetchType must be "online" or "offline", got: ${JSON.stringify(ft)}`,
+            );
+        }
+        const parser = centeredRegionMiniMapParsers.get(ft);
         if (parser == null) {
             throw new Error(
-                `No CenteredRegionMiniMap parser registered for miniMapType ${JSON.stringify(r.miniMapType)}`,
+                `No CenteredRegionMiniMap parser registered for fetchType ${JSON.stringify(ft)}`,
             );
         }
         return parser(result);
@@ -60,13 +55,12 @@ export abstract class CenteredRegionMiniMap extends MiniMap {
 
     protected static validateCommonFields(
         r: Record<string, unknown>,
-        expectedType: MiniMapType.OnlineCenteredGeojson | MiniMapType.OfflineCenteredGeojson,
         expectedFetchType: FetchType,
         context: string,
     ): void {
-        if (r.miniMapType !== expectedType) {
+        if (r.miniMapType !== MiniMapType.CenteredRegion) {
             throw new Error(
-                `${context}.miniMapType must be "${expectedType}", got: ${JSON.stringify(r.miniMapType)}`,
+                `${context}.miniMapType must be "${MiniMapType.CenteredRegion}", got: ${JSON.stringify(r.miniMapType)}`,
             );
         }
         if (r.fetchType !== expectedFetchType) {

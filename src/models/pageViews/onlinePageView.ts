@@ -13,7 +13,7 @@ export interface OnlinePageView {
     getImageIdsToDownload(): Array<[string, DownloadBytes]>;
     toOffline(
         downloadedImageVersions: Record<string, import('../mobile/imageVersions').ImageVersions>,
-        downloadedMiniMap?: import('../minimap/offlinePageMiniMap').OfflinePageMiniMap | import('../minimap/offlineCenteredRegionMiniMap').OfflineCenteredRegionMiniMap | null,
+        downloadedMiniMap?: import('../minimap/concrete/offlinePageMiniMap').OfflinePageMiniMap | import('../minimap/concrete/offlineCenteredRegionMiniMap').OfflineCenteredRegionMiniMap | null,
     ): OfflinePageView;
     toPagePreview(): PagePreview;
     toSavedPage(): SavedPage;

@@ -1,14 +1,16 @@
 import { describe, it, expect } from '@jest/globals';
+import '../../../../src/models/minimap/registerMiniMapParsers';
 import { RopewikiRegionView } from '../../../../src/models/api/endpoints/ropewikiRegionView';
 import { BetaSection } from '../../../../src/models/betaSections/betaSection';
-import { RegionMiniMap } from '../../../../src/models/minimap/regionMiniMap';
-import { MiniMapType } from '../../../../src/models/minimap/miniMapType';
+import { MiniMapType } from '../../../../src/models/minimap/abstract/miniMapType';
+import { OnlineRegionMiniMap } from '../../../../src/models/minimap/concrete/onlineRegionMiniMap';
 
 const REGION_UUID = 'c3d4e5f6-a7b8-9012-cdef-123456789012';
 
 function wireRegionMiniMap(regionId: string) {
     return {
-        miniMapType: MiniMapType.GeoJson,
+        miniMapType: MiniMapType.Region,
+        fetchType: 'online',
         title: 'Map title',
         bounds: { north: 41, south: 40, east: -110, west: -112 },
         routesParams: {
@@ -17,14 +19,14 @@ function wireRegionMiniMap(regionId: string) {
     };
 }
 
-const defaultRegionMiniMap = RegionMiniMap.fromResult(wireRegionMiniMap(REGION_UUID));
+const defaultRegionMiniMap = OnlineRegionMiniMap.fromResult(wireRegionMiniMap(REGION_UUID));
 
 interface ConstructorArgs {
     name: string;
     latestRevisionDate: Date;
     url: string;
     updatedAt: Date;
-    miniMap?: RegionMiniMap | null;
+    miniMap?: OnlineRegionMiniMap | null;
     regions?: { name: string; id: string }[];
     rawPageCount?: number | null;
     truePageCount?: number | null;
@@ -38,7 +40,7 @@ interface ConstructorArgs {
 function baseArgs(
     overrides: Partial<ConstructorArgs> = {},
 ): ConstructorParameters<typeof RopewikiRegionView> {
-    const miniMap: RegionMiniMap | null = !('miniMap' in overrides)
+    const miniMap: OnlineRegionMiniMap | null = !('miniMap' in overrides)
         ? defaultRegionMiniMap
         : overrides.miniMap === undefined
           ? defaultRegionMiniMap
@@ -89,8 +91,8 @@ describe('RopewikiRegionView', () => {
             expect(view.isMajorRegion).toBe(true);
             expect(view.latestRevisionDate).toEqual(new Date('2024-01-15T12:00:00Z'));
             expect(view.externalLink).toBe('https://ropewiki.com/North_America');
-            expect(view.miniMap).toBeInstanceOf(RegionMiniMap);
-            expect((view.miniMap as RegionMiniMap).routesParams.region!.id).toBe(
+            expect(view.miniMap).toBeInstanceOf(OnlineRegionMiniMap);
+            expect((view.miniMap as OnlineRegionMiniMap).routesParams.region!.id).toBe(
                 REGION_UUID,
             );
         });
@@ -245,7 +247,7 @@ describe('RopewikiRegionView', () => {
             expect(view.syncDate).toBeInstanceOf(Date);
             expect(view.syncDate.toISOString()).toBe('2025-01-10T08:00:00.000Z');
             expect(view.externalLink).toBe('https://ropewiki.com/North_America');
-            expect((view.miniMap as RegionMiniMap).routesParams.region!.id).toBe(
+            expect((view.miniMap as OnlineRegionMiniMap).routesParams.region!.id).toBe(
                 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
             );
         });
@@ -412,11 +414,11 @@ describe('RopewikiRegionView', () => {
         it('throws when miniMap is not object or null', () => {
             expect(() =>
                 RopewikiRegionView.fromResult({ ...getValidBody(), miniMap: 'bad' }),
-            ).toThrow(/RopewikiRegionView\.miniMap must be a RegionMiniMap object or null/);
+            ).toThrow(/RopewikiRegionView\.miniMap must be an OnlineRegionMiniMap object or null/);
             expect(() =>
                 RopewikiRegionView.fromResult({
                     ...getValidBody(),
-                    miniMap: { miniMapType: MiniMapType.TilesTemplate, layerId: 'x' },
+                    miniMap: { miniMapType: MiniMapType.Page, fetchType: 'online', layerId: 'x' },
                 }),
             ).toThrow();
         });

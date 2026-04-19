@@ -1,11 +1,12 @@
 import { describe, it, expect } from '@jest/globals';
 import { PageDataSource } from '../../../src/models/pageDataSource';
-import { PageMiniMap } from '../../../src/models/minimap/pageMiniMap';
-import { MiniMap } from '../../../src/models/minimap/miniMap';
-import { MiniMapType } from '../../../src/models/minimap/miniMapType';
-import { RegionMiniMap } from '../../../src/models/minimap/regionMiniMap';
-import { CenteredRegionMiniMap } from '../../../src/models/minimap/centeredRegionMiniMap';
-import { OfflinePageMiniMap } from '../../../src/models/minimap/offlinePageMiniMap';
+import { PageMiniMap } from '../../../src/models/minimap/abstract/pageMiniMap';
+import { MiniMap } from '../../../src/models/minimap/abstract/miniMap';
+import { MiniMapType } from '../../../src/models/minimap/abstract/miniMapType';
+import { RegionMiniMap } from '../../../src/models/minimap/abstract/regionMiniMap';
+import { CenteredRegionMiniMap } from '../../../src/models/minimap/abstract/centeredRegionMiniMap';
+import { OfflinePageMiniMap } from '../../../src/models/minimap/concrete/offlinePageMiniMap';
+import { OnlineRegionMiniMap } from '../../../src/models/minimap/concrete/onlineRegionMiniMap';
 import '../../../src/models/minimap/registerMiniMapParsers';
 
 const MAP_REGION_ID = 'c3d4e5f6-a7b8-9012-cdef-123456789012';
@@ -13,7 +14,8 @@ const ROUTE_ID = '38f5c3fa-7248-41ed-815e-8b9e6aae5d61';
 
 function regionPayload(bounds: Record<string, number> | null) {
     return {
-        miniMapType: MiniMapType.GeoJson,
+        miniMapType: MiniMapType.Region,
+        fetchType: 'online',
         title: 'North America',
         bounds,
         routesParams: {
@@ -24,16 +26,16 @@ function regionPayload(bounds: Record<string, number> | null) {
 
 describe('MiniMap', () => {
     describe('fromResult', () => {
-        it('delegates to RegionMiniMap', () => {
+        it('delegates to OnlineRegionMiniMap', () => {
             const m = MiniMap.fromResult(regionPayload({ north: 40, south: 38, east: -108, west: -110 }));
-            expect(m).toBeInstanceOf(RegionMiniMap);
-            expect(m.miniMapType).toBe(MiniMapType.GeoJson);
+            expect(m).toBeInstanceOf(OnlineRegionMiniMap);
+            expect(m.miniMapType).toBe(MiniMapType.Region);
             expect(m.title).toBe('North America');
         });
 
         it('delegates to PageMiniMap', () => {
             const m = MiniMap.fromResult({
-                miniMapType: MiniMapType.TilesTemplate,
+                miniMapType: MiniMapType.Page,
                 fetchType: 'online',
                 title: 'Page route',
                 layerId: ROUTE_ID,
@@ -41,12 +43,12 @@ describe('MiniMap', () => {
                 bounds: { north: 40, south: 38, east: -108, west: -110 },
             });
             expect(m).toBeInstanceOf(PageMiniMap);
-            expect(m.miniMapType).toBe(MiniMapType.TilesTemplate);
+            expect(m.miniMapType).toBe(MiniMapType.Page);
         });
 
         it('delegates to CenteredRegionMiniMap', () => {
             const m = MiniMap.fromResult({
-                miniMapType: MiniMapType.CenteredGeojson,
+                miniMapType: MiniMapType.CenteredRegion,
                 fetchType: 'online',
                 title: 'Centered',
                 centeredRouteId: ROUTE_ID,
@@ -55,22 +57,7 @@ describe('MiniMap', () => {
                 },
             });
             expect(m).toBeInstanceOf(CenteredRegionMiniMap);
-            expect(m.miniMapType).toBe(MiniMapType.CenteredGeojson);
-        });
-
-        it('rejects downloadedTilesTemplate', () => {
-            expect(() =>
-                MiniMap.fromResult(
-                    OfflinePageMiniMap.fromResult({
-                        miniMapType: MiniMapType.DownloadedTilesTemplate,
-                        fetchType: 'offline',
-                        title: 'L',
-                        layerId: ROUTE_ID,
-                        offlineTilesTemplate: 'file:///t/{z}/{x}/{y}.pbf',
-                        bounds: { north: 40, south: 38, east: -108, west: -110 },
-                    }),
-                ),
-            ).toThrow(/MiniMap\.fromResult does not accept/);
+            expect(m.miniMapType).toBe(MiniMapType.CenteredRegion);
         });
 
         it('throws when result is not an object', () => {
@@ -92,12 +79,13 @@ describe('RegionMiniMap', () => {
 
     it('fromResult parses valid payload with bounds object', () => {
         const m = RegionMiniMap.fromResult({
-            miniMapType: MiniMapType.GeoJson,
+            miniMapType: MiniMapType.Region,
+            fetchType: 'online',
             title: 'R',
             bounds: { north: 41, south: 40, east: -110, west: -112 },
             routesParams: validRoutes,
         });
-        expect(m.routesParams.region).toEqual({
+        expect((m as OnlineRegionMiniMap).routesParams.region).toEqual({
             id: MAP_REGION_ID,
             source: PageDataSource.Ropewiki,
         });
@@ -113,30 +101,33 @@ describe('RegionMiniMap', () => {
     it('throws when bounds key is missing', () => {
         expect(() =>
             RegionMiniMap.fromResult({
-                miniMapType: MiniMapType.GeoJson,
+                miniMapType: MiniMapType.Region,
+                fetchType: 'online',
                 title: 'R',
                 routesParams: validRoutes,
             } as Record<string, unknown>),
-        ).toThrow(/RegionMiniMap\.bounds must be present/);
+        ).toThrow(/OnlineRegionMiniMap\.bounds must be present/);
     });
 
     it('throws when title missing', () => {
         expect(() =>
             RegionMiniMap.fromResult({
-                miniMapType: MiniMapType.GeoJson,
+                miniMapType: MiniMapType.Region,
+                fetchType: 'online',
                 bounds: null,
                 routesParams: validRoutes,
             } as Record<string, unknown>),
-        ).toThrow(/RegionMiniMap\.title/);
+        ).toThrow(/OnlineRegionMiniMap\.title/);
     });
 
     it('throws when miniMapType wrong', () => {
         expect(() =>
             RegionMiniMap.fromResult({
-                miniMapType: MiniMapType.TilesTemplate,
+                miniMapType: MiniMapType.Page,
+                fetchType: 'online',
                 title: 'T',
                 layerId: 'x',
-                tilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
+                onlineTilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
                 bounds: { north: 1, south: 0, east: 1, west: 0 },
             }),
         ).toThrow(/RegionMiniMap\.miniMapType must be/);
@@ -145,17 +136,19 @@ describe('RegionMiniMap', () => {
     it('throws when routesParams missing', () => {
         expect(() =>
             RegionMiniMap.fromResult({
-                miniMapType: MiniMapType.GeoJson,
+                miniMapType: MiniMapType.Region,
+                fetchType: 'online',
                 title: 'R',
                 bounds: null,
             } as Record<string, unknown>),
-        ).toThrow(/RegionMiniMap\.routesParams must be an object/);
+        ).toThrow(/OnlineRegionMiniMap\.routesParams must be an object/);
     });
 
     it('throws when routesParams incomplete (requiredRegion path)', () => {
         expect(() =>
             RegionMiniMap.fromResult({
-                miniMapType: MiniMapType.GeoJson,
+                miniMapType: MiniMapType.Region,
+                fetchType: 'online',
                 title: 'R',
                 bounds: null,
                 routesParams: { region: { source: 'ropewiki' } },
@@ -169,7 +162,7 @@ describe('PageMiniMap', () => {
 
     it('fromResult parses valid payload', () => {
         const m = PageMiniMap.fromResult({
-            miniMapType: MiniMapType.TilesTemplate,
+            miniMapType: MiniMapType.Page,
             fetchType: 'online',
             title: 'T',
             layerId: '38f5c3fa-7248-41ed-815e-8b9e6aae5d61',
@@ -184,7 +177,7 @@ describe('PageMiniMap', () => {
     it('throws when title empty', () => {
         expect(() =>
             PageMiniMap.fromResult({
-                miniMapType: MiniMapType.TilesTemplate,
+                miniMapType: MiniMapType.Page,
                 fetchType: 'online',
                 title: '  ',
                 layerId: 'id',
@@ -197,7 +190,8 @@ describe('PageMiniMap', () => {
     it('throws when miniMapType wrong', () => {
         expect(() =>
             PageMiniMap.fromResult({
-                miniMapType: MiniMapType.GeoJson,
+                miniMapType: MiniMapType.Region,
+                fetchType: 'online',
                 title: 'R',
                 routesParams: {
                     region: { source: 'ropewiki', id: MAP_REGION_ID },
@@ -210,7 +204,7 @@ describe('PageMiniMap', () => {
     it('throws when layerId empty', () => {
         expect(() =>
             PageMiniMap.fromResult({
-                miniMapType: MiniMapType.TilesTemplate,
+                miniMapType: MiniMapType.Page,
                 fetchType: 'online',
                 title: 'T',
                 layerId: '',
@@ -223,7 +217,7 @@ describe('PageMiniMap', () => {
     it('throws when tilesTemplate missing placeholders', () => {
         expect(() =>
             PageMiniMap.fromResult({
-                miniMapType: MiniMapType.TilesTemplate,
+                miniMapType: MiniMapType.Page,
                 fetchType: 'online',
                 title: 'T',
                 layerId: 'id',
@@ -235,7 +229,7 @@ describe('PageMiniMap', () => {
 
     it('parses offline page minimap', () => {
         const m = PageMiniMap.fromResult({
-            miniMapType: MiniMapType.OfflineTilesTemplate,
+            miniMapType: MiniMapType.Page,
             fetchType: 'offline',
             title: 'Offline',
             layerId: ROUTE_ID,
@@ -248,7 +242,7 @@ describe('PageMiniMap', () => {
     it('validates offline page minimap template', () => {
         expect(() =>
             PageMiniMap.fromResult({
-                miniMapType: MiniMapType.OfflineTilesTemplate,
+                miniMapType: MiniMapType.Page,
                 fetchType: 'offline',
                 title: 'Offline',
                 layerId: ROUTE_ID,

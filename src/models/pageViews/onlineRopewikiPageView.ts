@@ -3,11 +3,11 @@ import { OfflineBetaSection } from '../betaSections/offlineBetaSection';
 import { OnlineBetaSection } from '../betaSections/onlineBetaSection';
 import { OnlineBetaSectionImage } from '../betaSections/onlineBetaSectionImage';
 import { DownloadBytes } from '../betaSections/downloadBytes';
-import { MiniMapType } from '../minimap/miniMapType';
-import { OnlineCenteredRegionMiniMap } from '../minimap/onlineCenteredRegionMiniMap';
-import { OnlinePageMiniMap } from '../minimap/onlinePageMiniMap';
-import { OfflineCenteredRegionMiniMap } from '../minimap/offlineCenteredRegionMiniMap';
-import { OfflinePageMiniMap } from '../minimap/offlinePageMiniMap';
+import { MiniMapType } from '../minimap/abstract/miniMapType';
+import { OnlineCenteredRegionMiniMap } from '../minimap/concrete/onlineCenteredRegionMiniMap';
+import { OnlinePageMiniMap } from '../minimap/concrete/onlinePageMiniMap';
+import { OfflineCenteredRegionMiniMap } from '../minimap/concrete/offlineCenteredRegionMiniMap';
+import { OfflinePageMiniMap } from '../minimap/concrete/offlinePageMiniMap';
 import { SavedPage } from '../mobile/savedPage';
 import { ImageVersion, ImageVersions } from '../mobile/imageVersions';
 import { OfflinePagePreview } from '../previews/offlinePagePreview';
@@ -189,7 +189,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
 
     toPagePreview(): OnlinePagePreview {
         const mapData =
-            this.miniMap != null && this.miniMap.miniMapType === MiniMapType.OnlineTilesTemplate
+            this.miniMap != null && this.miniMap.miniMapType === MiniMapType.Page
                 ? (this.miniMap as OnlinePageMiniMap).layerId
                 : null;
         return new OnlinePagePreview(
@@ -233,9 +233,9 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
             r.miniMap = null;
         } else if (typeof r.miniMap === 'object') {
             const mm = r.miniMap as Record<string, unknown>;
-            if (mm.miniMapType === MiniMapType.OnlineTilesTemplate) {
+            if (mm.miniMapType === MiniMapType.Page && mm.fetchType === 'online') {
                 r.miniMap = OnlinePageMiniMap.fromResult(r.miniMap);
-            } else if (mm.miniMapType === MiniMapType.OnlineCenteredGeojson) {
+            } else if (mm.miniMapType === MiniMapType.CenteredRegion && mm.fetchType === 'online') {
                 r.miniMap = OnlineCenteredRegionMiniMap.fromResult(r.miniMap);
             } else {
                 throw new Error(

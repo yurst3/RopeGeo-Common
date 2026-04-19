@@ -1,9 +1,10 @@
 import { describe, it, expect } from '@jest/globals';
+import '../../../../src/models/minimap/registerMiniMapParsers';
 import { RopewikiRegionViewResult } from '../../../../src/models/api/results/ropewikiRegionViewResult';
 import { RopewikiRegionView } from '../../../../src/models/api/endpoints/ropewikiRegionView';
 import { ResultType } from '../../../../src/models/api/results/result';
-import { MiniMapType } from '../../../../src/models/minimap/miniMapType';
-import { RegionMiniMap } from '../../../../src/models/minimap/regionMiniMap';
+import { MiniMapType } from '../../../../src/models/minimap/abstract/miniMapType';
+import { RegionMiniMap } from '../../../../src/models/minimap/abstract/regionMiniMap';
 
 const RID = 'c3d4e5f6-a7b8-9012-cdef-123456789012';
 
@@ -22,7 +23,8 @@ function validResult(): Record<string, unknown> {
         syncDate: '2024-01-01T00:00:00.000Z',
         externalLink: 'https://example.com/region',
         miniMap: {
-            miniMapType: MiniMapType.GeoJson,
+            miniMapType: MiniMapType.Region,
+            fetchType: 'online',
             title: 'Root',
             bounds: null,
             routesParams: {
@@ -49,7 +51,8 @@ describe('RopewikiRegionViewResult', () => {
                 syncDate: new Date(),
                 externalLink: 'https://example.com',
                 miniMap: RegionMiniMap.fromResult({
-                    miniMapType: MiniMapType.GeoJson,
+                    miniMapType: MiniMapType.Region,
+                    fetchType: 'online',
                     title: 'R',
                     bounds: null,
                     routesParams: {

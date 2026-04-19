@@ -1,10 +1,9 @@
-import { Bounds } from './bounds';
-import { MiniMapType } from './miniMapType';
-import { PageMiniMap, registerPageMiniMapParser } from './pageMiniMap';
+import { Bounds } from '../bounds';
+import type { OfflineMiniMap } from '../abstract/offlineMiniMap';
+import { PageMiniMap, registerPageMiniMapParser } from '../abstract/pageMiniMap';
 
-export class OfflinePageMiniMap extends PageMiniMap {
+export class OfflinePageMiniMap extends PageMiniMap implements OfflineMiniMap {
     readonly fetchType = 'offline' as const;
-    readonly miniMapType = MiniMapType.OfflineTilesTemplate;
     offlineTilesTemplate: string;
 
     constructor(layerId: string, offlineTilesTemplate: string, bounds: Bounds, title: string) {
@@ -33,19 +32,11 @@ export class OfflinePageMiniMap extends PageMiniMap {
             throw new Error('OfflinePageMiniMap result must be an object');
         }
         const r = result as Record<string, unknown>;
-        PageMiniMap.validateCommonFields(
-            r,
-            MiniMapType.OfflineTilesTemplate,
-            'offline',
-            'OfflinePageMiniMap',
-        );
+        PageMiniMap.validateCommonFields(r, 'offline', 'OfflinePageMiniMap');
         PageMiniMap.assertTemplate(r.offlineTilesTemplate, 'OfflinePageMiniMap.offlineTilesTemplate');
         Object.setPrototypeOf(r, OfflinePageMiniMap.prototype);
         return r as unknown as OfflinePageMiniMap;
     }
 }
 
-registerPageMiniMapParser(MiniMapType.OfflineTilesTemplate, (result) =>
-    OfflinePageMiniMap.fromResult(result),
-);
-
+registerPageMiniMapParser('offline', (res) => OfflinePageMiniMap.fromResult(res));

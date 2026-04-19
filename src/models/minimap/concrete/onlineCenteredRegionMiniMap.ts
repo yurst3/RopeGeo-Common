@@ -1,13 +1,13 @@
-import { RoutesParams } from '../api/params/routesParams';
-import { CenteredRegionMiniMap } from './centeredRegionMiniMap';
-import { registerMiniMapParser } from './miniMap';
-import { MiniMapType } from './miniMapType';
+import { RoutesParams } from '../../api/params/routesParams';
+import type { OnlineMiniMap } from '../abstract/onlineMiniMap';
+import {
+    CenteredRegionMiniMap,
+    registerCenteredRegionMiniMapParser,
+} from '../abstract/centeredRegionMiniMap';
 import { OfflineCenteredRegionMiniMap } from './offlineCenteredRegionMiniMap';
-import { registerCenteredRegionMiniMapParser } from './centeredRegionMiniMap';
 
-export class OnlineCenteredRegionMiniMap extends CenteredRegionMiniMap {
+export class OnlineCenteredRegionMiniMap extends CenteredRegionMiniMap implements OnlineMiniMap {
     readonly fetchType = 'online' as const;
-    readonly miniMapType = MiniMapType.OnlineCenteredGeojson;
     routesParams: RoutesParams;
 
     constructor(routesParams: RoutesParams, centeredRouteId: string, title: string) {
@@ -24,22 +24,11 @@ export class OnlineCenteredRegionMiniMap extends CenteredRegionMiniMap {
             throw new Error('OnlineCenteredRegionMiniMap result must be an object');
         }
         const r = result as Record<string, unknown>;
-        CenteredRegionMiniMap.validateCommonFields(
-            r,
-            MiniMapType.OnlineCenteredGeojson,
-            'online',
-            'OnlineCenteredRegionMiniMap',
-        );
+        CenteredRegionMiniMap.validateCommonFields(r, 'online', 'OnlineCenteredRegionMiniMap');
         r.routesParams = CenteredRegionMiniMap.parseRoutesParams(r, 'OnlineCenteredRegionMiniMap');
         Object.setPrototypeOf(r, OnlineCenteredRegionMiniMap.prototype);
         return r as unknown as OnlineCenteredRegionMiniMap;
     }
 }
 
-registerCenteredRegionMiniMapParser(MiniMapType.OnlineCenteredGeojson, (result) =>
-    OnlineCenteredRegionMiniMap.fromResult(result),
-);
-registerMiniMapParser(MiniMapType.OnlineCenteredGeojson, (result) =>
-    OnlineCenteredRegionMiniMap.fromResult(result),
-);
-
+registerCenteredRegionMiniMapParser('online', (res) => OnlineCenteredRegionMiniMap.fromResult(res));

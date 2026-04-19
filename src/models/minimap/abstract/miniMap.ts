@@ -1,10 +1,9 @@
 import { MiniMapType } from './miniMapType';
 
-/** `MiniMap.fromResult` accepts only wire shapes produced by the WebScraper API. */
 const API_MINI_MAP_TYPES: ReadonlySet<string> = new Set([
-    MiniMapType.GeoJson,
-    MiniMapType.OnlineTilesTemplate,
-    MiniMapType.OnlineCenteredGeojson,
+    MiniMapType.Page,
+    MiniMapType.Region,
+    MiniMapType.CenteredRegion,
 ]);
 const miniMapParsers = new Map<MiniMapType, (result: unknown) => MiniMap>();
 
@@ -17,8 +16,6 @@ export function registerMiniMapParser(
 
 /**
  * Base type for region/page minimap payloads. Use {@link MiniMap.fromResult} to parse API `miniMapType` values.
- * Persisted {@link MiniMapType.DownloadedTilesTemplate} / {@link MiniMapType.DownloadedCenteredGeojson} objects
- * are parsed only via {@link SavedPage} / their concrete `fromResult` methods.
  */
 export abstract class MiniMap {
     abstract readonly miniMapType: MiniMapType;
@@ -51,12 +48,6 @@ export abstract class MiniMap {
             );
         }
         if (!API_MINI_MAP_TYPES.has(t)) {
-            const all = Object.values(MiniMapType) as string[];
-            if (all.includes(t)) {
-                throw new Error(
-                    `MiniMap.fromResult does not accept miniMapType ${JSON.stringify(t)}; use the concrete class fromResult or SavedPage`,
-                );
-            }
             throw new Error(
                 `MiniMap.miniMapType must be one of [${[...API_MINI_MAP_TYPES].join(', ')}], got: ${JSON.stringify(t)}`,
             );
