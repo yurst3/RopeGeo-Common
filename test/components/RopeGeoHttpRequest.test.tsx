@@ -274,7 +274,7 @@ describe('RopeGeoHttpRequest', () => {
         expect(init.body).toBeUndefined();
     });
 
-    it('emits timeoutCountdown from full default window then times out', async () => {
+    it('does not emit timeoutCountdown or timeout when timeoutAfterSeconds is omitted', async () => {
         jest.useFakeTimers();
         fetchMock.mockImplementation((_input, init?: RequestInit) => {
             return new Promise<Response>((_resolve, reject) => {
@@ -302,23 +302,17 @@ describe('RopeGeoHttpRequest', () => {
         );
 
         await waitFor(() => {
-            expect(latest?.timeoutCountdown).toBe(30);
-        });
-
-        await act(async () => {
-            await jest.advanceTimersByTimeAsync(1000);
-        });
-        expect(latest?.timeoutCountdown).toBe(29);
-
-        await act(async () => {
-            await jest.advanceTimersByTimeAsync(29_000);
-            await Promise.resolve();
-        });
-        await waitFor(() => {
-            expect(latest?.loading).toBe(false);
-            expect(latest?.errors?.message).toBe(NETWORK_REQUEST_TIMED_OUT_MESSAGE);
+            expect(latest?.loading).toBe(true);
             expect(latest?.timeoutCountdown).toBeNull();
+            expect(latest?.errors).toBeNull();
         });
+
+        await act(async () => {
+            await jest.advanceTimersByTimeAsync(60_000);
+        });
+        expect(latest?.loading).toBe(true);
+        expect(latest?.timeoutCountdown).toBeNull();
+        expect(latest?.errors).toBeNull();
 
         jest.useRealTimers();
     });
