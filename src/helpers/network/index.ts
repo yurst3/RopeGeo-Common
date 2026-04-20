@@ -6,6 +6,7 @@
 
 export {
   NETWORK_REQUEST_TIMED_OUT_MESSAGE,
+  NO_NETWORK_MESSAGE,
   installNetworkRequestPolicyTimers,
   isAbortError,
   isNetworkRequestTimeoutError,

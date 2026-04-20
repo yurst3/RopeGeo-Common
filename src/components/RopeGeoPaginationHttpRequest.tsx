@@ -5,6 +5,7 @@ import {
   isAbortError,
   mergeParentSignalWithDeadline,
   NETWORK_REQUEST_TIMED_OUT_MESSAGE,
+  NO_NETWORK_MESSAGE,
   resolveRequestTimeoutMs,
 } from "../helpers/network";
 import {
@@ -90,6 +91,11 @@ export type RopeGeoPaginationHttpRequestProps<T = unknown> = {
    * When omitted, timeout and countdown are disabled.
    */
   timeoutAfterSeconds?: number;
+  /**
+   * When `false`, no HTTP requests run and children receive {@link NO_NETWORK_MESSAGE} as the error.
+   * Same semantics as `isOnline` on {@link RopeGeoHttpRequest}.
+   */
+  isOnline?: boolean;
   children: (args: {
     loading: boolean;
     received: number;
@@ -120,6 +126,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
   queryParams,
   batchSize = 10,
   timeoutAfterSeconds,
+  isOnline,
   children,
 }: RopeGeoPaginationHttpRequestProps<T>) {
   const [loading, setLoading] = useState(true);
@@ -134,6 +141,16 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
   const effectiveBatch = Math.max(1, Math.floor(batchSize));
 
   useEffect(() => {
+    if (isOnline === false) {
+      setLoading(false);
+      setReceived(0);
+      setTotal(null);
+      setData(null);
+      setErrors(new Error(NO_NETWORK_MESSAGE));
+      setTimeoutCountdown(null);
+      return;
+    }
+
     let cancelled = false;
     const abortController = new AbortController();
     const { signal } = abortController;
@@ -343,6 +360,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
     queryParams,
     effectiveBatch,
     timeoutAfterSeconds,
+    isOnline,
   ]);
 
   return (

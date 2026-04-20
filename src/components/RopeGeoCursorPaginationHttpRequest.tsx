@@ -4,6 +4,7 @@ import {
   installNetworkRequestPolicyTimers,
   isAbortError,
   NETWORK_REQUEST_TIMED_OUT_MESSAGE,
+  NO_NETWORK_MESSAGE,
   resolveRequestTimeoutMs,
 } from "../helpers/network";
 import {
@@ -60,6 +61,11 @@ export type RopeGeoCursorPaginationHttpRequestProps<T = unknown> = {
    */
   timeoutAfterSeconds?: number;
   /**
+   * When `false`, no HTTP requests run and children receive {@link NO_NETWORK_MESSAGE} as the error.
+   * Same semantics as `isOnline` on {@link RopeGeoHttpRequest}.
+   */
+  isOnline?: boolean;
+  /**
    * Response body is parsed via CursorPaginationResults.fromResponseBody (must include resultType).
    * Parsed shape is ValidatedCursorPaginationResponse; children receive result.results as data.
    */
@@ -81,6 +87,7 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
   pathParams,
   queryParams,
   timeoutAfterSeconds,
+  isOnline,
   children,
 }: RopeGeoCursorPaginationHttpRequestProps<T>) {
   const [loading, setLoading] = useState(true);
@@ -106,6 +113,15 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
   );
 
   useEffect(() => {
+    if (isOnline === false) {
+      setData([]);
+      setParams(queryParams);
+      setLoading(false);
+      setErrors(new Error(NO_NETWORK_MESSAGE));
+      setTimeoutCountdown(null);
+      return;
+    }
+
     let cancelled = false;
     const abortController = new AbortController();
     const timedOutRef = { current: false };
@@ -212,7 +228,16 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
       policyDispose();
       abortController.abort();
     };
-  }, [service, method, path, pathParams, queryParams, buildUrl, timeoutAfterSeconds]);
+  }, [
+    service,
+    method,
+    path,
+    pathParams,
+    queryParams,
+    buildUrl,
+    timeoutAfterSeconds,
+    isOnline,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -221,6 +246,7 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
   }, []);
 
   const loadMore = useCallback(() => {
+    if (isOnline === false) return;
     if (params.cursor == null) return;
     if (loadingMoreRef.current) return;
     loadingMoreRef.current = true;
@@ -308,7 +334,7 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
         loadingMoreRef.current = false;
         setLoadingMore(false);
       });
-  }, [params, method, buildUrl, timeoutAfterSeconds]);
+  }, [params, method, buildUrl, timeoutAfterSeconds, isOnline]);
 
   return (
     <>

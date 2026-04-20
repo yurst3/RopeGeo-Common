@@ -3,12 +3,21 @@
 /** Use this exact message so callers can detect timeout vs other failures. */
 export const NETWORK_REQUEST_TIMED_OUT_MESSAGE = "Network request timed out";
 
+/** Use this exact message for client-side offline gating and RN fetch failures treated as offline. */
+export const NO_NETWORK_MESSAGE = "No network connection";
+
 export function isNetworkRequestTimeoutError(e: unknown): boolean {
   return e instanceof Error && e.message === NETWORK_REQUEST_TIMED_OUT_MESSAGE;
 }
 
 export function isAbortError(e: unknown): boolean {
-  if (e instanceof DOMException && e.name === "AbortError") return true;
+  if (
+    typeof DOMException !== "undefined" &&
+    e instanceof DOMException &&
+    e.name === "AbortError"
+  ) {
+    return true;
+  }
   if (e instanceof Error && e.name === "AbortError") return true;
   return false;
 }

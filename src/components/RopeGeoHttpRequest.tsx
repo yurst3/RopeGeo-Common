@@ -4,6 +4,7 @@ import {
   installNetworkRequestPolicyTimers,
   isAbortError,
   NETWORK_REQUEST_TIMED_OUT_MESSAGE,
+  NO_NETWORK_MESSAGE,
   resolveRequestTimeoutMs,
 } from "../helpers/network";
 import { Result } from "../models";
@@ -70,6 +71,12 @@ export type RopeGeoHttpRequestProps<T = unknown> = {
    */
   timeoutAfterSeconds?: number;
   /**
+   * When `false`, the request is not started and children receive {@link NO_NETWORK_MESSAGE} as the
+   * error. When `true` or omitted, behavior is unchanged. Pass from app-level connectivity (e.g.
+   * `expo-network`) so fetches are not fired while offline.
+   */
+  isOnline?: boolean;
+  /**
    * Response body is parsed via Result.fromResponseBody (must include resultType and result).
    * Children receive the validated result.result as data (typed by T).
    */
@@ -94,6 +101,7 @@ export function RopeGeoHttpRequest<T = unknown>({
   queryParams,
   body,
   timeoutAfterSeconds,
+  isOnline,
   children,
 }: RopeGeoHttpRequestProps<T>) {
   const [loading, setLoading] = useState(true);
@@ -111,6 +119,14 @@ export function RopeGeoHttpRequest<T = unknown>({
         : body;
 
   useEffect(() => {
+    if (isOnline === false) {
+      setLoading(false);
+      setData(null);
+      setErrors(new Error(NO_NETWORK_MESSAGE));
+      setTimeoutCountdown(null);
+      return;
+    }
+
     let cancelled = false;
     const abortController = new AbortController();
     const timedOutRef = { current: false };
@@ -219,7 +235,16 @@ export function RopeGeoHttpRequest<T = unknown>({
       policyDispose();
       abortController.abort();
     };
-  }, [service, method, path, pathParamsKey, queryParamsKey, bodyKey, timeoutAfterSeconds]);
+  }, [
+    service,
+    method,
+    path,
+    pathParamsKey,
+    queryParamsKey,
+    bodyKey,
+    timeoutAfterSeconds,
+    isOnline,
+  ]);
 
   return (
     <>
