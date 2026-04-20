@@ -9,9 +9,6 @@ export const NETWORK_REQUEST_DEFAULT_TIMEOUT_SECONDS = 30;
 export const NETWORK_REQUEST_HARD_TIMEOUT_MS =
   NETWORK_REQUEST_DEFAULT_TIMEOUT_SECONDS * 1_000;
 
-/** Use when showing “slow network” UI before the full countdown is surfaced (e.g. toasts). */
-export const NETWORK_REQUEST_SLOW_THRESHOLD_MS = 15_000;
-
 /** Use this exact message so callers can detect timeout vs other failures. */
 export const NETWORK_REQUEST_TIMED_OUT_MESSAGE = "Network request timed out";
 
