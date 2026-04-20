@@ -1,13 +1,4 @@
-/**
- * Defaults for HTTP wrappers and other network clients (see plan: mobile-network-resilience).
- * Apps may pass their own deadline via `timeoutAfterSeconds` on components; when omitted,
- * {@link NETWORK_REQUEST_DEFAULT_TIMEOUT_SECONDS} applies.
- */
-
-export const NETWORK_REQUEST_DEFAULT_TIMEOUT_SECONDS = 30;
-
-export const NETWORK_REQUEST_HARD_TIMEOUT_MS =
-  NETWORK_REQUEST_DEFAULT_TIMEOUT_SECONDS * 1_000;
+/** Network helpers for optional request deadlines and timeout countdowns. */
 
 /** Use this exact message so callers can detect timeout vs other failures. */
 export const NETWORK_REQUEST_TIMED_OUT_MESSAGE = "Network request timed out";
@@ -22,8 +13,8 @@ export function isAbortError(e: unknown): boolean {
   return false;
 }
 
-/** Milliseconds for `timeoutAfterSeconds` on request components, or the package default. */
-export function resolveRequestTimeoutMs(timeoutAfterSeconds?: number): number {
+/** Milliseconds for `timeoutAfterSeconds` on request components; `null` when timeout is disabled. */
+export function resolveRequestTimeoutMs(timeoutAfterSeconds?: number): number | null {
   if (
     timeoutAfterSeconds != null &&
     Number.isFinite(timeoutAfterSeconds) &&
@@ -31,7 +22,7 @@ export function resolveRequestTimeoutMs(timeoutAfterSeconds?: number): number {
   ) {
     return Math.floor(timeoutAfterSeconds) * 1_000;
   }
-  return NETWORK_REQUEST_HARD_TIMEOUT_MS;
+  return null;
 }
 
 export type NetworkRequestPolicyTimerCallbacks = {
@@ -104,7 +95,7 @@ export type MergedDeadlineHandles = {
  */
 export function mergeParentSignalWithDeadline(
   parentSignal: AbortSignal,
-  deadlineMs: number = NETWORK_REQUEST_HARD_TIMEOUT_MS
+  deadlineMs: number
 ): MergedDeadlineHandles {
   const controller = new AbortController();
   let didTimeout = false;

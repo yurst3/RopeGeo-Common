@@ -5,8 +5,6 @@
  */
 
 export {
-  NETWORK_REQUEST_DEFAULT_TIMEOUT_SECONDS,
-  NETWORK_REQUEST_HARD_TIMEOUT_MS,
   NETWORK_REQUEST_TIMED_OUT_MESSAGE,
   installNetworkRequestPolicyTimers,
   isAbortError,

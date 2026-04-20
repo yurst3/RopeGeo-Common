@@ -86,8 +86,8 @@ export type RopeGeoPaginationHttpRequestProps<T = unknown> = {
    */
   batchSize?: number;
   /**
-   * Per-request deadline in seconds (page 1 countdown + each later page fetch). Defaults to the
-   * package default when omitted.
+   * Deadline in seconds for each request phase: initial page fetch, then each concurrent page batch.
+   * When omitted, timeout and countdown are disabled.
    */
   timeoutAfterSeconds?: number;
   children: (args: {
@@ -101,7 +101,7 @@ export type RopeGeoPaginationHttpRequestProps<T = unknown> = {
     data: T[] | null;
     /** Set when `data` is `null` after a terminal failure; cleared only when all pages succeed. */
     errors: Error | null;
-    /** Timeout countdown for the first page request only; `null` when not applicable. */
+    /** Timeout countdown for the active phase (initial page or current batch); `null` between phases. */
     timeoutCountdown: number | null;
   }) => ReactNode;
 };
@@ -156,6 +156,46 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
     (async () => {
       const pagesByNum = new Map<number, PaginationResults>();
       const limit = queryParams.limit;
+      let activePolicyDispose: (() => void) | null = null;
+
+      const clearActivePolicy = () => {
+        activePolicyDispose?.();
+        activePolicyDispose = null;
+      };
+
+      const runWithPhaseCountdown = async <R,>(
+        runner: () => Promise<R>
+      ): Promise<R> => {
+        if (timeoutMs == null) {
+          if (!cancelled) setTimeoutCountdown(null);
+          return runner();
+        }
+        let phaseTimedOut = false;
+        clearActivePolicy();
+        activePolicyDispose = installNetworkRequestPolicyTimers(Date.now(), timeoutMs, {
+          isActive: () => !cancelled,
+          onTimeoutCountdown: (seconds) => {
+            if (!cancelled) setTimeoutCountdown(seconds);
+          },
+          onClearTimeoutCountdown: () => {
+            if (!cancelled) setTimeoutCountdown(null);
+          },
+          onHardTimeout: () => {
+            phaseTimedOut = true;
+            abortController.abort();
+          },
+        });
+        try {
+          return await runner();
+        } catch (err) {
+          if (phaseTimedOut) {
+            throw new Error(NETWORK_REQUEST_TIMED_OUT_MESSAGE);
+          }
+          throw err;
+        } finally {
+          clearActivePolicy();
+        }
+      };
 
       const fetchPage = async (pageNum: number): Promise<PaginationResults> => {
         const params = queryParams.withPage(pageNum);
@@ -165,33 +205,11 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
           : resolvedPath;
         const url = new URL(fullPath, baseUrl).toString();
 
-        let pageOnePolicyDispose: (() => void) | null = null;
-        const pageOneTimedOutRef = { current: false };
-
-        if (pageNum === 1) {
-          const startedAt = Date.now();
-          pageOnePolicyDispose = installNetworkRequestPolicyTimers(
-            startedAt,
-            timeoutMs,
-            {
-              isActive: () => !cancelled,
-              onTimeoutCountdown: (seconds) => {
-                if (!cancelled) setTimeoutCountdown(seconds);
-              },
-              onClearTimeoutCountdown: () => {
-                if (!cancelled) setTimeoutCountdown(null);
-              },
-              onHardTimeout: () => {
-                pageOneTimedOutRef.current = true;
-                abortController.abort();
-              },
-            }
-          );
-        }
-
         let merged: ReturnType<typeof mergeParentSignalWithDeadline> | null = null;
         let signalForFetch: AbortSignal;
         if (pageNum === 1) {
+          signalForFetch = signal;
+        } else if (timeoutMs == null) {
           signalForFetch = signal;
         } else {
           merged = mergeParentSignalWithDeadline(signal, timeoutMs);
@@ -241,21 +259,14 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
             abortController.abort();
             throw new Error(NETWORK_REQUEST_TIMED_OUT_MESSAGE);
           }
-          if (pageNum === 1 && pageOneTimedOutRef.current) {
-            throw new Error(NETWORK_REQUEST_TIMED_OUT_MESSAGE);
-          }
           throw err;
         } finally {
-          pageOnePolicyDispose?.();
           merged?.dispose();
-          if (pageNum === 1 && !cancelled) {
-            setTimeoutCountdown(null);
-          }
         }
       };
 
       try {
-        const first = await fetchPage(1);
+        const first = await runWithPhaseCountdown(() => fetchPage(1));
         if (cancelled) return;
 
         pagesByNum.set(1, first);
@@ -286,14 +297,16 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
           if (sumReceived(pagesByNum) >= totalCount) break;
 
           const chunk = toFetch.slice(i, i + effectiveBatch);
-          await Promise.all(
-            chunk.map(async (pageNum) => {
-              const parsed = await fetchPage(pageNum);
-              if (cancelled) return;
-              pagesByNum.set(pageNum, parsed);
-              setReceived(sumReceived(pagesByNum));
-              setTotal(totalCount);
-            })
+          await runWithPhaseCountdown(() =>
+            Promise.all(
+              chunk.map(async (pageNum) => {
+                const parsed = await fetchPage(pageNum);
+                if (cancelled) return;
+                pagesByNum.set(pageNum, parsed);
+                setReceived(sumReceived(pagesByNum));
+                setTotal(totalCount);
+              })
+            )
           );
 
           if (cancelled) return;
@@ -312,6 +325,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
         setErrors(err instanceof Error ? err : new Error(String(err)));
         setData(null);
       } finally {
+        clearActivePolicy();
         if (!cancelled) setLoading(false);
       }
     })();

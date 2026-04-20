@@ -55,8 +55,8 @@ export type RopeGeoCursorPaginationHttpRequestProps<T = unknown> = {
   pathParams?: Record<string, string>;
   queryParams: CursorPaginationParams;
   /**
-   * Request deadline in seconds for each fetch (initial and `loadMore`). Defaults to the package
-   * default when omitted.
+   * Request deadline in seconds for each fetch (initial and `loadMore`). When omitted, timeout
+   * and countdown are disabled.
    */
   timeoutAfterSeconds?: number;
   /**
@@ -118,23 +118,26 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
     setErrors(null);
     setTimeoutCountdown(null);
 
-    const policyDispose = installNetworkRequestPolicyTimers(
-      requestStartedAt,
-      timeoutMs,
-      {
-        isActive: () => !cancelled,
-        onTimeoutCountdown: (seconds) => {
-          if (!cancelled) setTimeoutCountdown(seconds);
-        },
-        onClearTimeoutCountdown: () => {
-          if (!cancelled) setTimeoutCountdown(null);
-        },
-        onHardTimeout: () => {
-          timedOutRef.current = true;
-          abortController.abort();
-        },
-      }
-    );
+    const policyDispose =
+      timeoutMs == null
+        ? () => {}
+        : installNetworkRequestPolicyTimers(
+            requestStartedAt,
+            timeoutMs,
+            {
+              isActive: () => !cancelled,
+              onTimeoutCountdown: (seconds) => {
+                if (!cancelled) setTimeoutCountdown(seconds);
+              },
+              onClearTimeoutCountdown: () => {
+                if (!cancelled) setTimeoutCountdown(null);
+              },
+              onHardTimeout: () => {
+                timedOutRef.current = true;
+                abortController.abort();
+              },
+            }
+          );
 
     const url = buildUrl(queryParams);
     const init: RequestInit = {
@@ -228,27 +231,30 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
     const timedOutRef = { current: false };
     const requestStartedAt = Date.now();
     const timeoutMs = resolveRequestTimeoutMs(timeoutAfterSeconds);
-    const policyDispose = installNetworkRequestPolicyTimers(
-      requestStartedAt,
-      timeoutMs,
-      {
-        isActive: () => loadMoreAbortRef.current === outer,
-        onTimeoutCountdown: (seconds) => {
-          if (loadMoreAbortRef.current === outer) {
-            setTimeoutCountdown(seconds);
-          }
-        },
-        onClearTimeoutCountdown: () => {
-          if (loadMoreAbortRef.current === outer) {
-            setTimeoutCountdown(null);
-          }
-        },
-        onHardTimeout: () => {
-          timedOutRef.current = true;
-          outer.abort();
-        },
-      }
-    );
+    const policyDispose =
+      timeoutMs == null
+        ? () => {}
+        : installNetworkRequestPolicyTimers(
+            requestStartedAt,
+            timeoutMs,
+            {
+              isActive: () => loadMoreAbortRef.current === outer,
+              onTimeoutCountdown: (seconds) => {
+                if (loadMoreAbortRef.current === outer) {
+                  setTimeoutCountdown(seconds);
+                }
+              },
+              onClearTimeoutCountdown: () => {
+                if (loadMoreAbortRef.current === outer) {
+                  setTimeoutCountdown(null);
+                }
+              },
+              onHardTimeout: () => {
+                timedOutRef.current = true;
+                outer.abort();
+              },
+            }
+          );
 
     const url = buildUrl(params);
     const init: RequestInit = {

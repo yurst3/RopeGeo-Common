@@ -66,8 +66,7 @@ export type RopeGeoHttpRequestProps<T = unknown> = {
   queryParams?: Record<string, string | number | boolean | undefined>;
   body?: object;
   /**
-   * Request deadline in seconds (abort + timeout error). Defaults to the package default
-   * (`NETWORK_REQUEST_DEFAULT_TIMEOUT_SECONDS` from `ropegeo-common/helpers`) when omitted.
+   * Request deadline in seconds (abort + timeout error). When omitted, no timeout is enforced.
    */
   timeoutAfterSeconds?: number;
   /**
@@ -122,23 +121,26 @@ export function RopeGeoHttpRequest<T = unknown>({
     setErrors(null);
     setTimeoutCountdown(null);
 
-    const policyDispose = installNetworkRequestPolicyTimers(
-      requestStartedAt,
-      timeoutMs,
-      {
-        isActive: () => !cancelled,
-        onTimeoutCountdown: (seconds) => {
-          if (!cancelled) setTimeoutCountdown(seconds);
-        },
-        onClearTimeoutCountdown: () => {
-          if (!cancelled) setTimeoutCountdown(null);
-        },
-        onHardTimeout: () => {
-          timedOutRef.current = true;
-          abortController.abort();
-        },
-      }
-    );
+    const policyDispose =
+      timeoutMs == null
+        ? () => {}
+        : installNetworkRequestPolicyTimers(
+            requestStartedAt,
+            timeoutMs,
+            {
+              isActive: () => !cancelled,
+              onTimeoutCountdown: (seconds) => {
+                if (!cancelled) setTimeoutCountdown(seconds);
+              },
+              onClearTimeoutCountdown: () => {
+                if (!cancelled) setTimeoutCountdown(null);
+              },
+              onHardTimeout: () => {
+                timedOutRef.current = true;
+                abortController.abort();
+              },
+            }
+          );
 
     const baseUrl = SERVICE_BASE_URL[service];
     const url = buildUrl(baseUrl, path, pathParams, queryParams);
