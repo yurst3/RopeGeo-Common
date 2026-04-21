@@ -1,6 +1,6 @@
 {
     "name": "ropegeo-common",
-    "version": "1.12.9",
+    "version": "1.12.10",
     "description": "Shared domain models and helpers for RopeGeo and WebScraper",
     "license": "ISC",
     "repository": {

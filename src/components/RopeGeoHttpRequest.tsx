@@ -72,8 +72,9 @@ export type RopeGeoHttpRequestProps<T = unknown> = {
   timeoutAfterSeconds?: number;
   /**
    * When `false`, the request is not started and children receive {@link NO_NETWORK_MESSAGE} as the
-   * error. When `true` or omitted, behavior is unchanged. Pass from app-level connectivity (e.g.
-   * `expo-network`) so fetches are not fired while offline.
+   * error. Previously loaded `data` is kept until the network returns. When `true` or omitted,
+   * behavior is unchanged. Pass from app-level connectivity (e.g. `expo-network`) so fetches are
+   * not fired while offline.
    */
   isOnline?: boolean;
   /**
@@ -121,7 +122,6 @@ export function RopeGeoHttpRequest<T = unknown>({
   useEffect(() => {
     if (isOnline === false) {
       setLoading(false);
-      setData(null);
       setErrors(new Error(NO_NETWORK_MESSAGE));
       setTimeoutCountdown(null);
       return;

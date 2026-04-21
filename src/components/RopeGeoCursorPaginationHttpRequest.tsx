@@ -62,7 +62,8 @@ export type RopeGeoCursorPaginationHttpRequestProps<T = unknown> = {
   timeoutAfterSeconds?: number;
   /**
    * When `false`, no HTTP requests run and children receive {@link NO_NETWORK_MESSAGE} as the error.
-   * Same semantics as `isOnline` on {@link RopeGeoHttpRequest}.
+   * Previously loaded `data` and cursor `params` are kept until the network returns (same stale
+   * behavior as {@link RopeGeoPaginationHttpRequest} / {@link RopeGeoHttpRequest} when offline).
    */
   isOnline?: boolean;
   /**
@@ -114,8 +115,10 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
 
   useEffect(() => {
     if (isOnline === false) {
-      setData([]);
-      setParams(queryParams);
+      loadMoreAbortRef.current?.abort();
+      loadMoreAbortRef.current = null;
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
       setLoading(false);
       setErrors(new Error(NO_NETWORK_MESSAGE));
       setTimeoutCountdown(null);
