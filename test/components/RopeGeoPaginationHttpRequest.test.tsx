@@ -61,6 +61,7 @@ function jsonFail(status: number, body: string): Response {
 
 type Args = {
     loading: boolean;
+    refreshing: boolean;
     received: number;
     total: number | null;
     data: RouteGeoJsonFeature[] | null;

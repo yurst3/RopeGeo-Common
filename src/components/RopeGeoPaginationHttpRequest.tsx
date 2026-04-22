@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   installNetworkRequestPolicyTimers,
   isAbortError,
@@ -98,8 +98,21 @@ export type RopeGeoPaginationHttpRequestProps<T = unknown> = {
    * {@link RopeGeoCursorPaginationHttpRequest}.
    */
   isOnline?: boolean;
+  /**
+   * When `isOnline` goes from `false` to online and there is already successful data for the same
+   * request (only the soft {@link NO_NETWORK_MESSAGE} error), a new fetch runs only if this is
+   * `true`. Otherwise stale data stays visible and `errors` is cleared. When there is no
+   * successful data yet, or the last error was not the offline placeholder, a fetch always runs.
+   * @default false
+   */
+  refreshOnReconnect?: boolean;
   children: (args: {
     loading: boolean;
+    /**
+     * `true` while a full pagination pass is in flight after at least one successful completion for
+     * the current request identity (stale-while-revalidate).
+     */
+    refreshing: boolean;
     received: number;
     total: number | null;
     /**
@@ -129,6 +142,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
   batchSize = 10,
   timeoutAfterSeconds,
   isOnline,
+  refreshOnReconnect = false,
   children,
 }: RopeGeoPaginationHttpRequestProps<T>) {
   const [loading, setLoading] = useState(true);
@@ -137,18 +151,68 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
   const [data, setData] = useState<T[] | null>(null);
   const [errors, setErrors] = useState<Error | null>(null);
   const [timeoutCountdown, setTimeoutCountdown] = useState<number | null>(null);
+  const [hasCommittedOnce, setHasCommittedOnce] = useState(false);
+
+  const errorsRef = useRef(errors);
+  const hasCommittedRef = useRef(hasCommittedOnce);
+  errorsRef.current = errors;
+  hasCommittedRef.current = hasCommittedOnce;
 
   const pathParamsKey = JSON.stringify(pathParams ?? null);
   const queryParamsKey = queryParams.toQueryString();
   const effectiveBatch = Math.max(1, Math.floor(batchSize));
 
+  const requestKey = useMemo(
+    () =>
+      `${service}|${method}|${path}|${pathParamsKey}|${queryParamsKey}|${effectiveBatch}|${timeoutAfterSeconds ?? ""}`,
+    [service, method, path, pathParamsKey, queryParamsKey, effectiveBatch, timeoutAfterSeconds],
+  );
+
+  const prevIsOnlineRef = useRef<boolean | undefined>(undefined);
+  const lastRequestKeyRef = useRef<string>("");
+
   useEffect(() => {
-    if (isOnline === false) {
+    const online = isOnline !== false;
+    const prevOnline = prevIsOnlineRef.current;
+    const reconnecting = prevOnline === false && online;
+    const keyChanged = lastRequestKeyRef.current !== requestKey;
+
+    if (!online) {
+      if (keyChanged) {
+        lastRequestKeyRef.current = requestKey;
+        setHasCommittedOnce(false);
+        setReceived(0);
+        setTotal(null);
+        setData(null);
+        setErrors(null);
+      }
+      prevIsOnlineRef.current = false;
       setLoading(false);
       setErrors(new Error(NO_NETWORK_MESSAGE));
       setTimeoutCountdown(null);
       return;
     }
+
+    if (keyChanged) {
+      lastRequestKeyRef.current = requestKey;
+      setHasCommittedOnce(false);
+      setReceived(0);
+      setTotal(null);
+      setData(null);
+      setErrors(null);
+    }
+
+    if (!keyChanged && reconnecting) {
+      const onlyNoNetwork = errorsRef.current?.message === NO_NETWORK_MESSAGE;
+      if (hasCommittedRef.current && onlyNoNetwork && !refreshOnReconnect) {
+        setErrors(null);
+        setLoading(false);
+        prevIsOnlineRef.current = true;
+        return;
+      }
+    }
+
+    prevIsOnlineRef.current = true;
 
     let cancelled = false;
     const abortController = new AbortController();
@@ -156,11 +220,19 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
     const timeoutMs = resolveRequestTimeoutMs(timeoutAfterSeconds);
 
     setLoading(true);
-    setReceived(0);
-    setTotal(null);
-    setData(null);
     setErrors(null);
     setTimeoutCountdown(null);
+    const keepStaleDuringFetch =
+      reconnecting &&
+      hasCommittedRef.current &&
+      errorsRef.current?.message === NO_NETWORK_MESSAGE &&
+      refreshOnReconnect;
+    if (!keyChanged && !keepStaleDuringFetch) {
+      setReceived(0);
+      setTotal(null);
+      setData(null);
+      setHasCommittedOnce(false);
+    }
 
     const baseUrl = SERVICE_BASE_URL[service];
     const resolvedPath = resolvePath(path, pathParams);
@@ -299,6 +371,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
           if (cancelled) return;
           setData(concatPaginationResultItemsSorted<T>(pagesByNum));
           setErrors(null);
+          setHasCommittedOnce(true);
           return;
         }
 
@@ -333,6 +406,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
         if (cancelled) return;
         setData(concatPaginationResultItemsSorted<T>(pagesByNum));
         setErrors(null);
+        setHasCommittedOnce(true);
       } catch (err) {
         if (cancelled || isAbortError(err)) return;
         console.error("[RopeGeoPaginationHttpRequest] Request failed", {
@@ -340,6 +414,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
         });
         setErrors(err instanceof Error ? err : new Error(String(err)));
         setData(null);
+        setHasCommittedOnce(false);
       } finally {
         clearActivePolicy();
         if (!cancelled) setLoading(false);
@@ -356,16 +431,20 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
     path,
     pathParamsKey,
     queryParamsKey,
-    queryParams,
     effectiveBatch,
     timeoutAfterSeconds,
     isOnline,
+    refreshOnReconnect,
+    requestKey,
   ]);
+
+  const refreshing = loading && hasCommittedOnce;
 
   return (
     <>
       {children({
         loading,
+        refreshing,
         received,
         total,
         data,

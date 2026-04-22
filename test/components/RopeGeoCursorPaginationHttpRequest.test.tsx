@@ -42,7 +42,8 @@ function previewsPage(
 type Args = {
     loading: boolean;
     loadingMore: boolean;
-    data: unknown[];
+    refreshing: boolean;
+    data: unknown[] | null;
     errors: Error | null;
     loadMore: () => void;
     hasMore: boolean;
@@ -202,8 +203,9 @@ describe('RopeGeoCursorPaginationHttpRequest', () => {
         const secondUrl = requestUrl(fetchMock.mock.calls[1]![0]);
         expect(secondUrl).toContain('cursor=');
         expect(latest?.data).toHaveLength(2);
-        expect((latest?.data[0] as { name: string }).name).toBe('First');
-        expect((latest?.data[1] as { name: string }).name).toBe('Second');
+        const rows = latest!.data!;
+        expect((rows[0] as { name: string }).name).toBe('First');
+        expect((rows[1] as { name: string }).name).toBe('Second');
         expect(latest?.hasMore).toBe(false);
     });
 
@@ -223,7 +225,7 @@ describe('RopeGeoCursorPaginationHttpRequest', () => {
         await waitFor(() => {
             expect(latest?.loading).toBe(false);
         });
-        expect(latest?.data).toEqual([]);
+        expect(latest?.data).toBeNull();
         expect(latest?.errors?.message).toMatch(/HTTP 503/);
     });
 
@@ -271,7 +273,7 @@ describe('RopeGeoCursorPaginationHttpRequest', () => {
             expect(latest?.loadingMore).toBe(false);
         });
         expect(latest?.data).toHaveLength(1);
-        expect((latest?.data[0] as { name: string }).name).toBe('Kept');
+        expect(((latest!.data as unknown[])[0] as { name: string }).name).toBe('Kept');
     });
 
     it('invalid JSON on initial load sets errors', async () => {
@@ -293,7 +295,7 @@ describe('RopeGeoCursorPaginationHttpRequest', () => {
                 expect(latest?.loading).toBe(false);
             });
             expect(latest?.errors?.message).toBe('Invalid JSON response');
-            expect(latest?.data).toEqual([]);
+            expect(latest?.data).toBeNull();
         } finally {
             errSpy.mockRestore();
         }
@@ -321,6 +323,7 @@ describe('RopeGeoCursorPaginationHttpRequest', () => {
         await waitFor(() => {
             expect(latest?.loading).toBe(false);
         });
+        expect(latest?.data).toEqual([]);
         const init = fetchMock.mock.calls[0]![1] as RequestInit;
         expect(init.method).toBe(Method.GET);
     });

@@ -312,9 +312,9 @@ Abstract classes live under `minimap/abstract/`, concrete under `minimap/concret
 
 | Name | Description | Import |
 | --- | --- | --- |
-| `RopeGeoHttpRequest` | Single GET/POST wrapper; parses `Result.fromResponseBody`; optional `timeoutAfterSeconds` (default from helpers) + `timeoutCountdown` children arg. | `import { RopeGeoHttpRequest, Method, Service } from 'ropegeo-common/components'` |
-| `RopeGeoCursorPaginationHttpRequest` | Cursor-paginated fetch with `loadMore`; optional `timeoutAfterSeconds`; `timeoutCountdown` on initial and `loadMore` requests. | `import { RopeGeoCursorPaginationHttpRequest } from 'ropegeo-common/components'` |
-| `RopeGeoPaginationHttpRequest<T>` | Page-based fetch; page 1 emits `timeoutCountdown`; later pages use the same per-fetch deadline; concatenates `results` into `data` (`T[]` when complete, otherwise `null` with `errors`). | `import { RopeGeoPaginationHttpRequest } from 'ropegeo-common/components'` |
+| `RopeGeoHttpRequest` | Single GET/POST wrapper; parses `Result.fromResponseBody`; optional `timeoutAfterSeconds`, `isOnline`, `refreshOnReconnect`, `timeoutCountdown`, and `refreshing` (stale-while-revalidate) children args. | `import { RopeGeoHttpRequest, Method, Service } from 'ropegeo-common/components'` |
+| `RopeGeoCursorPaginationHttpRequest` | Cursor-paginated fetch with `loadMore`; `data` is `T[] \| null` (null until first success); optional `timeoutAfterSeconds`, `isOnline`, `refreshOnReconnect`, `refreshing`, `timeoutCountdown`. | `import { RopeGeoCursorPaginationHttpRequest } from 'ropegeo-common/components'` |
+| `RopeGeoPaginationHttpRequest<T>` | Page-based fetch; concatenates `results` into `data` (`T[]` when complete, otherwise `null` with `errors`); optional `isOnline`, `refreshOnReconnect`, `refreshing`, `timeoutCountdown`. | `import { RopeGeoPaginationHttpRequest } from 'ropegeo-common/components'` |
 
 ---
 

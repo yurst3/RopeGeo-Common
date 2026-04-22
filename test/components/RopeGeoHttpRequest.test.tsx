@@ -59,6 +59,7 @@ function pageViewResponseJson(): Record<string, unknown> {
 
 type Args<T> = {
     loading: boolean;
+    refreshing: boolean;
     data: T | null;
     errors: Error | null;
     timeoutCountdown: number | null;

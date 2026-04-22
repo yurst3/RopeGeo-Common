@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   installNetworkRequestPolicyTimers,
   isAbortError,
@@ -78,11 +78,24 @@ export type RopeGeoHttpRequestProps<T = unknown> = {
    */
   isOnline?: boolean;
   /**
+   * When `isOnline` goes from `false` to online and there is already successful data for the same
+   * request (only the soft {@link NO_NETWORK_MESSAGE} error), a new fetch runs only if this is
+   * `true`. Otherwise stale data stays visible and `errors` is cleared. When there is no
+   * successful data yet, or the last error was not the offline placeholder, a fetch always runs.
+   * @default false
+   */
+  refreshOnReconnect?: boolean;
+  /**
    * Response body is parsed via Result.fromResponseBody (must include resultType and result).
    * Children receive the validated result.result as data (typed by T).
    */
   children: (args: {
     loading: boolean;
+    /**
+     * `true` while a request is in flight after at least one successful response for the current
+     * request identity (stale-while-revalidate).
+     */
+    refreshing: boolean;
     data: T | null;
     errors: Error | null;
     /**
@@ -103,12 +116,19 @@ export function RopeGeoHttpRequest<T = unknown>({
   body,
   timeoutAfterSeconds,
   isOnline,
+  refreshOnReconnect = false,
   children,
 }: RopeGeoHttpRequestProps<T>) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<T | null>(null);
   const [errors, setErrors] = useState<Error | null>(null);
   const [timeoutCountdown, setTimeoutCountdown] = useState<number | null>(null);
+  const [hasCommittedOnce, setHasCommittedOnce] = useState(false);
+
+  const errorsRef = useRef(errors);
+  const hasCommittedRef = useRef(hasCommittedOnce);
+  errorsRef.current = errors;
+  hasCommittedRef.current = hasCommittedOnce;
 
   const pathParamsKey = JSON.stringify(pathParams ?? null);
   const queryParamsKey = JSON.stringify(queryParams ?? null);
@@ -119,13 +139,53 @@ export function RopeGeoHttpRequest<T = unknown>({
         ? JSON.stringify(body)
         : body;
 
+  const requestKey = useMemo(
+    () =>
+      `${service}|${method}|${path}|${pathParamsKey}|${queryParamsKey}|${String(bodyKey)}|${timeoutAfterSeconds ?? ""}`,
+    [service, method, path, pathParamsKey, queryParamsKey, bodyKey, timeoutAfterSeconds],
+  );
+
+  const prevIsOnlineRef = useRef<boolean | undefined>(undefined);
+  const lastRequestKeyRef = useRef<string>("");
+
   useEffect(() => {
-    if (isOnline === false) {
+    const online = isOnline !== false;
+    const prevOnline = prevIsOnlineRef.current;
+    const reconnecting = prevOnline === false && online;
+    const keyChanged = lastRequestKeyRef.current !== requestKey;
+
+    if (!online) {
+      if (keyChanged) {
+        lastRequestKeyRef.current = requestKey;
+        setData(null);
+        setHasCommittedOnce(false);
+        setErrors(null);
+      }
+      prevIsOnlineRef.current = false;
       setLoading(false);
       setErrors(new Error(NO_NETWORK_MESSAGE));
       setTimeoutCountdown(null);
       return;
     }
+
+    if (keyChanged) {
+      lastRequestKeyRef.current = requestKey;
+      setHasCommittedOnce(false);
+      setData(null);
+      setErrors(null);
+    }
+
+    if (!keyChanged && reconnecting) {
+      const onlyNoNetwork = errorsRef.current?.message === NO_NETWORK_MESSAGE;
+      if (hasCommittedRef.current && onlyNoNetwork && !refreshOnReconnect) {
+        setErrors(null);
+        setLoading(false);
+        prevIsOnlineRef.current = true;
+        return;
+      }
+    }
+
+    prevIsOnlineRef.current = true;
 
     let cancelled = false;
     const abortController = new AbortController();
@@ -136,6 +196,14 @@ export function RopeGeoHttpRequest<T = unknown>({
     setLoading(true);
     setErrors(null);
     setTimeoutCountdown(null);
+    const keepStaleDuringFetch =
+      reconnecting &&
+      hasCommittedRef.current &&
+      errorsRef.current?.message === NO_NETWORK_MESSAGE &&
+      refreshOnReconnect;
+    if (!keyChanged && !keepStaleDuringFetch) {
+      setData(null);
+    }
 
     const policyDispose =
       timeoutMs == null
@@ -179,10 +247,13 @@ export function RopeGeoHttpRequest<T = unknown>({
         if (!res.ok) {
           setErrors(new Error(`HTTP ${res.status}: ${text || res.statusText}`));
           setData(null);
+          setHasCommittedOnce(false);
           return;
         }
         if (text.length === 0) {
           setData(null);
+          setErrors(null);
+          setHasCommittedOnce(true);
           return;
         }
         try {
@@ -191,6 +262,7 @@ export function RopeGeoHttpRequest<T = unknown>({
           if (!cancelled) {
             setData(parsed.result as T);
             setErrors(null);
+            setHasCommittedOnce(true);
           }
         } catch (parseError) {
           if (!cancelled) {
@@ -204,6 +276,7 @@ export function RopeGeoHttpRequest<T = unknown>({
               parseError instanceof Error ? parseError : new Error("Invalid JSON response")
             );
             setData(null);
+            setHasCommittedOnce(false);
           }
         }
       })
@@ -212,6 +285,7 @@ export function RopeGeoHttpRequest<T = unknown>({
         if (timedOutRef.current) {
           setErrors(new Error(NETWORK_REQUEST_TIMED_OUT_MESSAGE));
           setData(null);
+          setHasCommittedOnce(false);
           return;
         }
         if (isAbortError(err)) return;
@@ -221,6 +295,7 @@ export function RopeGeoHttpRequest<T = unknown>({
         });
         setErrors(err instanceof Error ? err : new Error(String(err)));
         setData(null);
+        setHasCommittedOnce(false);
       })
       .finally(() => {
         policyDispose();
@@ -244,12 +319,17 @@ export function RopeGeoHttpRequest<T = unknown>({
     bodyKey,
     timeoutAfterSeconds,
     isOnline,
+    refreshOnReconnect,
+    requestKey,
   ]);
+
+  const refreshing = loading && hasCommittedOnce;
 
   return (
     <>
       {children({
         loading,
+        refreshing,
         data,
         errors,
         timeoutCountdown,
