@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   formatHttpStatusMessage,
   formatNetworkRequestErrorMessage,
@@ -106,6 +106,12 @@ export type RopeGeoHttpRequestProps<T = unknown> = {
      * after `NETWORK_REQUEST_SLOW_THRESHOLD_MS` from `ropegeo-common/helpers`).
      */
     timeoutCountdown: number | null;
+    /**
+     * Re-runs the current request while online. Sets `loading` to `true`, clears `errors`, and
+     * keeps existing `data` visible until the new response resolves (when data was already
+     * committed). No-op when `isOnline` is `false`.
+     */
+    reload: () => void;
   }) => ReactNode;
 };
 
@@ -126,11 +132,19 @@ export function RopeGeoHttpRequest<T = unknown>({
   const [errors, setErrors] = useState<Error | null>(null);
   const [timeoutCountdown, setTimeoutCountdown] = useState<number | null>(null);
   const [hasCommittedOnce, setHasCommittedOnce] = useState(false);
+  const [reloadTick, setReloadTick] = useState(0);
+  const pendingReloadRef = useRef(false);
 
   const errorsRef = useRef(errors);
   const hasCommittedRef = useRef(hasCommittedOnce);
   errorsRef.current = errors;
   hasCommittedRef.current = hasCommittedOnce;
+
+  const reload = useCallback(() => {
+    if (isOnline === false) return;
+    pendingReloadRef.current = true;
+    setReloadTick((n) => n + 1);
+  }, [isOnline]);
 
   const pathParamsKey = JSON.stringify(pathParams ?? null);
   const queryParamsKey = JSON.stringify(queryParams ?? null);
@@ -155,8 +169,13 @@ export function RopeGeoHttpRequest<T = unknown>({
     const prevOnline = prevIsOnlineRef.current;
     const reconnecting = prevOnline === false && online;
     const keyChanged = lastRequestKeyRef.current !== requestKey;
+    const isManualReload = pendingReloadRef.current;
+    if (isManualReload) {
+      pendingReloadRef.current = false;
+    }
 
     if (!online) {
+      pendingReloadRef.current = false;
       if (keyChanged) {
         lastRequestKeyRef.current = requestKey;
         setData(null);
@@ -179,7 +198,12 @@ export function RopeGeoHttpRequest<T = unknown>({
 
     if (!keyChanged && reconnecting) {
       const onlyNoNetwork = errorsRef.current?.message === NO_NETWORK_MESSAGE;
-      if (hasCommittedRef.current && onlyNoNetwork && !refreshOnReconnect) {
+      if (
+        !isManualReload &&
+        hasCommittedRef.current &&
+        onlyNoNetwork &&
+        !refreshOnReconnect
+      ) {
         setErrors(null);
         setLoading(false);
         prevIsOnlineRef.current = true;
@@ -203,7 +227,8 @@ export function RopeGeoHttpRequest<T = unknown>({
       hasCommittedRef.current &&
       errorsRef.current?.message === NO_NETWORK_MESSAGE &&
       refreshOnReconnect;
-    if (!keyChanged && !keepStaleDuringFetch) {
+    const keepStaleForManualReload = isManualReload && hasCommittedRef.current;
+    if (!keyChanged && !keepStaleDuringFetch && !keepStaleForManualReload) {
       setData(null);
     }
 
@@ -331,6 +356,7 @@ export function RopeGeoHttpRequest<T = unknown>({
     isOnline,
     refreshOnReconnect,
     requestKey,
+    reloadTick,
   ]);
 
   const refreshing = loading && hasCommittedOnce;
@@ -343,6 +369,7 @@ export function RopeGeoHttpRequest<T = unknown>({
         data,
         errors,
         timeoutCountdown,
+        reload,
       })}
     </>
   );

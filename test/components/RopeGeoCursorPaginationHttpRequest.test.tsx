@@ -48,6 +48,7 @@ type Args = {
     loadMore: () => void;
     hasMore: boolean;
     timeoutCountdown: number | null;
+    reload: () => void;
 };
 
 function TestHost(props: {
@@ -121,6 +122,56 @@ describe('RopeGeoCursorPaginationHttpRequest', () => {
         expect(latest?.errors).toBeNull();
         expect(latest?.data).toHaveLength(1);
         expect(latest?.hasMore).toBe(false);
+    });
+
+    it('reload clears data and refetches the first page', async () => {
+        fetchMock
+            .mockResolvedValueOnce(
+                mockJsonResponse(
+                    true,
+                    200,
+                    JSON.stringify(previewsPage([regionPreviewItem('r1', 'One')], null)),
+                ),
+            )
+            .mockResolvedValueOnce(
+                mockJsonResponse(
+                    true,
+                    200,
+                    JSON.stringify(previewsPage([regionPreviewItem('r2', 'Two')], null)),
+                ),
+            );
+
+        const params = new RopewikiRegionPreviewsParams(10);
+        let latest: Args | undefined;
+        render(
+            <TestHost
+                queryParams={params}
+                onRender={(a) => {
+                    latest = a;
+                }}
+            />,
+        );
+
+        await waitFor(() => {
+            expect(latest?.loading).toBe(false);
+        });
+        expect((latest!.data as { id: string }[])[0]!.id).toBe('r1');
+
+        act(() => {
+            latest?.reload();
+        });
+
+        await waitFor(() => {
+            expect(latest?.loading).toBe(true);
+        });
+        expect(latest?.errors).toBeNull();
+        expect(latest?.data).toBeNull();
+
+        await waitFor(() => {
+            expect(latest?.loading).toBe(false);
+        });
+        expect((latest!.data as { id: string }[])[0]!.id).toBe('r2');
+        expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
     it('unwraps { data: ... } wrapper before parsing', async () => {

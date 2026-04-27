@@ -63,6 +63,7 @@ type Args<T> = {
     data: T | null;
     errors: Error | null;
     timeoutCountdown: number | null;
+    reload: () => void;
 };
 
 function TestHost<T>(props: {
@@ -178,6 +179,49 @@ describe('RopeGeoHttpRequest', () => {
         });
         expect(latest?.data).toBeNull();
         expect(latest?.errors?.message).toBe("404 missing");
+    });
+
+    it('reload refetches with loading true and errors null while keeping committed data', async () => {
+        const body1 = pageViewResponseJson();
+        const body2 = {
+            ...pageViewResponseJson(),
+            result: { ...(pageViewResponseJson().result as object), name: 'Updated Page' },
+        };
+        fetchMock
+            .mockResolvedValueOnce(mockJsonResponse(true, 200, JSON.stringify(body1)))
+            .mockResolvedValueOnce(mockJsonResponse(true, 200, JSON.stringify(body2)));
+
+        let latest: Args<RopewikiPageView> | undefined;
+        render(
+            <TestHost<RopewikiPageView>
+                path="/ropewiki/page/:id"
+                pathParams={{ id: 'reload-id' }}
+                onRender={(a) => {
+                    latest = a as Args<RopewikiPageView>;
+                }}
+            />,
+        );
+
+        await waitFor(() => {
+            expect(latest?.loading).toBe(false);
+        });
+        expect(latest?.data?.name).toBe('Test Page');
+
+        act(() => {
+            latest?.reload();
+        });
+
+        await waitFor(() => {
+            expect(latest?.loading).toBe(true);
+        });
+        expect(latest?.errors).toBeNull();
+        expect(latest?.data?.name).toBe('Test Page');
+
+        await waitFor(() => {
+            expect(latest?.loading).toBe(false);
+        });
+        expect(latest?.data?.name).toBe('Updated Page');
+        expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
     it('empty 200 body leaves data null without error', async () => {

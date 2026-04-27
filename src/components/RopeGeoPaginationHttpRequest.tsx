@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   formatHttpStatusMessage,
   formatNetworkRequestErrorMessage,
@@ -126,6 +126,12 @@ export type RopeGeoPaginationHttpRequestProps<T = unknown> = {
     errors: Error | null;
     /** Timeout countdown for the active phase (initial page or current batch); `null` between phases. */
     timeoutCountdown: number | null;
+    /**
+     * Re-runs the full pagination pass while online. Sets `loading` to `true`, clears `errors`,
+     * and resets progress (`received` / `total` / `data`) until the new pass completes. No-op when
+     * `isOnline` is `false`.
+     */
+    reload: () => void;
   }) => ReactNode;
 };
 
@@ -154,6 +160,8 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
   const [errors, setErrors] = useState<Error | null>(null);
   const [timeoutCountdown, setTimeoutCountdown] = useState<number | null>(null);
   const [hasCommittedOnce, setHasCommittedOnce] = useState(false);
+  const [reloadTick, setReloadTick] = useState(0);
+  const pendingReloadRef = useRef(false);
 
   const errorsRef = useRef(errors);
   const hasCommittedRef = useRef(hasCommittedOnce);
@@ -173,13 +181,24 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
   const prevIsOnlineRef = useRef<boolean | undefined>(undefined);
   const lastRequestKeyRef = useRef<string>("");
 
+  const reload = useCallback(() => {
+    if (isOnline === false) return;
+    pendingReloadRef.current = true;
+    setReloadTick((n) => n + 1);
+  }, [isOnline]);
+
   useEffect(() => {
     const online = isOnline !== false;
     const prevOnline = prevIsOnlineRef.current;
     const reconnecting = prevOnline === false && online;
     const keyChanged = lastRequestKeyRef.current !== requestKey;
+    const isManualReload = pendingReloadRef.current;
+    if (isManualReload) {
+      pendingReloadRef.current = false;
+    }
 
     if (!online) {
+      pendingReloadRef.current = false;
       if (keyChanged) {
         lastRequestKeyRef.current = requestKey;
         setHasCommittedOnce(false);
@@ -202,11 +221,22 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
       setTotal(null);
       setData(null);
       setErrors(null);
+    } else if (isManualReload) {
+      setHasCommittedOnce(false);
+      setReceived(0);
+      setTotal(null);
+      setData(null);
+      setErrors(null);
     }
 
     if (!keyChanged && reconnecting) {
       const onlyNoNetwork = errorsRef.current?.message === NO_NETWORK_MESSAGE;
-      if (hasCommittedRef.current && onlyNoNetwork && !refreshOnReconnect) {
+      if (
+        !isManualReload &&
+        hasCommittedRef.current &&
+        onlyNoNetwork &&
+        !refreshOnReconnect
+      ) {
         setErrors(null);
         setLoading(false);
         prevIsOnlineRef.current = true;
@@ -229,7 +259,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
       hasCommittedRef.current &&
       errorsRef.current?.message === NO_NETWORK_MESSAGE &&
       refreshOnReconnect;
-    if (!keyChanged && !keepStaleDuringFetch) {
+    if (!keyChanged && !keepStaleDuringFetch && !isManualReload) {
       setReceived(0);
       setTotal(null);
       setData(null);
@@ -442,6 +472,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
     isOnline,
     refreshOnReconnect,
     requestKey,
+    reloadTick,
   ]);
 
   const refreshing = loading && hasCommittedOnce;
@@ -456,6 +487,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
         data,
         errors,
         timeoutCountdown,
+        reload,
       })}
     </>
   );

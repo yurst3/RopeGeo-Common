@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
-import { render, waitFor, cleanup } from '@testing-library/react';
+import { act, render, waitFor, cleanup } from '@testing-library/react';
 import type { RouteGeoJsonFeature } from '../../src/models/routes/route';
 import { RouteType } from '../../src/models/routes/routeType';
 import '../../src/models/api/results/registerAllResultParsers';
@@ -67,6 +67,7 @@ type Args = {
     data: RouteGeoJsonFeature[] | null;
     errors: Error | null;
     timeoutCountdown: number | null;
+    reload: () => void;
 };
 
 function TestHost(props: {
@@ -133,6 +134,50 @@ describe('RopeGeoPaginationHttpRequest', () => {
             'p1-i1',
             'p1-i2',
         ]);
+    });
+
+    it('reload resets progress and refetches from page 1', async () => {
+        const params = new RoutesParams({ region: null, limit: 10, page: 1 });
+        const pageJson = routesPageJson(1, 2, 2);
+        fetchMock
+            .mockResolvedValueOnce(jsonOk(pageJson))
+            .mockImplementationOnce(() =>
+                new Promise((resolve) => {
+                    setTimeout(() => resolve(jsonOk(pageJson)), 40);
+                }),
+            );
+
+        let latest: Args | undefined;
+        render(
+            <TestHost
+                queryParams={params}
+                onRender={(a) => {
+                    latest = a;
+                }}
+            />,
+        );
+
+        await waitFor(() => {
+            expect(latest?.loading).toBe(false);
+        });
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        await act(async () => {
+            latest!.reload();
+        });
+
+        await waitFor(() => {
+            expect(latest?.loading).toBe(true);
+        });
+        expect(latest?.errors).toBeNull();
+        expect(latest?.received).toBe(0);
+        expect(latest?.total).toBeNull();
+        expect(latest?.data).toBeNull();
+
+        await waitFor(() => {
+            expect(latest?.loading).toBe(false);
+        });
+        expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
     it('concatenates multiple pages in ascending page order (not completion order)', async () => {
