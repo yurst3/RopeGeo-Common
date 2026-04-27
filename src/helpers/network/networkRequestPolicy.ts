@@ -6,6 +6,62 @@ export const NETWORK_REQUEST_TIMED_OUT_MESSAGE = "Network request timed out";
 /** Use this exact message for client-side offline gating and RN fetch failures treated as offline. */
 export const NO_NETWORK_MESSAGE = "No network connection";
 
+const HTTP_STATUS_TEXT: Record<number, string> = {
+  400: "Bad Request",
+  401: "Unauthorized",
+  403: "Forbidden",
+  404: "Not Found",
+  408: "Request Timeout",
+  409: "Conflict",
+  429: "Too Many Requests",
+  500: "Internal Server Error",
+  502: "Bad Gateway",
+  503: "Service Unavailable",
+  504: "Gateway Timeout",
+};
+
+function firstLineOrEmpty(value: string): string {
+  return (value.split("\n")[0] ?? "").trim();
+}
+
+/**
+ * Formats HTTP response failures as user-facing copy (e.g. "500 Internal Server Error").
+ * `detail` can be a response body snippet or `statusText`.
+ */
+export function formatHttpStatusMessage(status: number, detail?: string): string {
+  const trimmed = (detail ?? "").trim();
+  if (trimmed !== "") {
+    const line = firstLineOrEmpty(trimmed);
+    return line === "" ? String(status) : `${status} ${line}`;
+  }
+  return `${status} ${HTTP_STATUS_TEXT[status] ?? "HTTP Error"}`;
+}
+
+/**
+ * Normalizes raw network/request errors into stable user-facing copy.
+ * Keeps NO_NETWORK_MESSAGE unchanged for offline gating checks.
+ */
+export function formatNetworkRequestErrorMessage(error: unknown): string {
+  const raw =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : String(error ?? "");
+  const msg = raw.trim();
+  if (msg === "") return "Request failed";
+  if (msg === NO_NETWORK_MESSAGE) return NO_NETWORK_MESSAGE;
+  if (msg === NETWORK_REQUEST_TIMED_OUT_MESSAGE) return NETWORK_REQUEST_TIMED_OUT_MESSAGE;
+
+  const http = /^HTTP\s+(\d{3})(?::\s*(.*))?$/i.exec(msg);
+  if (http != null) {
+    const code = Number(http[1]);
+    const detail = (http[2] ?? "").trim();
+    return formatHttpStatusMessage(code, detail);
+  }
+  return msg;
+}
+
 export function isNetworkRequestTimeoutError(e: unknown): boolean {
   return e instanceof Error && e.message === NETWORK_REQUEST_TIMED_OUT_MESSAGE;
 }

@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  formatHttpStatusMessage,
+  formatNetworkRequestErrorMessage,
   installNetworkRequestPolicyTimers,
   isAbortError,
   NETWORK_REQUEST_TIMED_OUT_MESSAGE,
@@ -245,7 +247,9 @@ export function RopeGeoHttpRequest<T = unknown>({
         if (cancelled) return;
         const text = await res.text();
         if (!res.ok) {
-          setErrors(new Error(`HTTP ${res.status}: ${text || res.statusText}`));
+          setErrors(
+            new Error(formatHttpStatusMessage(res.status, text || res.statusText))
+          );
           setData(null);
           setHasCommittedOnce(false);
           return;
@@ -283,7 +287,13 @@ export function RopeGeoHttpRequest<T = unknown>({
       .catch((err) => {
         if (cancelled) return;
         if (timedOutRef.current) {
-          setErrors(new Error(NETWORK_REQUEST_TIMED_OUT_MESSAGE));
+          setErrors(
+            new Error(
+              formatNetworkRequestErrorMessage(
+                new Error(NETWORK_REQUEST_TIMED_OUT_MESSAGE)
+              )
+            )
+          );
           setData(null);
           setHasCommittedOnce(false);
           return;
@@ -293,7 +303,7 @@ export function RopeGeoHttpRequest<T = unknown>({
           url,
           error: err instanceof Error ? err.message : String(err),
         });
-        setErrors(err instanceof Error ? err : new Error(String(err)));
+        setErrors(new Error(formatNetworkRequestErrorMessage(err)));
         setData(null);
         setHasCommittedOnce(false);
       })

@@ -226,7 +226,7 @@ describe('RopeGeoCursorPaginationHttpRequest', () => {
             expect(latest?.loading).toBe(false);
         });
         expect(latest?.data).toBeNull();
-        expect(latest?.errors?.message).toMatch(/HTTP 503/);
+        expect(latest?.errors?.message).toBe("503 down");
     });
 
     it('loadMore HTTP error does not clear existing data', async () => {

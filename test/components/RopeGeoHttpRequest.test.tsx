@@ -177,7 +177,7 @@ describe('RopeGeoHttpRequest', () => {
             expect(latest?.loading).toBe(false);
         });
         expect(latest?.data).toBeNull();
-        expect(latest?.errors?.message).toMatch(/HTTP 404/);
+        expect(latest?.errors?.message).toBe("404 missing");
     });
 
     it('empty 200 body leaves data null without error', async () => {

@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  formatHttpStatusMessage,
+  formatNetworkRequestErrorMessage,
   installNetworkRequestPolicyTimers,
   isAbortError,
   mergeParentSignalWithDeadline,
@@ -310,7 +312,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
 
           if (!res.ok) {
             abortController.abort();
-            throw new Error(`HTTP ${res.status}: ${text || res.statusText}`);
+            throw new Error(formatHttpStatusMessage(res.status, text || res.statusText));
           }
 
           if (text.length === 0) {
@@ -345,7 +347,11 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
         } catch (err) {
           if (pageNum !== 1 && merged != null && merged.consumeDidTimeout()) {
             abortController.abort();
-            throw new Error(NETWORK_REQUEST_TIMED_OUT_MESSAGE);
+            throw new Error(
+              formatNetworkRequestErrorMessage(
+                new Error(NETWORK_REQUEST_TIMED_OUT_MESSAGE)
+              )
+            );
           }
           throw err;
         } finally {
@@ -412,7 +418,7 @@ export function RopeGeoPaginationHttpRequest<T = unknown>({
         console.error("[RopeGeoPaginationHttpRequest] Request failed", {
           error: err instanceof Error ? err.message : String(err),
         });
-        setErrors(err instanceof Error ? err : new Error(String(err)));
+        setErrors(new Error(formatNetworkRequestErrorMessage(err)));
         setData(null);
         setHasCommittedOnce(false);
       } finally {

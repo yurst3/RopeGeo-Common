@@ -241,7 +241,7 @@ describe('RopeGeoPaginationHttpRequest', () => {
                 expect(latest?.loading).toBe(false);
             });
             expect(latest?.data).toBeNull();
-            expect(latest?.errors?.message).toMatch(/HTTP 500/);
+            expect(latest?.errors?.message).toBe("500 nope");
         } finally {
             errSpy.mockRestore();
         }
