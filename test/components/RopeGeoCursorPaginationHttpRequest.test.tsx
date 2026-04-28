@@ -325,6 +325,8 @@ describe('RopeGeoCursorPaginationHttpRequest', () => {
         });
         expect(latest?.data).toHaveLength(1);
         expect(((latest!.data as unknown[])[0] as { name: string }).name).toBe('Kept');
+        expect(latest?.hasMore).toBe(false);
+        expect(latest?.errors?.message).toBe('500 fail');
     });
 
     it('invalid JSON on initial load sets errors', async () => {

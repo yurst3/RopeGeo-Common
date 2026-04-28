@@ -422,8 +422,18 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
     fetch(url, init)
       .then(async (res) => {
         const text = await res.text();
-        if (!res.ok) return;
-        if (text.length === 0) return;
+        if (!res.ok) {
+          setErrors(
+            new Error(formatHttpStatusMessage(res.status, text || res.statusText))
+          );
+          setParams((p) => p.withCursor(null));
+          return;
+        }
+        if (text.length === 0) {
+          setErrors(null);
+          setParams((p) => p.withCursor(null));
+          return;
+        }
         try {
           const raw = JSON.parse(text) as unknown;
           const body = getResponseBody(raw);
@@ -434,6 +444,7 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
           };
           setData((prev) => [...(prev ?? []), ...results]);
           setParams((p) => p.withCursor(nextCursor));
+          setErrors(null);
         } catch (parseError) {
           console.error("[RopeGeoCursorPaginationHttpRequest] loadMore: Invalid JSON response", {
             url,
@@ -441,12 +452,22 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
             responseText: text.slice(0, 500),
             parseError: parseError instanceof Error ? parseError.message : String(parseError),
           });
+          setErrors(new Error("Invalid JSON response"));
+          setParams((p) => p.withCursor(null));
         }
       })
       .catch((err) => {
         if (loadMoreAbortRef.current !== outer) return;
         if (timedOutRef.current) {
           console.error("[RopeGeoCursorPaginationHttpRequest] loadMore: timed out", { url });
+          setErrors(
+            new Error(
+              formatNetworkRequestErrorMessage(
+                new Error(NETWORK_REQUEST_TIMED_OUT_MESSAGE)
+              )
+            )
+          );
+          setParams((p) => p.withCursor(null));
           return;
         }
         if (isAbortError(err)) return;
@@ -454,6 +475,8 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
           url,
           error: err instanceof Error ? err.message : String(err),
         });
+        setErrors(new Error(formatNetworkRequestErrorMessage(err)));
+        setParams((p) => p.withCursor(null));
       })
       .finally(() => {
         policyDispose();
