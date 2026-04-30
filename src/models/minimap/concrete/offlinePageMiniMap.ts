@@ -1,18 +1,25 @@
 import { Bounds } from '../bounds';
 import type { OfflineMiniMap } from '../abstract/offlineMiniMap';
 import { PageMiniMap, registerPageMiniMapParser } from '../abstract/pageMiniMap';
+import type { LegendItem } from '../legend/abstract/legendItem';
 
 export class OfflinePageMiniMap extends PageMiniMap implements OfflineMiniMap {
     readonly fetchType = 'offline' as const;
     offlineTilesTemplate: string;
 
-    constructor(layerId: string, offlineTilesTemplate: string, bounds: Bounds, title: string) {
-        super(layerId, bounds, title);
+    constructor(
+        layerId: string,
+        offlineTilesTemplate: string,
+        bounds: Bounds,
+        title: string,
+        legend?: Record<string, LegendItem>,
+    ) {
+        super(layerId, bounds, title, legend);
         this.offlineTilesTemplate = offlineTilesTemplate;
     }
 
     toPlain(): Record<string, unknown> {
-        return {
+        const plain: Record<string, unknown> = {
             fetchType: this.fetchType,
             miniMapType: this.miniMapType,
             layerId: this.layerId,
@@ -25,6 +32,12 @@ export class OfflinePageMiniMap extends PageMiniMap implements OfflineMiniMap {
             },
             title: this.title,
         };
+        if (this.legend !== undefined) {
+            plain.legend = Object.fromEntries(
+                Object.entries(this.legend).map(([key, item]) => [key, item.toPlain()]),
+            );
+        }
+        return plain;
     }
 
     static fromResult(result: unknown): OfflinePageMiniMap {

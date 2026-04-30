@@ -239,6 +239,27 @@ describe('PageMiniMap', () => {
         expect(m).toBeInstanceOf(OfflinePageMiniMap);
     });
 
+    it('parses optional legend on online page minimap', () => {
+        const m = PageMiniMap.fromResult({
+            miniMapType: MiniMapType.Page,
+            fetchType: 'online',
+            title: 'T',
+            layerId: 'layer-1',
+            onlineTilesTemplate: 'https://api.example.com/tiles/u/{z}/{x}/{y}.pbf',
+            bounds: validBounds,
+            legend: {
+                seg: {
+                    featureType: 'line',
+                    id: 'seg',
+                    name: 'Main',
+                    bounds: validBounds,
+                },
+            },
+        });
+        expect(m.legend).toBeDefined();
+        expect(m.legend?.seg.featureType).toBe('line');
+    });
+
     it('validates offline page minimap template', () => {
         expect(() =>
             PageMiniMap.fromResult({

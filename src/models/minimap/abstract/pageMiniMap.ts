@@ -1,5 +1,9 @@
 import type { FetchType } from '../../fetchType';
 import { Bounds } from '../bounds';
+import { LegendItem } from '../legend/abstract/legendItem';
+import '../legend/concrete/lineLegendItem';
+import '../legend/concrete/pointLegendItem';
+import '../legend/concrete/polygonLegendItem';
 import { MiniMap } from './miniMap';
 import { MiniMapType } from './miniMapType';
 
@@ -20,11 +24,13 @@ export abstract class PageMiniMap extends MiniMap {
     readonly miniMapType = MiniMapType.Page;
     layerId: string;
     bounds: Bounds;
+    legend?: Record<string, LegendItem>;
 
-    protected constructor(layerId: string, bounds: Bounds, title: string) {
+    protected constructor(layerId: string, bounds: Bounds, title: string, legend?: Record<string, LegendItem>) {
         super(title);
         this.layerId = layerId;
         this.bounds = bounds;
+        this.legend = legend;
     }
 
     static fromResult(result: unknown): PageMiniMap {
@@ -72,6 +78,9 @@ export abstract class PageMiniMap extends MiniMap {
         }
         r.title = title;
         r.bounds = Bounds.fromResult(r.bounds);
+        if ('legend' in r && r.legend !== undefined) {
+            r.legend = LegendItem.legendRecordFromResult(r.legend, `${context}.legend`);
+        }
     }
 
     protected static assertTemplate(value: unknown, keyName: string): void {

@@ -254,12 +254,26 @@ Abstract classes live under `minimap/abstract/`, concrete under `minimap/concret
 | `RegionMiniMap` | `MiniMap` | Abstract region minimap (`miniMapType: region`); online/offline concrete subclasses. | `import { RegionMiniMap } from 'ropegeo-common/models'` |
 | `OnlineRegionMiniMap` | `RegionMiniMap` | API region routes (`routesParams`, `bounds` or null, `fetchType: "online"`). | `import { OnlineRegionMiniMap } from 'ropegeo-common/models'` |
 | `OfflineRegionMiniMap` | `RegionMiniMap` | Bundled region routes GeoJSON path (`downloadedGeojson`, `fetchType: "offline"`). | `import { OfflineRegionMiniMap } from 'ropegeo-common/models'` |
-| `PageMiniMap` | `MiniMap` | Abstract page minimap (`miniMapType: page`); online/offline tile templates. | `import { PageMiniMap } from 'ropegeo-common/models'` |
+| `PageMiniMap` | `MiniMap` | Abstract page minimap (`miniMapType: page`); online/offline tile templates and optional `legend`. | `import { PageMiniMap } from 'ropegeo-common/models'` |
 | `OnlinePageMiniMap` | `PageMiniMap` | API page tiles template (`onlineTilesTemplate`, `fetchType: "online"`). | `import { OnlinePageMiniMap } from 'ropegeo-common/models'` |
 | `OfflinePageMiniMap` | `PageMiniMap` | Persisted local tiles template (`offlineTilesTemplate`, `fetchType: "offline"`). | `import { OfflinePageMiniMap } from 'ropegeo-common/models'` |
 | `CenteredRegionMiniMap` | `MiniMap` | Abstract centered-route minimap (`miniMapType: centeredRegion`). | `import { CenteredRegionMiniMap } from 'ropegeo-common/models'` |
 | `OnlineCenteredRegionMiniMap` | `CenteredRegionMiniMap` | API centered-route fallback (`routesParams`, `fetchType: "online"`). | `import { OnlineCenteredRegionMiniMap } from 'ropegeo-common/models'` |
 | `OfflineCenteredRegionMiniMap` | `CenteredRegionMiniMap` | Persisted local centered-route geojson (`downloadedGeojson`, `fetchType: "offline"`). | `import { OfflineCenteredRegionMiniMap } from 'ropegeo-common/models'` |
+
+### Minimap legend (`src/models/minimap/legend/`)
+
+Legend entries for page minimaps are keyed objects (`legend` on `PageMiniMap`); each value is validated by `featureType` like `MiniMap`.
+
+| Name | Base class | Description | Import |
+| --- | --- | --- | --- |
+| `LegendFeatureType` | N/A | Discriminator for legend wire payloads (`point`, `line`, `polygon`). | `import { LegendFeatureType } from 'ropegeo-common/models'` |
+| `LEGEND_FEATURE_TYPES` | N/A | Set of allowed `LegendItem.featureType` string values. | `import { LEGEND_FEATURE_TYPES } from 'ropegeo-common/models'` |
+| `LegendItem` | N/A | Abstract legend entry; `fromResult` dispatches on `featureType`. | `import { LegendItem } from 'ropegeo-common/models'` |
+| `registerLegendItemParser` | N/A | Registers a `LegendItem` parser for a `LegendFeatureType` (extension point). | `import { registerLegendItemParser } from 'ropegeo-common/models'` |
+| `PointLegendItem` | `LegendItem` | Point legend entry (`coordinates`, optional `icon`). | `import { PointLegendItem } from 'ropegeo-common/models'` |
+| `LineLegendItem` | `LegendItem` | Line legend entry (`bounds`, optional stroke fields). | `import { LineLegendItem } from 'ropegeo-common/models'` |
+| `PolygonLegendItem` | `LegendItem` | Polygon legend entry (`bounds`, optional border/fill colors). | `import { PolygonLegendItem } from 'ropegeo-common/models'` |
 
 ### Link preview (`src/models/linkPreview/`)
 
