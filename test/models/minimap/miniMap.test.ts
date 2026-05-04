@@ -38,7 +38,8 @@ describe('MiniMap', () => {
                 miniMapType: MiniMapType.Page,
                 fetchType: 'online',
                 title: 'Page route',
-                layerId: ROUTE_ID,
+                polyLineLayerId: 'PolyLines',
+                pointLayerId: 'Points',
                 onlineTilesTemplate: 'https://x.com/t/{z}/{x}/{y}.pbf',
                 bounds: { north: 40, south: 38, east: -108, west: -110 },
             });
@@ -126,7 +127,8 @@ describe('RegionMiniMap', () => {
                 miniMapType: MiniMapType.Page,
                 fetchType: 'online',
                 title: 'T',
-                layerId: 'x',
+                polyLineLayerId: 'PolyLines',
+                pointLayerId: 'Points',
                 onlineTilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
                 bounds: { north: 1, south: 0, east: 1, west: 0 },
             }),
@@ -165,11 +167,13 @@ describe('PageMiniMap', () => {
             miniMapType: MiniMapType.Page,
             fetchType: 'online',
             title: 'T',
-            layerId: '38f5c3fa-7248-41ed-815e-8b9e6aae5d61',
+            polyLineLayerId: 'PolyLines',
+            pointLayerId: 'Points',
             onlineTilesTemplate: 'https://api.example.com/tiles/u/{z}/{x}/{y}.pbf',
             bounds: validBounds,
         });
-        expect(m.layerId).toBe('38f5c3fa-7248-41ed-815e-8b9e6aae5d61');
+        expect(m.polyLineLayerId).toBe('PolyLines');
+        expect(m.pointLayerId).toBe('Points');
         expect(m.bounds.north).toBe(39.5);
         expect(m.title).toBe('T');
     });
@@ -180,7 +184,8 @@ describe('PageMiniMap', () => {
                 miniMapType: MiniMapType.Page,
                 fetchType: 'online',
                 title: '  ',
-                layerId: 'id',
+                polyLineLayerId: 'PolyLines',
+                pointLayerId: 'Points',
                 onlineTilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
                 bounds: validBounds,
             }),
@@ -201,26 +206,14 @@ describe('PageMiniMap', () => {
         ).toThrow(/PageMiniMap\.miniMapType must be/);
     });
 
-    it('throws when layerId empty', () => {
-        expect(() =>
-            PageMiniMap.fromResult({
-                miniMapType: MiniMapType.Page,
-                fetchType: 'online',
-                title: 'T',
-                layerId: '',
-                onlineTilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
-                bounds: validBounds,
-            }),
-        ).toThrow(/OnlinePageMiniMap\.layerId/);
-    });
-
     it('throws when tilesTemplate missing placeholders', () => {
         expect(() =>
             PageMiniMap.fromResult({
                 miniMapType: MiniMapType.Page,
                 fetchType: 'online',
                 title: 'T',
-                layerId: 'id',
+                polyLineLayerId: 'PolyLines',
+                pointLayerId: 'Points',
                 onlineTilesTemplate: 'https://x/',
                 bounds: validBounds,
             }),
@@ -232,7 +225,8 @@ describe('PageMiniMap', () => {
             miniMapType: MiniMapType.Page,
             fetchType: 'offline',
             title: 'Offline',
-            layerId: ROUTE_ID,
+            polyLineLayerId: 'PolyLines',
+            pointLayerId: 'Points',
             offlineTilesTemplate: 'file:///tiles/{z}/{x}/{y}.pbf',
             bounds: validBounds,
         });
@@ -244,7 +238,8 @@ describe('PageMiniMap', () => {
             miniMapType: MiniMapType.Page,
             fetchType: 'online',
             title: 'T',
-            layerId: 'layer-1',
+            polyLineLayerId: 'PolyLines',
+            pointLayerId: 'Points',
             onlineTilesTemplate: 'https://api.example.com/tiles/u/{z}/{x}/{y}.pbf',
             bounds: validBounds,
             legend: {
@@ -266,7 +261,8 @@ describe('PageMiniMap', () => {
                 miniMapType: MiniMapType.Page,
                 fetchType: 'offline',
                 title: 'Offline',
-                layerId: ROUTE_ID,
+                polyLineLayerId: 'PolyLines',
+                pointLayerId: 'Points',
                 offlineTilesTemplate: '/tiles/no-placeholders.pbf',
                 bounds: validBounds,
             }),

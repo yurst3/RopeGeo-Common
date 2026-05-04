@@ -418,7 +418,12 @@ describe('RopewikiRegionView', () => {
             expect(() =>
                 RopewikiRegionView.fromResult({
                     ...getValidBody(),
-                    miniMap: { miniMapType: MiniMapType.Page, fetchType: 'online', layerId: 'x' },
+                    miniMap: {
+                        miniMapType: MiniMapType.Page,
+                        fetchType: 'online',
+                        polyLineLayerId: 'PolyLines',
+                        pointLayerId: 'Points',
+                    },
                 }),
             ).toThrow();
         });

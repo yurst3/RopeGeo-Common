@@ -9,18 +9,26 @@ export class OnlinePageMiniMap extends PageMiniMap implements OnlineMiniMap {
     onlineTilesTemplate: string;
 
     constructor(
-        layerId: string,
+        polyLineLayerId: string,
+        pointLayerId: string,
         onlineTilesTemplate: string,
         bounds: Bounds,
         title: string,
         legend?: Record<string, LegendItem>,
     ) {
-        super(layerId, bounds, title, legend);
+        super(polyLineLayerId, pointLayerId, bounds, title, legend);
         this.onlineTilesTemplate = onlineTilesTemplate;
     }
 
     toOffline(offlineTilesTemplate: string): OfflinePageMiniMap {
-        return new OfflinePageMiniMap(this.layerId, offlineTilesTemplate, this.bounds, this.title, this.legend);
+        return new OfflinePageMiniMap(
+            this.polyLineLayerId,
+            this.pointLayerId,
+            offlineTilesTemplate,
+            this.bounds,
+            this.title,
+            this.legend,
+        );
     }
 
     static fromResult(result: unknown): OnlinePageMiniMap {

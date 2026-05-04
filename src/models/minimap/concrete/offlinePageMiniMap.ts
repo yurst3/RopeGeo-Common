@@ -8,13 +8,14 @@ export class OfflinePageMiniMap extends PageMiniMap implements OfflineMiniMap {
     offlineTilesTemplate: string;
 
     constructor(
-        layerId: string,
+        polyLineLayerId: string,
+        pointLayerId: string,
         offlineTilesTemplate: string,
         bounds: Bounds,
         title: string,
         legend?: Record<string, LegendItem>,
     ) {
-        super(layerId, bounds, title, legend);
+        super(polyLineLayerId, pointLayerId, bounds, title, legend);
         this.offlineTilesTemplate = offlineTilesTemplate;
     }
 
@@ -22,7 +23,8 @@ export class OfflinePageMiniMap extends PageMiniMap implements OfflineMiniMap {
         const plain: Record<string, unknown> = {
             fetchType: this.fetchType,
             miniMapType: this.miniMapType,
-            layerId: this.layerId,
+            polyLineLayerId: this.polyLineLayerId,
+            pointLayerId: this.pointLayerId,
             offlineTilesTemplate: this.offlineTilesTemplate,
             bounds: {
                 north: this.bounds.north,

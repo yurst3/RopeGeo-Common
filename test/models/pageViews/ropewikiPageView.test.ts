@@ -48,6 +48,7 @@ function onlineResult(miniMap: Record<string, unknown> | null = null): Record<st
         exitElevGain: null,
         months: [],
         latestRevisionDate: '2024-01-01T00:00:00.000Z',
+        mapDataId: null,
         bannerImage: {
             fetchType: 'online',
             order: 0,
@@ -131,16 +132,18 @@ describe('RopewikiPageView models', () => {
     });
 
     it('toOffline throws when minimap exists but downloaded minimap is omitted', () => {
-        const page = OnlineRopewikiPageView.fromResult(
-            onlineResult({
+        const page = OnlineRopewikiPageView.fromResult({
+            ...onlineResult({
                 miniMapType: MiniMapType.Page,
                 fetchType: 'online',
                 title: 'Map',
-                layerId: ROUTE_ID,
+                polyLineLayerId: 'PolyLines',
+                pointLayerId: 'Points',
                 onlineTilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
                 bounds: { north: 1, south: 0, east: 1, west: 0 },
             }),
-        );
+            mapDataId: ROUTE_ID,
+        });
         expect(() =>
             page.toOffline({
                 [IMAGE_ID_A]: new ImageVersions({ banner: '/tmp/a-banner.avif', full: '/tmp/a-full.avif' }),
@@ -189,7 +192,8 @@ describe('RopewikiPageView models', () => {
                     miniMapType: MiniMapType.Page,
                     fetchType: 'online',
                     title: 'Map',
-                    layerId: ROUTE_ID,
+                    polyLineLayerId: 'PolyLines',
+                    pointLayerId: 'Points',
                     onlineTilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
                     bounds: { north: 1, south: 0, east: 1, west: 0 },
                 },
@@ -204,23 +208,26 @@ describe('RopewikiPageView models', () => {
     });
 
     it('toOffline accepts downloaded minimap when online minimap exists', () => {
-        const page = OnlineRopewikiPageView.fromResult(
-            onlineResult({
+        const page = OnlineRopewikiPageView.fromResult({
+            ...onlineResult({
                 miniMapType: MiniMapType.Page,
                 fetchType: 'online',
                 title: 'Map',
-                layerId: ROUTE_ID,
+                polyLineLayerId: 'PolyLines',
+                pointLayerId: 'Points',
                 onlineTilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
                 bounds: { north: 1, south: 0, east: 1, west: 0 },
             }),
-        );
+            mapDataId: ROUTE_ID,
+        });
         const offline = page.toOffline(
             {
                 [IMAGE_ID_A]: new ImageVersions({ banner: '/tmp/a-banner.avif', full: '/tmp/a-full.avif' }),
                 [IMAGE_ID_B]: new ImageVersions({ banner: '/tmp/b-banner.avif', full: '/tmp/b-full.avif' }),
             },
             new OfflinePageMiniMap(
-                ROUTE_ID,
+                'PolyLines',
+                'Points',
                 'file:///tiles/{z}/{x}/{y}.pbf',
                 new Bounds(1, 0, 1, 0),
                 'Map',

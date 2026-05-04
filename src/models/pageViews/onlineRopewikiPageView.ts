@@ -56,6 +56,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
         latestRevisionDate: Date,
         bannerImage: OnlineBetaSectionImage | null,
         betaSections: OnlineBetaSection[],
+        mapDataId: string | null,
         miniMap: OnlinePageMiniMap | OnlineCenteredRegionMiniMap | null,
         coordinates: { lat: number; lon: number } | null,
     ) {
@@ -88,6 +89,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
             exitElevGain,
             months,
             latestRevisionDate,
+            mapDataId,
             coordinates,
         );
         this.bannerImage = bannerImage;
@@ -182,6 +184,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
             this.latestRevisionDate,
             offlineBannerImage,
             offlineSections,
+            this.mapDataId,
             offlineMiniMap,
             this.coordinates,
         );
@@ -190,7 +193,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
     toPagePreview(): OnlinePagePreview {
         const mapData =
             this.miniMap != null && this.miniMap.miniMapType === MiniMapType.Page
-                ? (this.miniMap as OnlinePageMiniMap).layerId
+                ? this.mapDataId
                 : null;
         return new OnlinePagePreview(
             this.id,

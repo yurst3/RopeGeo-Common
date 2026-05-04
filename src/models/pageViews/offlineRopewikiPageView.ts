@@ -47,6 +47,7 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
         latestRevisionDate: Date,
         bannerImage: OfflineBetaSectionImage | null,
         betaSections: OfflineBetaSection[],
+        mapDataId: string | null,
         miniMap: OfflinePageMiniMap | OfflineCenteredRegionMiniMap | null,
         coordinates: { lat: number; lon: number } | null,
     ) {
@@ -79,6 +80,7 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
             exitElevGain,
             months,
             latestRevisionDate,
+            mapDataId,
             coordinates,
         );
         this.bannerImage = bannerImage;
@@ -89,7 +91,7 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
     toPagePreview(): OfflinePagePreview {
         const mapData =
             this.miniMap != null && this.miniMap.miniMapType === MiniMapType.Page
-                ? (this.miniMap as OfflinePageMiniMap).layerId
+                ? this.mapDataId
                 : null;
         return new OfflinePagePreview(
             this.id,

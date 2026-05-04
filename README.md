@@ -178,7 +178,7 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
 | `RopewikiPageView` | `BaseRopewikiPageView` | Backward-compatible alias exported as the online page view class. | `import { RopewikiPageView } from 'ropegeo-common/models'` |
-| `BaseRopewikiPageView` | N/A | Abstract Ropewiki page view base with shared validation/fields. | `import { BaseRopewikiPageView } from 'ropegeo-common/models'` |
+| `BaseRopewikiPageView` | N/A | Abstract Ropewiki page view base; includes optional `mapDataId` (vector tile record id) alongside shared validation/fields. | `import { BaseRopewikiPageView } from 'ropegeo-common/models'` |
 | `OnlineRopewikiPageView` | `BaseRopewikiPageView` | Online Ropewiki page view with API image URLs and online minimap variants. | `import { OnlineRopewikiPageView } from 'ropegeo-common/models'` |
 | `OfflineRopewikiPageView` | `BaseRopewikiPageView` | Offline Ropewiki page view with downloaded paths and offline minimap variants. | `import { OfflineRopewikiPageView } from 'ropegeo-common/models'` |
 | `OnlinePageView` | N/A | Interface for online page-view behavior (`toOffline`, `toSavedPage`, etc.). | `import type { OnlinePageView } from 'ropegeo-common/models'` |
@@ -254,9 +254,9 @@ Abstract classes live under `minimap/abstract/`, concrete under `minimap/concret
 | `RegionMiniMap` | `MiniMap` | Abstract region minimap (`miniMapType: region`); online/offline concrete subclasses. | `import { RegionMiniMap } from 'ropegeo-common/models'` |
 | `OnlineRegionMiniMap` | `RegionMiniMap` | API region routes (`routesParams`, `bounds` or null, `fetchType: "online"`). | `import { OnlineRegionMiniMap } from 'ropegeo-common/models'` |
 | `OfflineRegionMiniMap` | `RegionMiniMap` | Bundled region routes GeoJSON path (`downloadedGeojson`, `fetchType: "offline"`). | `import { OfflineRegionMiniMap } from 'ropegeo-common/models'` |
-| `PageMiniMap` | `MiniMap` | Abstract page minimap (`miniMapType: page`); online/offline tile templates and optional `legend`. | `import { PageMiniMap } from 'ropegeo-common/models'` |
-| `OnlinePageMiniMap` | `PageMiniMap` | API page tiles template (`onlineTilesTemplate`, `fetchType: "online"`). | `import { OnlinePageMiniMap } from 'ropegeo-common/models'` |
-| `OfflinePageMiniMap` | `PageMiniMap` | Persisted local tiles template (`offlineTilesTemplate`, `fetchType: "offline"`). | `import { OfflinePageMiniMap } from 'ropegeo-common/models'` |
+| `PageMiniMap` | `MiniMap` | Abstract page minimap (`miniMapType: page`); MVT `polyLineLayerId` / `pointLayerId`, tile templates, optional `legend`. | `import { PageMiniMap } from 'ropegeo-common/models'` |
+| `OnlinePageMiniMap` | `PageMiniMap` | API page tiles (`onlineTilesTemplate`, `fetchType: "online"`). | `import { OnlinePageMiniMap } from 'ropegeo-common/models'` |
+| `OfflinePageMiniMap` | `PageMiniMap` | Local page tiles (`offlineTilesTemplate`, `fetchType: "offline"`). | `import { OfflinePageMiniMap } from 'ropegeo-common/models'` |
 | `CenteredRegionMiniMap` | `MiniMap` | Abstract centered-route minimap (`miniMapType: centeredRegion`). | `import { CenteredRegionMiniMap } from 'ropegeo-common/models'` |
 | `OnlineCenteredRegionMiniMap` | `CenteredRegionMiniMap` | API centered-route fallback (`routesParams`, `fetchType: "online"`). | `import { OnlineCenteredRegionMiniMap } from 'ropegeo-common/models'` |
 | `OfflineCenteredRegionMiniMap` | `CenteredRegionMiniMap` | Persisted local centered-route geojson (`downloadedGeojson`, `fetchType: "offline"`). | `import { OfflineCenteredRegionMiniMap } from 'ropegeo-common/models'` |

@@ -42,6 +42,7 @@ function validResult(): Record<string, unknown> {
         exitElevGain: null,
         months: [],
         latestRevisionDate: '2024-01-01T00:00:00.000Z',
+        mapDataId: null,
         bannerImage: null,
         betaSections: [],
         miniMap: null,
@@ -53,7 +54,8 @@ function validTilesMiniMap() {
     return {
         miniMapType: MiniMapType.Page,
         fetchType: 'online',
-        layerId: '38f5c3fa-7248-41ed-815e-8b9e6aae5d61',
+        polyLineLayerId: 'PolyLines',
+        pointLayerId: 'Points',
         onlineTilesTemplate:
             'https://api.webscraper.ropegeo.com/mapdata/tiles/38f5c3fa-7248-41ed-815e-8b9e6aae5d61/{z}/{x}/{y}.pbf',
         bounds: { north: 39.5, south: 38.1, east: -108.2, west: -110.0 },
@@ -121,6 +123,9 @@ describe('RopewikiPageViewResult', () => {
             expect(() =>
                 RopewikiPageViewResult.fromResult({ ...validResult(), url: undefined }),
             ).toThrow(/RopewikiPageView\.url must be a string/);
+            expect(() =>
+                RopewikiPageViewResult.fromResult({ ...validResult(), mapDataId: '' }),
+            ).toThrow(/RopewikiPageView\.mapDataId/);
         });
 
         it('parses miniMap when null', () => {
@@ -176,11 +181,17 @@ describe('RopewikiPageViewResult', () => {
         });
 
         it('parses valid PageMiniMap', () => {
-            const result = { ...validResult(), miniMap: validTilesMiniMap() };
+            const result = {
+                ...validResult(),
+                mapDataId: '38f5c3fa-7248-41ed-815e-8b9e6aae5d61',
+                miniMap: validTilesMiniMap(),
+            };
             const parsed = RopewikiPageViewResult.fromResult(result);
             expect(parsed.result.miniMap).not.toBeNull();
+            expect(parsed.result.mapDataId).toBe('38f5c3fa-7248-41ed-815e-8b9e6aae5d61');
             const mm = parsed.result.miniMap as OnlinePageMiniMap;
-            expect(mm.layerId).toBe('38f5c3fa-7248-41ed-815e-8b9e6aae5d61');
+            expect(mm.polyLineLayerId).toBe('PolyLines');
+            expect(mm.pointLayerId).toBe('Points');
             expect(mm.onlineTilesTemplate).toContain('{z}');
             expect(mm.bounds.north).toBe(39.5);
             expect(mm.title).toBe('Route One');
@@ -228,7 +239,8 @@ describe('RopewikiPageViewResult', () => {
                     miniMap: {
                         miniMapType: MiniMapType.Page,
                         fetchType: 'online',
-                        layerId: 'id',
+                        polyLineLayerId: 'PolyLines',
+                        pointLayerId: 'Points',
                         title: 'T',
                         onlineTilesTemplate: 'https://example.com/tiles/{z}/{x}.pbf',
                         bounds: { north: 39, south: 38, east: -108, west: -110 },
@@ -244,7 +256,8 @@ describe('RopewikiPageViewResult', () => {
                     miniMap: {
                         miniMapType: MiniMapType.Page,
                         fetchType: 'online',
-                        layerId: 'id',
+                        polyLineLayerId: 'PolyLines',
+                        pointLayerId: 'Points',
                         title: 'T',
                         onlineTilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
                         bounds: { north: 39, south: 38, east: -108 },

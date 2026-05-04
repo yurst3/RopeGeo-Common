@@ -22,13 +22,23 @@ export function registerPageMiniMapParser(
 export abstract class PageMiniMap extends MiniMap {
     abstract readonly fetchType: FetchType;
     readonly miniMapType = MiniMapType.Page;
-    layerId: string;
+    /** Vector tile source-layer id for line and polygon features. */
+    polyLineLayerId: string;
+    /** Vector tile source-layer id for point features. */
+    pointLayerId: string;
     bounds: Bounds;
     legend?: Record<string, LegendItem>;
 
-    protected constructor(layerId: string, bounds: Bounds, title: string, legend?: Record<string, LegendItem>) {
+    protected constructor(
+        polyLineLayerId: string,
+        pointLayerId: string,
+        bounds: Bounds,
+        title: string,
+        legend?: Record<string, LegendItem>,
+    ) {
         super(title);
-        this.layerId = layerId;
+        this.polyLineLayerId = polyLineLayerId;
+        this.pointLayerId = pointLayerId;
         this.bounds = bounds;
         this.legend = legend;
     }
@@ -72,9 +82,15 @@ export abstract class PageMiniMap extends MiniMap {
             );
         }
         const title = MiniMap.assertNonEmptyTitle(r.title, `${context}.title`);
-        const layerId = r.layerId;
-        if (typeof layerId !== 'string' || layerId.length === 0) {
-            throw new Error(`${context}.layerId must be a non-empty string, got: ${typeof layerId}`);
+        const polyLineLayerId = r.polyLineLayerId;
+        if (typeof polyLineLayerId !== 'string' || polyLineLayerId.length === 0) {
+            throw new Error(
+                `${context}.polyLineLayerId must be a non-empty string, got: ${typeof polyLineLayerId}`,
+            );
+        }
+        const pointLayerId = r.pointLayerId;
+        if (typeof pointLayerId !== 'string' || pointLayerId.length === 0) {
+            throw new Error(`${context}.pointLayerId must be a non-empty string, got: ${typeof pointLayerId}`);
         }
         r.title = title;
         r.bounds = Bounds.fromResult(r.bounds);
