@@ -29,4 +29,15 @@ export abstract class CursorPaginationParams<C extends Cursor = Cursor> {
      * Each subclass implements this.
      */
     abstract withCursor(cursorEncoded: string | null): CursorPaginationParams;
+
+    /**
+     * Query identity for reconnect dirty detection: same as {@link toQueryString} but without
+     * `limit` and `cursor` so cursor pagination position does not count as semantic drift while offline.
+     */
+    reconnectIdentityQueryString(): string {
+        const p = new URLSearchParams(this.toQueryString());
+        p.delete('limit');
+        p.delete('cursor');
+        return p.toString();
+    }
 }

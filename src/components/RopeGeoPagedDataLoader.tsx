@@ -13,7 +13,7 @@ import {
   type CursorPaginationParams,
   CursorPaginationResults,
 } from "../models";
-import { Method, Service, SERVICE_BASE_URL } from "./RopeGeoHttpRequest";
+import { Method, Service, SERVICE_BASE_URL } from "./RopeGeoDataLoader";
 
 const PATH_PARAM_PATTERN = /:([a-zA-Z0-9_]+)/g;
 
@@ -38,7 +38,6 @@ function resolvePath(
   return resolved;
 }
 
-/** Extracts the response payload (body) for cursor-paginated APIs. */
 function getResponseBody(raw: unknown): unknown {
   if (
     raw != null &&
@@ -51,71 +50,36 @@ function getResponseBody(raw: unknown): unknown {
   return raw;
 }
 
-export type RopeGeoCursorPaginationHttpRequestProps<T = unknown> = {
+export type RopeGeoPagedDataLoaderProps<T = unknown> = {
   service: Service;
   method?: (typeof Method)[keyof typeof Method];
-  path: string;
-  pathParams?: Record<string, string>;
+  onlinePath: string;
+  onlinePathParams?: Record<string, string>;
   queryParams: CursorPaginationParams;
-  /**
-   * Request deadline in seconds for each fetch (initial and `loadMore`). When omitted, timeout
-   * and countdown are disabled.
-   */
   timeoutAfterSeconds?: number;
-  /**
-   * When `false`, no HTTP requests run and children receive {@link NO_NETWORK_MESSAGE} as the error.
-   * Previously loaded `data` and cursor `params` are kept until the network returns.
-   */
   isOnline?: boolean;
-  /**
-   * When `isOnline` goes from `false` to online and there is already successful data for the same
-   * request (only the soft {@link NO_NETWORK_MESSAGE} error), a new fetch runs only if this is
-   * `true`. Otherwise stale data stays visible and `errors` is cleared. When there is no
-   * successful data yet, or the last error was not the offline placeholder, a fetch always runs.
-   * @default false
-   */
-  refreshOnReconnect?: boolean;
-  /**
-   * Response body is parsed via CursorPaginationResults.fromResponseBody (must include resultType).
-   * Parsed shape is ValidatedCursorPaginationResponse; children receive result.results as data.
-   * `data` is `null` until the first successful response for the current request identity, then an
-   * array (possibly empty) for loaded pages.
-   */
   children: (args: {
-    loading: boolean;
-    loadingMore: boolean;
-    /**
-     * `true` while the initial request is in flight after at least one successful response for the
-     * current request identity (stale-while-revalidate). Not used for `loadMore` alone.
-     */
-    refreshing: boolean;
+    loadingNextPage: boolean;
     data: T[] | null;
     errors: Error | null;
-    loadMore: () => void;
-    hasMore: boolean;
+    loadNextPage: () => void;
+    morePages: boolean;
     timeoutCountdown: number | null;
-    /**
-     * Re-runs from the first page while online: aborts any `loadMore`, resets the cursor to the
-     * initial `queryParams`, sets `loading` to `true`, clears `errors`, and clears `data` until the
-     * new first page resolves. No-op when `isOnline` is `false`.
-     */
     reload: () => void;
   }) => ReactNode;
 };
 
-export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
+export function RopeGeoPagedDataLoader<T = unknown>({
   service,
   method = Method.GET,
-  path,
-  pathParams,
+  onlinePath,
+  onlinePathParams,
   queryParams,
   timeoutAfterSeconds,
   isOnline,
-  refreshOnReconnect = false,
   children,
-}: RopeGeoCursorPaginationHttpRequestProps<T>) {
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+}: RopeGeoPagedDataLoaderProps<T>) {
+  const [loadingNextPage, setLoadingNextPage] = useState(false);
   const [data, setData] = useState<T[] | null>(null);
   const [params, setParams] = useState<CursorPaginationParams>(queryParams);
   const [errors, setErrors] = useState<Error | null>(null);
@@ -129,31 +93,41 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
   errorsRef.current = errors;
   hasCommittedRef.current = hasCommittedOnce;
 
-  const loadingMoreRef = useRef(false);
-  const loadMoreAbortRef = useRef<AbortController | null>(null);
+  const loadingNextPageRef = useRef(false);
+  const loadNextPageAbortRef = useRef<AbortController | null>(null);
 
-  const hasMore = params.cursor != null;
+  const morePages = params.cursor != null;
 
-  const pathParamsKey = JSON.stringify(pathParams ?? null);
+  const pathParamsKey = JSON.stringify(onlinePathParams ?? null);
   const queryKey = queryParams.toQueryString();
   const requestKey = useMemo(
     () =>
-      `${service}|${method}|${path}|${pathParamsKey}|${queryKey}|${timeoutAfterSeconds ?? ""}`,
-    [service, method, path, pathParamsKey, queryKey, timeoutAfterSeconds],
+      `${service}|${method}|${onlinePath}|${pathParamsKey}|${queryKey}|${timeoutAfterSeconds ?? ""}`,
+    [service, method, onlinePath, pathParamsKey, queryKey, timeoutAfterSeconds]
   );
 
+  const reconnectSemanticKey = useMemo(
+    () =>
+      `${service}|${method}|${onlinePath}|${pathParamsKey}|${queryParams.reconnectIdentityQueryString()}|${timeoutAfterSeconds ?? ""}`,
+    [service, method, onlinePath, pathParamsKey, queryParams, timeoutAfterSeconds]
+  );
+
+  const dirtyWhileOfflineRef = useRef(false);
+  const semanticSnapshotRef = useRef<string | null>(null);
   const prevIsOnlineRef = useRef<boolean | undefined>(undefined);
   const lastRequestKeyRef = useRef<string>("");
 
   const buildUrl = useCallback(
     (p: CursorPaginationParams) => {
       const baseUrl = SERVICE_BASE_URL[service];
-      const resolvedPath = resolvePath(path, pathParams);
+      const resolvedPath = resolvePath(onlinePath, onlinePathParams);
       const queryString = p.toQueryString();
-      const fullPath = queryString ? `${resolvedPath}?${queryString}` : resolvedPath;
+      const fullPath = queryString
+        ? `${resolvedPath}?${queryString}`
+        : resolvedPath;
       return new URL(fullPath, baseUrl).toString();
     },
-    [service, path, pathParams]
+    [service, onlinePath, onlinePathParams]
   );
 
   const reload = useCallback(() => {
@@ -165,15 +139,31 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
   useEffect(() => {
     const online = isOnline !== false;
     const prevOnline = prevIsOnlineRef.current;
+    const enteringOffline = prevOnline === true && !online;
     const reconnecting = prevOnline === false && online;
+
+    if (enteringOffline) {
+      dirtyWhileOfflineRef.current = false;
+      semanticSnapshotRef.current = reconnectSemanticKey;
+    }
+
+    if (!online && prevOnline !== undefined) {
+      if (
+        semanticSnapshotRef.current != null &&
+        reconnectSemanticKey !== semanticSnapshotRef.current
+      ) {
+        dirtyWhileOfflineRef.current = true;
+      }
+    }
+
     const keyChanged = lastRequestKeyRef.current !== requestKey;
     const isManualReload = pendingReloadRef.current;
     if (isManualReload) {
       pendingReloadRef.current = false;
-      loadMoreAbortRef.current?.abort();
-      loadMoreAbortRef.current = null;
-      loadingMoreRef.current = false;
-      setLoadingMore(false);
+      loadNextPageAbortRef.current?.abort();
+      loadNextPageAbortRef.current = null;
+      loadingNextPageRef.current = false;
+      setLoadingNextPage(false);
     }
 
     if (!online) {
@@ -185,12 +175,11 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
         setParams(queryParams);
         setErrors(null);
       }
-      loadMoreAbortRef.current?.abort();
-      loadMoreAbortRef.current = null;
-      loadingMoreRef.current = false;
-      setLoadingMore(false);
+      loadNextPageAbortRef.current?.abort();
+      loadNextPageAbortRef.current = null;
+      loadingNextPageRef.current = false;
+      setLoadingNextPage(false);
       prevIsOnlineRef.current = false;
-      setLoading(false);
       setErrors(new Error(NO_NETWORK_MESSAGE));
       setTimeoutCountdown(null);
       return;
@@ -211,15 +200,15 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
 
     if (!keyChanged && reconnecting) {
       const onlyNoNetwork = errorsRef.current?.message === NO_NETWORK_MESSAGE;
-      if (
-        !isManualReload &&
-        hasCommittedRef.current &&
-        onlyNoNetwork &&
-        !refreshOnReconnect
-      ) {
+      const shouldRefetchAfterReconnect =
+        dirtyWhileOfflineRef.current ||
+        !hasCommittedRef.current ||
+        !onlyNoNetwork;
+      if (!isManualReload && !shouldRefetchAfterReconnect) {
         setErrors(null);
-        setLoading(false);
         prevIsOnlineRef.current = true;
+        dirtyWhileOfflineRef.current = false;
+        semanticSnapshotRef.current = null;
         return;
       }
     }
@@ -232,15 +221,14 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
     const requestStartedAt = Date.now();
     const timeoutMs = resolveRequestTimeoutMs(timeoutAfterSeconds);
 
-    setLoading(true);
     setErrors(null);
     setTimeoutCountdown(null);
-    const keepStaleDuringFetch =
+    const keepStaleDuringReconnectRefetch =
       reconnecting &&
       hasCommittedRef.current &&
       errorsRef.current?.message === NO_NETWORK_MESSAGE &&
-      refreshOnReconnect;
-    if (!keyChanged && !keepStaleDuringFetch && !isManualReload) {
+      dirtyWhileOfflineRef.current;
+    if (!keyChanged && !keepStaleDuringReconnectRefetch && !isManualReload) {
       setData(null);
       setParams(queryParams);
     }
@@ -290,6 +278,8 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
           setParams(queryParams.withCursor(null));
           setErrors(null);
           setHasCommittedOnce(true);
+          dirtyWhileOfflineRef.current = false;
+          semanticSnapshotRef.current = null;
           return;
         }
         try {
@@ -305,13 +295,18 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
           setParams(queryParams.withCursor(nextCursor));
           setErrors(null);
           setHasCommittedOnce(true);
+          dirtyWhileOfflineRef.current = false;
+          semanticSnapshotRef.current = null;
         } catch (parseError) {
           if (!cancelled) {
-            console.error("[RopeGeoCursorPaginationHttpRequest] Invalid JSON response", {
+            console.error("[RopeGeoPagedDataLoader] Invalid JSON response", {
               url,
               status: res.status,
               responseText: text.slice(0, 500),
-              parseError: parseError instanceof Error ? parseError.message : String(parseError),
+              parseError:
+                parseError instanceof Error
+                  ? parseError.message
+                  : String(parseError),
             });
             setErrors(new Error("Invalid JSON response"));
             setData(null);
@@ -334,7 +329,7 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
           return;
         }
         if (isAbortError(err)) return;
-        console.error("[RopeGeoCursorPaginationHttpRequest] Request failed", {
+        console.error("[RopeGeoPagedDataLoader] Request failed", {
           url,
           error: err instanceof Error ? err.message : String(err),
         });
@@ -346,7 +341,6 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
         policyDispose();
         if (!cancelled) {
           setTimeoutCountdown(null);
-          setLoading(false);
         }
       });
 
@@ -358,32 +352,33 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
   }, [
     service,
     method,
-    path,
+    onlinePath,
     pathParamsKey,
     queryKey,
     buildUrl,
     timeoutAfterSeconds,
     isOnline,
-    refreshOnReconnect,
     requestKey,
     reloadTick,
+    queryParams,
+    reconnectSemanticKey,
   ]);
 
   useEffect(() => {
     return () => {
-      loadMoreAbortRef.current?.abort();
+      loadNextPageAbortRef.current?.abort();
     };
   }, []);
 
-  const loadMore = useCallback(() => {
+  const loadNextPage = useCallback(() => {
     if (isOnline === false) return;
     if (params.cursor == null) return;
-    if (loadingMoreRef.current) return;
-    loadingMoreRef.current = true;
-    setLoadingMore(true);
+    if (loadingNextPageRef.current) return;
+    loadingNextPageRef.current = true;
+    setLoadingNextPage(true);
 
     const outer = new AbortController();
-    loadMoreAbortRef.current = outer;
+    loadNextPageAbortRef.current = outer;
     const timedOutRef = { current: false };
     const requestStartedAt = Date.now();
     const timeoutMs = resolveRequestTimeoutMs(timeoutAfterSeconds);
@@ -394,14 +389,14 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
             requestStartedAt,
             timeoutMs,
             {
-              isActive: () => loadMoreAbortRef.current === outer,
+              isActive: () => loadNextPageAbortRef.current === outer,
               onTimeoutCountdown: (seconds) => {
-                if (loadMoreAbortRef.current === outer) {
+                if (loadNextPageAbortRef.current === outer) {
                   setTimeoutCountdown(seconds);
                 }
               },
               onClearTimeoutCountdown: () => {
-                if (loadMoreAbortRef.current === outer) {
+                if (loadNextPageAbortRef.current === outer) {
                   setTimeoutCountdown(null);
                 }
               },
@@ -446,20 +441,23 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
           setParams((p) => p.withCursor(nextCursor));
           setErrors(null);
         } catch (parseError) {
-          console.error("[RopeGeoCursorPaginationHttpRequest] loadMore: Invalid JSON response", {
+          console.error("[RopeGeoPagedDataLoader] loadNextPage: Invalid JSON response", {
             url,
             status: res.status,
             responseText: text.slice(0, 500),
-            parseError: parseError instanceof Error ? parseError.message : String(parseError),
+            parseError:
+              parseError instanceof Error
+                ? parseError.message
+                : String(parseError),
           });
           setErrors(new Error("Invalid JSON response"));
           setParams((p) => p.withCursor(null));
         }
       })
       .catch((err) => {
-        if (loadMoreAbortRef.current !== outer) return;
+        if (loadNextPageAbortRef.current !== outer) return;
         if (timedOutRef.current) {
-          console.error("[RopeGeoCursorPaginationHttpRequest] loadMore: timed out", { url });
+          console.error("[RopeGeoPagedDataLoader] loadNextPage: timed out", { url });
           setErrors(
             new Error(
               formatNetworkRequestErrorMessage(
@@ -471,7 +469,7 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
           return;
         }
         if (isAbortError(err)) return;
-        console.error("[RopeGeoCursorPaginationHttpRequest] loadMore: Request failed", {
+        console.error("[RopeGeoPagedDataLoader] loadNextPage: Request failed", {
           url,
           error: err instanceof Error ? err.message : String(err),
         });
@@ -480,27 +478,23 @@ export function RopeGeoCursorPaginationHttpRequest<T = unknown>({
       })
       .finally(() => {
         policyDispose();
-        if (loadMoreAbortRef.current === outer) {
+        if (loadNextPageAbortRef.current === outer) {
           setTimeoutCountdown(null);
-          loadMoreAbortRef.current = null;
+          loadNextPageAbortRef.current = null;
         }
-        loadingMoreRef.current = false;
-        setLoadingMore(false);
+        loadingNextPageRef.current = false;
+        setLoadingNextPage(false);
       });
   }, [params, method, buildUrl, timeoutAfterSeconds, isOnline]);
-
-  const refreshing = loading && hasCommittedOnce;
 
   return (
     <>
       {children({
-        loading,
-        loadingMore,
-        refreshing,
+        loadingNextPage,
         data,
         errors,
-        loadMore,
-        hasMore,
+        loadNextPage,
+        morePages,
         timeoutCountdown,
         reload,
       })}

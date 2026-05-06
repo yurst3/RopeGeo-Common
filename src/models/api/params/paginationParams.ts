@@ -41,4 +41,15 @@ export abstract class PaginationParams {
     }
 
     abstract withPage(page: number): PaginationParams;
+
+    /**
+     * Query identity for reconnect dirty detection: same as {@link toQueryString} but without
+     * `limit` and `page` so in-flight page changes do not count as semantic drift while offline.
+     */
+    reconnectIdentityQueryString(): string {
+        const p = new URLSearchParams(this.toQueryString());
+        p.delete('limit');
+        p.delete('page');
+        return p.toString();
+    }
 }

@@ -6,8 +6,8 @@ import type { RouteGeoJsonFeature } from '../../src/models/routes/route';
 import { RouteType } from '../../src/models/routes/routeType';
 import '../../src/models/api/results/registerAllResultParsers';
 import { RoutesParams } from '../../src/models/api/params/routesParams';
-import { RopeGeoPaginationHttpRequest } from '../../src/components/RopeGeoPaginationHttpRequest';
-import { Service } from '../../src/components/RopeGeoHttpRequest';
+import { RopeGeoProgressDataLoader } from '../../src/components/RopeGeoProgressDataLoader';
+import { Service } from '../../src/components/RopeGeoDataLoader';
 import { mockJsonResponse, requestUrl } from '../helpers/jestFetch';
 
 const BASE = 'https://api.webscraper.ropegeo.com';
@@ -60,8 +60,6 @@ function jsonFail(status: number, body: string): Response {
 }
 
 type Args = {
-    loading: boolean;
-    refreshing: boolean;
     received: number;
     total: number | null;
     data: RouteGeoJsonFeature[] | null;
@@ -76,9 +74,9 @@ function TestHost(props: {
     onRender: (a: Args) => void;
 }) {
     return (
-        <RopeGeoPaginationHttpRequest<RouteGeoJsonFeature>
+        <RopeGeoProgressDataLoader<RouteGeoJsonFeature>
             service={Service.WEBSCRAPER}
-            path="/routes"
+            onlinePath="/routes"
             queryParams={props.queryParams}
             batchSize={props.batchSize}
         >
@@ -86,11 +84,11 @@ function TestHost(props: {
                 props.onRender(args as Args);
                 return null;
             }}
-        </RopeGeoPaginationHttpRequest>
+        </RopeGeoProgressDataLoader>
     );
 }
 
-describe('RopeGeoPaginationHttpRequest', () => {
+describe('RopeGeoProgressDataLoader', () => {
     const fetchMock = jest.fn<typeof fetch>();
 
     beforeEach(() => {
@@ -123,7 +121,7 @@ describe('RopeGeoPaginationHttpRequest', () => {
         );
 
         await waitFor(() => {
-            expect(latest?.loading).toBe(false);
+            expect(latest?.data).toHaveLength(3);
         });
         expect(fetchMock).toHaveBeenCalledTimes(1);
         expect(latest?.errors).toBeNull();
@@ -158,7 +156,7 @@ describe('RopeGeoPaginationHttpRequest', () => {
         );
 
         await waitFor(() => {
-            expect(latest?.loading).toBe(false);
+            expect(latest?.data).toHaveLength(2);
         });
         expect(fetchMock).toHaveBeenCalledTimes(1);
 
@@ -167,15 +165,13 @@ describe('RopeGeoPaginationHttpRequest', () => {
         });
 
         await waitFor(() => {
-            expect(latest?.loading).toBe(true);
+            expect(latest?.received).toBe(0);
+            expect(latest?.total).toBeNull();
+            expect(latest?.data).toBeNull();
         });
-        expect(latest?.errors).toBeNull();
-        expect(latest?.received).toBe(0);
-        expect(latest?.total).toBeNull();
-        expect(latest?.data).toBeNull();
 
         await waitFor(() => {
-            expect(latest?.loading).toBe(false);
+            expect(latest?.data).toHaveLength(2);
         });
         expect(fetchMock).toHaveBeenCalledTimes(2);
     });
@@ -214,7 +210,7 @@ describe('RopeGeoPaginationHttpRequest', () => {
         );
 
         await waitFor(() => {
-            expect(latest?.loading).toBe(false);
+            expect(latest?.data?.length).toBe(5);
         });
         expect(latest?.data?.map((f) => f.properties.name)).toEqual([
             'p1-i0',
@@ -251,11 +247,10 @@ describe('RopeGeoPaginationHttpRequest', () => {
         );
 
         await waitFor(() => {
-            expect(latest?.loading).toBe(false);
+            expect(latest?.data).toHaveLength(9);
         });
         expect(fetchMock).toHaveBeenCalledTimes(5);
         expect(latest?.received).toBe(9);
-        expect(latest?.data).toHaveLength(9);
     });
 
     it('sets errors and clears data when a later page returns HTTP error', async () => {
@@ -283,10 +278,9 @@ describe('RopeGeoPaginationHttpRequest', () => {
             );
 
             await waitFor(() => {
-                expect(latest?.loading).toBe(false);
+                expect(latest?.errors?.message).toBe('500 nope');
             });
             expect(latest?.data).toBeNull();
-            expect(latest?.errors?.message).toBe("500 nope");
         } finally {
             errSpy.mockRestore();
         }
@@ -314,9 +308,8 @@ describe('RopeGeoPaginationHttpRequest', () => {
         );
 
         await waitFor(() => {
-            expect(latest?.loading).toBe(false);
+            expect(latest?.data).toHaveLength(8);
         });
         expect(fetchMock).toHaveBeenCalledTimes(2);
-        expect(latest?.data).toHaveLength(8);
     });
 });

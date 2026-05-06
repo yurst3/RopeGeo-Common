@@ -7,9 +7,9 @@ import '../../src/models/api/results/ropewikiPageViewResult';
 import { RopewikiPageView } from '../../src/models/api/endpoints/ropewikiPageView';
 import {
     Method,
-    RopeGeoHttpRequest,
+    RopeGeoDataLoader,
     Service,
-} from '../../src/components/RopeGeoHttpRequest';
+} from '../../src/components/RopeGeoDataLoader';
 import { NETWORK_REQUEST_TIMED_OUT_MESSAGE } from '../../src/helpers/network';
 import { mockJsonResponse, requestUrl } from '../helpers/jestFetch';
 
@@ -58,8 +58,6 @@ function pageViewResponseJson(): Record<string, unknown> {
 }
 
 type Args<T> = {
-    loading: boolean;
-    refreshing: boolean;
     data: T | null;
     errors: Error | null;
     timeoutCountdown: number | null;
@@ -68,32 +66,36 @@ type Args<T> = {
 
 function TestHost<T>(props: {
     method?: Method;
-    path: string;
-    pathParams?: Record<string, string>;
+    onlinePath: string;
+    onlinePathParams?: Record<string, string>;
     queryParams?: Record<string, string | number | boolean | undefined>;
     body?: object;
     timeoutAfterSeconds?: number;
+    offlineData?: T | string;
+    readOfflineFile?: (path: string) => Promise<string>;
     onRender: (a: Args<T>) => void;
 }) {
     return (
-        <RopeGeoHttpRequest<T>
+        <RopeGeoDataLoader<T>
             service={Service.WEBSCRAPER}
             method={props.method ?? Method.GET}
-            path={props.path}
-            pathParams={props.pathParams}
+            onlinePath={props.onlinePath}
+            onlinePathParams={props.onlinePathParams}
             queryParams={props.queryParams}
             body={props.body}
             timeoutAfterSeconds={props.timeoutAfterSeconds}
+            offlineData={props.offlineData}
+            readOfflineFile={props.readOfflineFile}
         >
             {(args) => {
                 props.onRender(args);
                 return null;
             }}
-        </RopeGeoHttpRequest>
+        </RopeGeoDataLoader>
     );
 }
 
-describe('RopeGeoHttpRequest', () => {
+describe('RopeGeoDataLoader', () => {
     const fetchMock = jest.fn<typeof fetch>();
 
     beforeEach(() => {
@@ -113,8 +115,8 @@ describe('RopeGeoHttpRequest', () => {
         let latest: Args<RopewikiPageView> | undefined;
         render(
             <TestHost<RopewikiPageView>
-                path="/ropewiki/page/:id"
-                pathParams={{ id: 'abc-uuid-here-0001' }}
+                onlinePath="/ropewiki/page/:id"
+                onlinePathParams={{ id: 'abc-uuid-here-0001' }}
                 onRender={(a) => {
                     latest = a as Args<RopewikiPageView>;
                 }}
@@ -122,14 +124,13 @@ describe('RopeGeoHttpRequest', () => {
         );
 
         await waitFor(() => {
-            expect(latest?.loading).toBe(false);
+            expect(latest?.data).toBeInstanceOf(RopewikiPageView);
         });
         expect(fetchMock).toHaveBeenCalledTimes(1);
         const url = requestUrl(fetchMock.mock.calls[0]![0]);
         expect(url.startsWith(BASE)).toBe(true);
         expect(url).toContain('/ropewiki/page/abc-uuid-here-0001');
         expect(latest?.errors).toBeNull();
-        expect(latest?.data).toBeInstanceOf(RopewikiPageView);
         expect(latest?.data?.name).toBe('Test Page');
     });
 
@@ -141,8 +142,8 @@ describe('RopeGeoHttpRequest', () => {
         let latest: Args<RopewikiPageView> | undefined;
         render(
             <TestHost<RopewikiPageView>
-                path="/ropewiki/page/:id"
-                pathParams={{ id: 'rid' }}
+                onlinePath="/ropewiki/page/:id"
+                onlinePathParams={{ id: 'rid' }}
                 queryParams={{ a: '1', b: '', c: undefined, flag: true }}
                 onRender={(a) => {
                     latest = a as Args<RopewikiPageView>;
@@ -151,7 +152,7 @@ describe('RopeGeoHttpRequest', () => {
         );
 
         await waitFor(() => {
-            expect(latest?.loading).toBe(false);
+            expect(latest?.data).toBeInstanceOf(RopewikiPageView);
         });
         const url = requestUrl(fetchMock.mock.calls[0]![0]);
         const u = new URL(url);
@@ -167,7 +168,7 @@ describe('RopeGeoHttpRequest', () => {
         let latest: Args<RopewikiPageView> | undefined;
         render(
             <TestHost<RopewikiPageView>
-                path="/x"
+                onlinePath="/x"
                 onRender={(a) => {
                     latest = a as Args<RopewikiPageView>;
                 }}
@@ -175,13 +176,12 @@ describe('RopeGeoHttpRequest', () => {
         );
 
         await waitFor(() => {
-            expect(latest?.loading).toBe(false);
+            expect(latest?.errors?.message).toBe('404 missing');
         });
         expect(latest?.data).toBeNull();
-        expect(latest?.errors?.message).toBe("404 missing");
     });
 
-    it('reload refetches with loading true and errors null while keeping committed data', async () => {
+    it('reload refetches and keeps committed data until new response', async () => {
         const body1 = pageViewResponseJson();
         const body2 = {
             ...pageViewResponseJson(),
@@ -194,8 +194,8 @@ describe('RopeGeoHttpRequest', () => {
         let latest: Args<RopewikiPageView> | undefined;
         render(
             <TestHost<RopewikiPageView>
-                path="/ropewiki/page/:id"
-                pathParams={{ id: 'reload-id' }}
+                onlinePath="/ropewiki/page/:id"
+                onlinePathParams={{ id: 'reload-id' }}
                 onRender={(a) => {
                     latest = a as Args<RopewikiPageView>;
                 }}
@@ -203,25 +203,18 @@ describe('RopeGeoHttpRequest', () => {
         );
 
         await waitFor(() => {
-            expect(latest?.loading).toBe(false);
+            expect(latest?.data?.name).toBe('Test Page');
         });
-        expect(latest?.data?.name).toBe('Test Page');
 
         act(() => {
             latest?.reload();
         });
 
         await waitFor(() => {
-            expect(latest?.loading).toBe(true);
+            expect(fetchMock).toHaveBeenCalledTimes(2);
+            expect(latest?.data?.name).toBe('Updated Page');
         });
         expect(latest?.errors).toBeNull();
-        expect(latest?.data?.name).toBe('Test Page');
-
-        await waitFor(() => {
-            expect(latest?.loading).toBe(false);
-        });
-        expect(latest?.data?.name).toBe('Updated Page');
-        expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
     it('empty 200 body leaves data null without error', async () => {
@@ -230,7 +223,7 @@ describe('RopeGeoHttpRequest', () => {
         let latest: Args<RopewikiPageView> | undefined;
         render(
             <TestHost<RopewikiPageView>
-                path="/x"
+                onlinePath="/x"
                 onRender={(a) => {
                     latest = a as Args<RopewikiPageView>;
                 }}
@@ -238,10 +231,9 @@ describe('RopeGeoHttpRequest', () => {
         );
 
         await waitFor(() => {
-            expect(latest?.loading).toBe(false);
+            expect(latest?.data).toBeNull();
+            expect(latest?.errors).toBeNull();
         });
-        expect(latest?.data).toBeNull();
-        expect(latest?.errors).toBeNull();
     });
 
     it('invalid JSON sets errors and logs', async () => {
@@ -252,7 +244,7 @@ describe('RopeGeoHttpRequest', () => {
             let latest: Args<RopewikiPageView> | undefined;
             render(
                 <TestHost<RopewikiPageView>
-                    path="/x"
+                    onlinePath="/x"
                     onRender={(a) => {
                         latest = a as Args<RopewikiPageView>;
                     }}
@@ -260,10 +252,9 @@ describe('RopeGeoHttpRequest', () => {
             );
 
             await waitFor(() => {
-                expect(latest?.loading).toBe(false);
+                expect(latest?.errors).not.toBeNull();
             });
             expect(latest?.data).toBeNull();
-            expect(latest?.errors).not.toBeNull();
         } finally {
             errSpy.mockRestore();
         }
@@ -278,8 +269,8 @@ describe('RopeGeoHttpRequest', () => {
         render(
             <TestHost<RopewikiPageView>
                 method={Method.POST}
-                path="/ropewiki/page/:id"
-                pathParams={{ id: 'r1' }}
+                onlinePath="/ropewiki/page/:id"
+                onlinePathParams={{ id: 'r1' }}
                 body={{ foo: 'bar' }}
                 onRender={(a) => {
                     latest = a as Args<RopewikiPageView>;
@@ -288,7 +279,7 @@ describe('RopeGeoHttpRequest', () => {
         );
 
         await waitFor(() => {
-            expect(latest?.loading).toBe(false);
+            expect(latest?.data).toBeInstanceOf(RopewikiPageView);
         });
         const init = fetchMock.mock.calls[0]![1] as RequestInit;
         expect(init.method).toBe('POST');
@@ -304,7 +295,7 @@ describe('RopeGeoHttpRequest', () => {
         render(
             <TestHost<RopewikiPageView>
                 method={Method.GET}
-                path="/x"
+                onlinePath="/x"
                 body={{ skip: true }}
                 onRender={(a) => {
                     latest = a as Args<RopewikiPageView>;
@@ -313,13 +304,13 @@ describe('RopeGeoHttpRequest', () => {
         );
 
         await waitFor(() => {
-            expect(latest?.loading).toBe(false);
+            expect(latest?.data).toBeInstanceOf(RopewikiPageView);
         });
         const init = fetchMock.mock.calls[0]![1] as RequestInit;
         expect(init.body).toBeUndefined();
     });
 
-    it('does not emit timeoutCountdown or timeout when timeoutAfterSeconds is omitted', async () => {
+    it('does not emit timeoutCountdown when timeoutAfterSeconds is omitted', async () => {
         jest.useFakeTimers();
         fetchMock.mockImplementation((_input, init?: RequestInit) => {
             return new Promise<Response>((_resolve, reject) => {
@@ -338,8 +329,8 @@ describe('RopeGeoHttpRequest', () => {
         let latest: Args<RopewikiPageView> | undefined;
         render(
             <TestHost<RopewikiPageView>
-                path="/ropewiki/page/:id"
-                pathParams={{ id: 'slow' }}
+                onlinePath="/ropewiki/page/:id"
+                onlinePathParams={{ id: 'slow' }}
                 onRender={(a) => {
                     latest = a as Args<RopewikiPageView>;
                 }}
@@ -347,7 +338,6 @@ describe('RopeGeoHttpRequest', () => {
         );
 
         await waitFor(() => {
-            expect(latest?.loading).toBe(true);
             expect(latest?.timeoutCountdown).toBeNull();
             expect(latest?.errors).toBeNull();
         });
@@ -355,9 +345,7 @@ describe('RopeGeoHttpRequest', () => {
         await act(async () => {
             await jest.advanceTimersByTimeAsync(60_000);
         });
-        expect(latest?.loading).toBe(true);
         expect(latest?.timeoutCountdown).toBeNull();
-        expect(latest?.errors).toBeNull();
 
         jest.useRealTimers();
     });
@@ -384,8 +372,8 @@ describe('RopeGeoHttpRequest', () => {
         let latest: Args<RopewikiPageView> | undefined;
         render(
             <TestHost<RopewikiPageView>
-                path="/ropewiki/page/:id"
-                pathParams={{ id: 't5' }}
+                onlinePath="/ropewiki/page/:id"
+                onlinePathParams={{ id: 't5' }}
                 timeoutAfterSeconds={5}
                 onRender={(a) => {
                     latest = a as Args<RopewikiPageView>;
@@ -402,10 +390,72 @@ describe('RopeGeoHttpRequest', () => {
             await Promise.resolve();
         });
         await waitFor(() => {
-            expect(latest?.loading).toBe(false);
             expect(latest?.errors?.message).toBe(NETWORK_REQUEST_TIMED_OUT_MESSAGE);
         });
 
         jest.useRealTimers();
+    });
+
+    it('offlineData object skips fetch and exposes data', async () => {
+        const view = RopewikiPageView.fromResult(pageViewResponseJson().result);
+        let latest: Args<RopewikiPageView> | undefined;
+        render(
+            <TestHost<RopewikiPageView>
+                onlinePath="/ropewiki/page/:id"
+                onlinePathParams={{ id: 'x' }}
+                offlineData={view}
+                onRender={(a) => {
+                    latest = a as Args<RopewikiPageView>;
+                }}
+            />,
+        );
+        await waitFor(() => {
+            expect(latest?.data?.name).toBe('Test Page');
+        });
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('offlineData string uses readOfflineFile then skips fetch on success', async () => {
+        let latest: Args<RopewikiPageView> | undefined;
+        render(
+            <TestHost<RopewikiPageView>
+                onlinePath="/ropewiki/page/:id"
+                onlinePathParams={{ id: 'x' }}
+                offlineData="/fake/path.json"
+                readOfflineFile={async () => JSON.stringify(pageViewResponseJson())}
+                onRender={(a) => {
+                    latest = a as Args<RopewikiPageView>;
+                }}
+            />,
+        );
+        await waitFor(() => {
+            expect(latest?.data?.name).toBe('Test Page');
+        });
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('offlineData string read failure falls back to online fetch', async () => {
+        fetchMock.mockResolvedValue(
+            mockJsonResponse(true, 200, JSON.stringify(pageViewResponseJson())),
+        );
+        let latest: Args<RopewikiPageView> | undefined;
+        render(
+            <TestHost<RopewikiPageView>
+                onlinePath="/ropewiki/page/:id"
+                onlinePathParams={{ id: 'fb' }}
+                offlineData="/missing.json"
+                readOfflineFile={async () => {
+                    throw new Error('ENOENT');
+                }}
+                onRender={(a) => {
+                    latest = a as Args<RopewikiPageView>;
+                }}
+            />,
+        );
+        await waitFor(() => {
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+        });
+        expect(latest?.data?.name).toBe('Test Page');
+        expect(latest?.errors).toBeNull();
     });
 });

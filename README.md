@@ -326,9 +326,9 @@ Legend entries for page minimaps are keyed objects (`legend` on `PageMiniMap`); 
 
 | Name | Description | Import |
 | --- | --- | --- |
-| `RopeGeoHttpRequest` | Single GET/POST wrapper; parses `Result.fromResponseBody`; optional `timeoutAfterSeconds`, `isOnline`, `refreshOnReconnect`, `timeoutCountdown`, and `refreshing` (stale-while-revalidate) children args. | `import { RopeGeoHttpRequest, Method, Service } from 'ropegeo-common/components'` |
-| `RopeGeoCursorPaginationHttpRequest` | Cursor-paginated fetch with `loadMore`; `data` is `T[] \| null` (null until first success); optional `timeoutAfterSeconds`, `isOnline`, `refreshOnReconnect`, `refreshing`, `timeoutCountdown`. | `import { RopeGeoCursorPaginationHttpRequest } from 'ropegeo-common/components'` |
-| `RopeGeoPaginationHttpRequest<T>` | Page-based fetch; concatenates `results` into `data` (`T[]` when complete, otherwise `null` with `errors`); optional `isOnline`, `refreshOnReconnect`, `refreshing`, `timeoutCountdown`. | `import { RopeGeoPaginationHttpRequest } from 'ropegeo-common/components'` |
+| `RopeGeoDataLoader` | Single-request loader: `onlinePath` / `onlinePathParams`, optional `offlineData` (object or filesystem path + `readOfflineFile`), optional `timeoutAfterSeconds` and `isOnline`. Children receive `data`, `errors`, `timeoutCountdown` (numeric only while an online fetch is in flight, otherwise `null`), and `reload`. Reconnect refetch uses `dirtyWhileOffline` driven by a semantic key (no `refreshOnReconnect` prop). Also exports `Method`, `Service`, `SERVICE_BASE_URL`. | `import { RopeGeoDataLoader, Method, Service } from 'ropegeo-common/components'` |
+| `RopeGeoPagedDataLoader` | Cursor-paginated list: same networking props as above; children get `loadNextPage`, `loadingNextPage`, `morePages`, plus `data`, `errors`, `timeoutCountdown`, `reload`. | `import { RopeGeoPagedDataLoader } from 'ropegeo-common/components'` |
+| `RopeGeoProgressDataLoader` | Page-based “progress” fetch: batches additional pages until `total` is satisfied; children get `received`, `total`, `data`, `errors`, `timeoutCountdown`, `reload`. | `import { RopeGeoProgressDataLoader } from 'ropegeo-common/components'` |
 
 ---
 
