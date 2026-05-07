@@ -89,9 +89,8 @@ function dataLoaderReconnectSemanticKey(
   return `${service}|${method}|${onlinePath}|${pathParamsKey}|${bodyStr}|${q}`;
 }
 
-function offlineDataKeyPart<T>(offlineData: T | string | undefined): string {
+function offlineDataKeyPart<T>(offlineData: T | undefined): string {
   if (offlineData === undefined) return "";
-  if (typeof offlineData === "string") return `|file:${offlineData}`;
   return `|obj:${JSON.stringify(offlineData)}`;
 }
 
@@ -115,15 +114,10 @@ export type RopeGeoDataLoaderProps<T = unknown> = {
    */
   isOnline?: boolean;
   /**
-   * Inline offline payload or filesystem path. When an object, it is used as `data` immediately
-   * (no network, no file read). When a string, `readOfflineFile` is invoked; on failure the error
-   * `Could not read file at {path}` is set and the loader falls back to {@link onlinePath} when online.
+   * When set, this value is used as `data` immediately (no network). Callers that load from disk
+   * should read and parse the file themselves, then pass the resulting object here.
    */
-  offlineData?: T | string;
-  /**
-   * Required when `offlineData` is a string. Reads file contents as UTF-8 text for JSON parsing.
-   */
-  readOfflineFile?: (path: string) => Promise<string>;
+  offlineData?: T;
   children: (args: {
     data: T | null;
     errors: Error | null;
@@ -147,7 +141,6 @@ export function RopeGeoDataLoader<T = unknown>({
   timeoutAfterSeconds,
   isOnline,
   offlineData,
-  readOfflineFile,
   children,
 }: RopeGeoDataLoaderProps<T>) {
   const [data, setData] = useState<T | null>(null);
@@ -155,11 +148,6 @@ export function RopeGeoDataLoader<T = unknown>({
   const [timeoutCountdown, setTimeoutCountdown] = useState<number | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
   const pendingReloadRef = useRef(false);
-
-  /** `null` = not using file path, `'pending'`, `'ok'`, `'failed'` */
-  const [offlineFileStatus, setOfflineFileStatus] = useState<
-    null | "pending" | "ok" | "failed"
-  >(null);
 
   const errorsRef = useRef(errors);
   const hasCommittedRef = useRef(false);
@@ -223,68 +211,17 @@ export function RopeGeoDataLoader<T = unknown>({
 
   const lastRequestKeyRef = useRef<string>("");
 
-  /** Inline object offlineData — immediate, no network. */
+  /** `offlineData` object — immediate `data`, no network. */
   useEffect(() => {
-    if (offlineData == null || typeof offlineData !== "object") {
+    if (offlineData === undefined) {
       return;
     }
-    setOfflineFileStatus(null);
     setData(offlineData);
     setErrors(null);
     hasCommittedRef.current = true;
     dirtyWhileOfflineRef.current = false;
     semanticSnapshotRef.current = null;
   }, [offlineData]);
-
-  /** String path: read file, then maybe fall back to online. */
-  useEffect(() => {
-    if (typeof offlineData !== "string") {
-      setOfflineFileStatus(null);
-      return;
-    }
-    let cancelled = false;
-    setOfflineFileStatus("pending");
-    setData(null);
-    setErrors(null);
-    hasCommittedRef.current = false;
-
-    if (readOfflineFile == null) {
-      setErrors(
-        new Error(
-          "readOfflineFile is required when offlineData is a filesystem path"
-        )
-      );
-      setOfflineFileStatus("failed");
-      return;
-    }
-
-    void (async () => {
-      try {
-        const text = await readOfflineFile(offlineData);
-        const raw = JSON.parse(text) as unknown;
-        const parsed = Result.fromResponseBody(raw);
-        if (!cancelled) {
-          setData(parsed.result as T);
-          setErrors(null);
-          hasCommittedRef.current = true;
-          setOfflineFileStatus("ok");
-          dirtyWhileOfflineRef.current = false;
-          semanticSnapshotRef.current = null;
-        }
-      } catch {
-        if (!cancelled) {
-          setErrors(new Error(`Could not read file at ${offlineData}`));
-        setData(null);
-        hasCommittedRef.current = false;
-        setOfflineFileStatus("failed");
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [offlineData, readOfflineFile]);
 
   useEffect(() => {
     const online = isOnline !== false;
@@ -306,22 +243,8 @@ export function RopeGeoDataLoader<T = unknown>({
       }
     }
 
-    /** Inline object: dedicated effect owns `data`; never hit the network here. */
-    if (offlineData != null && typeof offlineData === "object") {
-      prevIsOnlineRef.current = online;
-      return;
-    }
-
-    /** File path: wait for read outcome; `ok` keeps local data; only `failed` falls through to online fetch. */
-    if (typeof offlineData === "string" && offlineFileStatus === "ok") {
-      prevIsOnlineRef.current = online;
-      return;
-    }
-    if (
-      typeof offlineData === "string" &&
-      offlineFileStatus !== "failed" &&
-      offlineFileStatus !== "ok"
-    ) {
+    /** Object `offlineData`: dedicated effect owns `data`; never hit the network here. */
+    if (offlineData !== undefined) {
       prevIsOnlineRef.current = online;
       return;
     }
@@ -517,7 +440,6 @@ export function RopeGeoDataLoader<T = unknown>({
     requestKey,
     reloadTick,
     offlineData,
-    offlineFileStatus,
     reconnectSemanticKey,
     queryParams,
   ]);

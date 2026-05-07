@@ -71,8 +71,7 @@ function TestHost<T>(props: {
     queryParams?: Record<string, string | number | boolean | undefined>;
     body?: object;
     timeoutAfterSeconds?: number;
-    offlineData?: T | string;
-    readOfflineFile?: (path: string) => Promise<string>;
+    offlineData?: T;
     onRender: (a: Args<T>) => void;
 }) {
     return (
@@ -85,7 +84,6 @@ function TestHost<T>(props: {
             body={props.body}
             timeoutAfterSeconds={props.timeoutAfterSeconds}
             offlineData={props.offlineData}
-            readOfflineFile={props.readOfflineFile}
         >
             {(args) => {
                 props.onRender(args);
@@ -415,47 +413,4 @@ describe('RopeGeoDataLoader', () => {
         expect(fetchMock).not.toHaveBeenCalled();
     });
 
-    it('offlineData string uses readOfflineFile then skips fetch on success', async () => {
-        let latest: Args<RopewikiPageView> | undefined;
-        render(
-            <TestHost<RopewikiPageView>
-                onlinePath="/ropewiki/page/:id"
-                onlinePathParams={{ id: 'x' }}
-                offlineData="/fake/path.json"
-                readOfflineFile={async () => JSON.stringify(pageViewResponseJson())}
-                onRender={(a) => {
-                    latest = a as Args<RopewikiPageView>;
-                }}
-            />,
-        );
-        await waitFor(() => {
-            expect(latest?.data?.name).toBe('Test Page');
-        });
-        expect(fetchMock).not.toHaveBeenCalled();
-    });
-
-    it('offlineData string read failure falls back to online fetch', async () => {
-        fetchMock.mockResolvedValue(
-            mockJsonResponse(true, 200, JSON.stringify(pageViewResponseJson())),
-        );
-        let latest: Args<RopewikiPageView> | undefined;
-        render(
-            <TestHost<RopewikiPageView>
-                onlinePath="/ropewiki/page/:id"
-                onlinePathParams={{ id: 'fb' }}
-                offlineData="/missing.json"
-                readOfflineFile={async () => {
-                    throw new Error('ENOENT');
-                }}
-                onRender={(a) => {
-                    latest = a as Args<RopewikiPageView>;
-                }}
-            />,
-        );
-        await waitFor(() => {
-            expect(fetchMock).toHaveBeenCalledTimes(1);
-        });
-        expect(latest?.data?.name).toBe('Test Page');
-        expect(latest?.errors).toBeNull();
-    });
 });
