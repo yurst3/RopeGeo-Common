@@ -89,8 +89,9 @@ function dataLoaderReconnectSemanticKey(
   return `${service}|${method}|${onlinePath}|${pathParamsKey}|${bodyStr}|${q}`;
 }
 
-function offlineDataKeyPart<T>(offlineData: T | undefined): string {
+function offlineDataKeyPart<T>(offlineData: T | null | undefined): string {
   if (offlineData === undefined) return "";
+  if (offlineData === null) return "|offline:null";
   return `|obj:${JSON.stringify(offlineData)}`;
 }
 
@@ -114,10 +115,12 @@ export type RopeGeoDataLoaderProps<T = unknown> = {
    */
   isOnline?: boolean;
   /**
-   * When set, this value is used as `data` immediately (no network). Callers that load from disk
-   * should read and parse the file themselves, then pass the resulting object here.
+   * Offline / local-first behavior without reading files inside the loader:
+   * - **`undefined`**: omit or leave unset — fetch from {@link onlinePath} as usual.
+   * - **`null`**: do not fetch; children receive `data: null` and `errors: null` (loading-style).
+   * - **`T`**: use as `data` immediately; no network.
    */
-  offlineData?: T;
+  offlineData?: T | null;
   children: (args: {
     data: T | null;
     errors: Error | null;
@@ -211,9 +214,17 @@ export function RopeGeoDataLoader<T = unknown>({
 
   const lastRequestKeyRef = useRef<string>("");
 
-  /** `offlineData` object — immediate `data`, no network. */
+  /** Sync `data` from {@link offlineData} when it is `null` or `T`; `undefined` defers to the network effect. */
   useEffect(() => {
     if (offlineData === undefined) {
+      return;
+    }
+    if (offlineData === null) {
+      setData(null);
+      setErrors(null);
+      hasCommittedRef.current = false;
+      dirtyWhileOfflineRef.current = false;
+      semanticSnapshotRef.current = null;
       return;
     }
     setData(offlineData);
@@ -243,7 +254,7 @@ export function RopeGeoDataLoader<T = unknown>({
       }
     }
 
-    /** Object `offlineData`: dedicated effect owns `data`; never hit the network here. */
+    /** `offlineData` is `null` or `T`: own `data`; never hit the network here. */
     if (offlineData !== undefined) {
       prevIsOnlineRef.current = online;
       return;

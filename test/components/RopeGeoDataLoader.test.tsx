@@ -71,7 +71,7 @@ function TestHost<T>(props: {
     queryParams?: Record<string, string | number | boolean | undefined>;
     body?: object;
     timeoutAfterSeconds?: number;
-    offlineData?: T;
+    offlineData?: T | null;
     onRender: (a: Args<T>) => void;
 }) {
     return (
@@ -409,6 +409,25 @@ describe('RopeGeoDataLoader', () => {
         );
         await waitFor(() => {
             expect(latest?.data?.name).toBe('Test Page');
+        });
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('offlineData null skips fetch; data and errors null (loading-style)', async () => {
+        let latest: Args<RopewikiPageView> | undefined;
+        render(
+            <TestHost<RopewikiPageView>
+                onlinePath="/ropewiki/page/:id"
+                onlinePathParams={{ id: 'x' }}
+                offlineData={null}
+                onRender={(a) => {
+                    latest = a as Args<RopewikiPageView>;
+                }}
+            />,
+        );
+        await waitFor(() => {
+            expect(latest?.data).toBeNull();
+            expect(latest?.errors).toBeNull();
         });
         expect(fetchMock).not.toHaveBeenCalled();
     });
