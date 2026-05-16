@@ -1,6 +1,9 @@
-import '../difficulty/registerDifficultyParsers';
-import { Difficulty } from '../difficulty/difficulty';
-import { AcaDifficulty } from '../difficulty/acaDifficulty';
+import '../difficulty/registerDifficultyRatingParsers';
+import {
+    DifficultyRating,
+    resolveDifficultyRatingFromRecord,
+} from '../difficulty/difficultyRating';
+import { AcaDifficultyRating } from '../difficulty/acaDifficultyRating';
 import { PermitStatus } from '../permitStatus';
 import { PageDataSource } from '../pageDataSource';
 import { FetchType } from '../fetchType';
@@ -57,8 +60,8 @@ export abstract class PagePreview extends Preview {
     regions: string[];
     /** AKA (also-known-as) names */
     aka: string[];
-    /** ACA (or future) difficulty; use {@link AcaDifficulty.effectiveRisk} for display when applicable. */
-    difficulty: Difficulty;
+    /** ACA (or future) difficulty rating; use {@link AcaDifficultyRating.effectiveRisk} for display when applicable. */
+    difficultyRating: DifficultyRating;
     /** Map data id for the page route, or null if none */
     mapData: string | null;
     /** External link to the page (e.g. Ropewiki page URL) */
@@ -74,7 +77,7 @@ export abstract class PagePreview extends Preview {
         title: string,
         regions: string[],
         aka: string[],
-        difficulty: Difficulty,
+        difficultyRating: DifficultyRating,
         mapData: string | null,
         externalLink: string | null,
         permit: PermitStatus | null,
@@ -87,7 +90,7 @@ export abstract class PagePreview extends Preview {
         this.title = title;
         this.regions = regions;
         this.aka = aka;
-        this.difficulty = difficulty;
+        this.difficultyRating = difficultyRating;
         this.mapData = mapData;
         this.externalLink = externalLink;
         this.permit = permit;
@@ -102,7 +105,7 @@ export abstract class PagePreview extends Preview {
         regions?: string[],
         aka?: string[],
     ): import('./onlinePagePreview').OnlinePagePreview {
-        const difficulty = new AcaDifficulty(
+        const difficultyRating = new AcaDifficultyRating(
             row.technicalRating,
             row.waterRating,
             row.timeRating,
@@ -120,7 +123,7 @@ export abstract class PagePreview extends Preview {
                 title: row.title,
                 regions: regions ?? [row.regionName],
                 aka: aka ?? [],
-                difficulty,
+                difficultyRating,
                 mapData,
                 externalLink: row.url ?? null,
                 permit: PagePreview.parsePermit(row.permits),
@@ -131,7 +134,7 @@ export abstract class PagePreview extends Preview {
 
     /**
      * Validates result has page preview fields and applies PagePreview.prototype.
-     * Expects difficulty as plain object with technical, water, time, additionalRisk (optional).
+     * Expects difficultyRating as plain object with technical, water, time, additionalRisk (optional).
      */
     static fromResult(result: unknown, fetchType?: FetchType): PagePreview {
         if (result == null || typeof result !== 'object') {
@@ -169,7 +172,7 @@ export abstract class PagePreview extends Preview {
         PagePreview.assertSource(r, 'source');
         PagePreview.assertStringArray(r, 'regions');
         PagePreview.assertStringArray(r, 'aka');
-        PagePreview.assertDifficulty(r, 'difficulty');
+        PagePreview.assertDifficultyRating(r);
         PagePreview.assertNullableString(r, 'mapData');
         PagePreview.assertNullableString(r, 'externalLink');
         PagePreview.assertNullableNumber(r, 'rating');
@@ -180,8 +183,8 @@ export abstract class PagePreview extends Preview {
                 `${context}.fetchType must be "${expectedFetchType}", got: ${JSON.stringify(r.fetchType)}`,
             );
         }
-        (r as Record<string, unknown>).difficulty = Difficulty.fromResult(
-            r.difficulty,
+        r.difficultyRating = DifficultyRating.fromResult(
+            resolveDifficultyRatingFromRecord(r),
         );
     }
 
@@ -227,15 +230,15 @@ export abstract class PagePreview extends Preview {
         }
     }
 
-    protected static assertDifficulty(obj: Record<string, unknown>, key: string): void {
-        const v = obj[key];
+    protected static assertDifficultyRating(r: Record<string, unknown>): void {
+        const v = resolveDifficultyRatingFromRecord(r);
         if (v == null || typeof v !== 'object') {
-            throw new Error(`PagePreview.${key} must be an object`);
+            throw new Error('PagePreview.difficultyRating must be an object');
         }
         const d = v as Record<string, unknown>;
         const strOrNull = (x: unknown, field: string) => {
             if (x !== undefined && x !== null && typeof x !== 'string') {
-                throw new Error(`PagePreview.difficulty.${field} must be string or null`);
+                throw new Error(`PagePreview.difficultyRating.${field} must be string or null`);
             }
         };
         strOrNull(d.technical, 'technical');
@@ -243,13 +246,19 @@ export abstract class PagePreview extends Preview {
         strOrNull(d.time, 'time');
         strOrNull(d.additionalRisk, 'additionalRisk');
         strOrNull(d.effectiveRisk, 'effectiveRisk');
-        const dtype = d.difficultyType ?? d.DifficultyType;
+        const dtype =
+            d.difficultyRatingSystem ??
+            d.DifficultyRatingSystem ??
+            d.difficultyType ??
+            d.DifficultyType;
         if (
             dtype !== undefined &&
             dtype !== null &&
             typeof dtype !== 'string'
         ) {
-            throw new Error('PagePreview.difficulty.difficultyType must be a string or null');
+            throw new Error(
+                'PagePreview.difficultyRating.difficultyRatingSystem must be a string or null',
+            );
         }
     }
 

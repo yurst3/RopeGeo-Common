@@ -1,15 +1,15 @@
-import { DifficultyType } from '../../difficulty/difficulty';
+import { DifficultyRatingSystem } from '../../difficulty/difficultyRating';
 
 /** Flat query / query-like record for {@link DifficultyParams.fromQueryStringParams}. */
 export type DifficultyParamsQueryRecord = Record<string, string | undefined>;
 
 const queryParsers = new Map<
-    DifficultyType,
+    DifficultyRatingSystem,
     (q: DifficultyParamsQueryRecord) => DifficultyParams
 >();
 
 let queryInference:
-    | ((q: DifficultyParamsQueryRecord) => DifficultyType | null)
+    | ((q: DifficultyParamsQueryRecord) => DifficultyRatingSystem | null)
     | undefined;
 
 let parseFromResult:
@@ -17,11 +17,11 @@ let parseFromResult:
     | undefined;
 
 /**
- * When `difficulty-type` is absent, this hook may return a {@link DifficultyType} to parse with
+ * When `difficulty-type` is absent, this hook may return a {@link DifficultyRatingSystem} to parse with
  * {@link registerDifficultyParamsQueryParser} (e.g. ACA when any `aca-*-rating` key is present).
  */
 export function registerDifficultyParamsQueryInference(
-    fn: (q: DifficultyParamsQueryRecord) => DifficultyType | null,
+    fn: (q: DifficultyParamsQueryRecord) => DifficultyRatingSystem | null,
 ): void {
     queryInference = fn;
 }
@@ -31,7 +31,7 @@ export function registerDifficultyParamsQueryInference(
  * (see `registerDifficultyParamsParsers.ts`).
  */
 export function registerDifficultyParamsQueryParser(
-    type: DifficultyType,
+    type: DifficultyRatingSystem,
     parse: (q: DifficultyParamsQueryRecord) => DifficultyParams,
 ): void {
     queryParsers.set(type, parse);
@@ -50,7 +50,7 @@ export function registerDifficultyParamsResultParser(
  * Query serialization for GET /routes and GET /search difficulty filters.
  */
 export abstract class DifficultyParams {
-    abstract readonly difficultyType: DifficultyType;
+    abstract readonly difficultyType: DifficultyRatingSystem;
 
     abstract toQueryString(): string;
 
@@ -84,7 +84,7 @@ export abstract class DifficultyParams {
             return parser(q);
         }
         if (rawType === 'aca') {
-            const parser = queryParsers.get(DifficultyType.ACA);
+            const parser = queryParsers.get(DifficultyRatingSystem.ACA);
             if (parser === undefined) {
                 throw new Error(
                     'No difficulty params query parser registered for difficultyType ACA',

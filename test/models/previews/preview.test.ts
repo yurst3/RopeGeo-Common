@@ -2,12 +2,12 @@ import { describe, it, expect } from '@jest/globals';
 import { Preview, PreviewType } from '../../../src/models/previews/preview';
 import { OnlinePagePreview } from '../../../src/models/previews/onlinePagePreview';
 import { RegionPreview } from '../../../src/models/previews/regionPreview';
-import { AcaDifficulty } from '../../../src/models';
+import { AcaDifficultyRating } from '../../../src/models';
 import { PageDataSource } from '../../../src/models/pageDataSource';
 import '../../../src/models/previews/registerPreviewParsers';
 
 function samplePagePreview(): OnlinePagePreview {
-    const difficulty = new AcaDifficulty(null, null, null, null);
+    const difficulty = new AcaDifficultyRating(null, null, null, null);
     return new OnlinePagePreview(
         'page-id',
         PageDataSource.Ropewiki,
@@ -45,7 +45,7 @@ describe('Preview', () => {
             if (preview.isPagePreview()) {
                 expect(preview.title).toBe('Page Title');
                 expect(preview.regions).toEqual([]);
-                expect(preview.difficulty).toBeInstanceOf(AcaDifficulty);
+                expect(preview.difficultyRating).toBeInstanceOf(AcaDifficultyRating);
             }
         });
     });

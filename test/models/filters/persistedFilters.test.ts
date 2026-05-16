@@ -2,10 +2,10 @@ import { describe, it, expect } from '@jest/globals';
 import {
     AcaDifficultyFilterOptions,
     AcaDifficultyParams,
-    AcaRiskRating,
-    AcaTechnicalRating,
-    AcaTimeRating,
-    AcaWaterRating,
+    AcaRiskSubRating,
+    AcaTechnicalSubRating,
+    AcaTimeSubRating,
+    AcaWaterSubRating,
     DifficultyFilterOptions,
     PageDataSource,
     RiskMinMax,
@@ -23,10 +23,10 @@ const rid = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 
 function sampleAcaFilterOptions(): AcaDifficultyFilterOptions {
     return new AcaDifficultyFilterOptions(
-        new TechnicalMinMax(AcaTechnicalRating.One, AcaTechnicalRating.Two),
-        new WaterMinMax(AcaWaterRating.A, AcaWaterRating.C),
-        new TimeMinMax(AcaTimeRating.I, AcaTimeRating.II),
-        new RiskMinMax(AcaRiskRating.G, AcaRiskRating.PG),
+        new TechnicalMinMax(AcaTechnicalSubRating.One, AcaTechnicalSubRating.Two),
+        new WaterMinMax(AcaWaterSubRating.A, AcaWaterSubRating.C),
+        new TimeMinMax(AcaTimeSubRating.I, AcaTimeSubRating.II),
+        new RiskMinMax(AcaRiskSubRating.G, AcaRiskSubRating.PG),
     );
 }
 
@@ -35,8 +35,8 @@ describe('MinMax constructors', () => {
         expect(
             () =>
                 new TechnicalMinMax(
-                    AcaTechnicalRating.Three,
-                    AcaTechnicalRating.One,
+                    AcaTechnicalSubRating.Three,
+                    AcaTechnicalSubRating.One,
                 ),
         ).toThrow(/must not be greater than max/);
     });
@@ -44,20 +44,20 @@ describe('MinMax constructors', () => {
     it('throws when water min > max', () => {
         expect(
             () =>
-                new WaterMinMax(AcaWaterRating.C, AcaWaterRating.A),
+                new WaterMinMax(AcaWaterSubRating.C, AcaWaterSubRating.A),
         ).toThrow(/must not be greater than max/);
     });
 
     it('throws when time min > max', () => {
         expect(
             () =>
-                new TimeMinMax(AcaTimeRating.VI, AcaTimeRating.I),
+                new TimeMinMax(AcaTimeSubRating.VI, AcaTimeSubRating.I),
         ).toThrow(/must not be greater than max/);
     });
 
     it('throws when risk min > max', () => {
         expect(
-            () => new RiskMinMax(AcaRiskRating.R, AcaRiskRating.G),
+            () => new RiskMinMax(AcaRiskSubRating.R, AcaRiskSubRating.G),
         ).toThrow(/must not be greater than max/);
     });
 });
@@ -65,19 +65,19 @@ describe('MinMax constructors', () => {
 describe('AcaDifficultyFilterOptions', () => {
     it('toDifficultyParams expands inclusive ranges', () => {
         const f = new AcaDifficultyFilterOptions(
-            new TechnicalMinMax(AcaTechnicalRating.One, AcaTechnicalRating.Two),
-            new WaterMinMax(AcaWaterRating.C, AcaWaterRating.C),
-            new TimeMinMax(AcaTimeRating.I, AcaTimeRating.I),
-            new RiskMinMax(AcaRiskRating.G, AcaRiskRating.G),
+            new TechnicalMinMax(AcaTechnicalSubRating.One, AcaTechnicalSubRating.Two),
+            new WaterMinMax(AcaWaterSubRating.C, AcaWaterSubRating.C),
+            new TimeMinMax(AcaTimeSubRating.I, AcaTimeSubRating.I),
+            new RiskMinMax(AcaRiskSubRating.G, AcaRiskSubRating.G),
         );
         const p = f.toDifficultyParams();
         expect(p.technical).toEqual([
-            AcaTechnicalRating.One,
-            AcaTechnicalRating.Two,
+            AcaTechnicalSubRating.One,
+            AcaTechnicalSubRating.Two,
         ]);
-        expect(p.water).toEqual([AcaWaterRating.C]);
-        expect(p.time).toEqual([AcaTimeRating.I]);
-        expect(p.effectiveRisk).toEqual([AcaRiskRating.G]);
+        expect(p.water).toEqual([AcaWaterSubRating.C]);
+        expect(p.time).toEqual([AcaTimeSubRating.I]);
+        expect(p.effectiveRisk).toEqual([AcaRiskSubRating.G]);
     });
 
     it('toJSON and DifficultyFilterOptions.fromResult round-trip', () => {
@@ -97,7 +97,7 @@ describe('AcaDifficultyFilterOptions', () => {
         };
         const f = AcaDifficultyFilterOptions.fromResult(j);
         expect(f.difficultyType).toBe('ACA');
-        expect(f.technical.min).toBe(AcaTechnicalRating.One);
+        expect(f.technical.min).toBe(AcaTechnicalSubRating.One);
     });
 
     it('fromResult rejects wrong difficultyType', () => {

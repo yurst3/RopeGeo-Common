@@ -1,4 +1,4 @@
-import { AcaDifficulty } from '../difficulty/acaDifficulty';
+import { AcaDifficultyRating } from '../difficulty/acaDifficultyRating';
 import { OfflinePagePreview } from '../previews/offlinePagePreview';
 import { OnlinePagePreview } from '../previews/onlinePagePreview';
 import { PagePreview } from '../previews/pagePreview';
@@ -32,18 +32,18 @@ function assertFiniteNumber(value: unknown, name: string): asserts value is numb
 }
 
 function pagePreviewToPlain(p: OnlinePagePreview | OfflinePagePreview): Record<string, unknown> {
-    const diffPlain =
-        p.difficulty instanceof AcaDifficulty
+    const difficultyRatingPlain =
+        p.difficultyRating instanceof AcaDifficultyRating
             ? {
-                  difficultyType: p.difficulty.difficultyType,
-                  technical: p.difficulty.technical,
-                  water: p.difficulty.water,
-                  time: p.difficulty.time,
-                  additionalRisk: p.difficulty.additionalRisk,
-                  effectiveRisk: p.difficulty.effectiveRisk,
+                  difficultyRatingSystem: p.difficultyRating.difficultyRatingSystem,
+                  technical: p.difficultyRating.technical,
+                  water: p.difficultyRating.water,
+                  time: p.difficultyRating.time,
+                  additionalRisk: p.difficultyRating.additionalRisk,
+                  effectiveRisk: p.difficultyRating.effectiveRisk,
               }
             : {
-                  difficultyType: p.difficulty.difficultyType,
+                  difficultyRatingSystem: p.difficultyRating.difficultyRatingSystem,
               };
 
     const imageFields =
@@ -62,7 +62,7 @@ function pagePreviewToPlain(p: OnlinePagePreview | OfflinePagePreview): Record<s
         title: p.title,
         regions: p.regions,
         aka: p.aka,
-        difficulty: diffPlain,
+        difficultyRating: difficultyRatingPlain,
         mapData: p.mapData,
         externalLink: p.externalLink,
         permit: p.permit,

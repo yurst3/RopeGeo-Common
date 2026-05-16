@@ -1,12 +1,12 @@
 import { describe, it, expect } from '@jest/globals';
 import {
     AcaDifficultyParams,
-    AcaRiskRating,
-    AcaTechnicalRating,
-    AcaTimeRating,
-    AcaWaterRating,
+    AcaRiskSubRating,
+    AcaTechnicalSubRating,
+    AcaTimeSubRating,
+    AcaWaterSubRating,
     DifficultyParams,
-    DifficultyType,
+    DifficultyRatingSystem,
     isDifficultyParamsActive,
     Q_ACA_TECHNICAL,
 } from '../../../../src/models';
@@ -24,8 +24,8 @@ describe('DifficultyParams', () => {
             });
             expect(d).toBeInstanceOf(AcaDifficultyParams);
             expect((d as AcaDifficultyParams).technical).toEqual([
-                AcaTechnicalRating.One,
-                AcaTechnicalRating.Two,
+                AcaTechnicalSubRating.One,
+                AcaTechnicalSubRating.Two,
             ]);
         });
 
@@ -34,14 +34,14 @@ describe('DifficultyParams', () => {
                 'Difficulty-Type': 'ACA',
                 'aca-water-rating': 'c',
             }) as AcaDifficultyParams;
-            expect(d.water).toEqual([AcaWaterRating.C]);
+            expect(d.water).toEqual([AcaWaterSubRating.C]);
         });
 
         it('infers ACA when difficulty-type omitted but an aca axis is set', () => {
             const d = DifficultyParams.fromQueryStringParams({
                 [Q_ACA_TECHNICAL]: '3',
             }) as AcaDifficultyParams;
-            expect(d.technical).toEqual([AcaTechnicalRating.Three]);
+            expect(d.technical).toEqual([AcaTechnicalSubRating.Three]);
         });
 
         it('accepts PascalCase aca rating keys when type is explicit', () => {
@@ -49,14 +49,14 @@ describe('DifficultyParams', () => {
                 'difficulty-type': 'aca',
                 'Aca-Time-Rating': 'I|II',
             }) as AcaDifficultyParams;
-            expect(d.time).toEqual([AcaTimeRating.I, AcaTimeRating.II]);
+            expect(d.time).toEqual([AcaTimeSubRating.I, AcaTimeSubRating.II]);
         });
 
         it('dedupes and sorts pipe tokens', () => {
             const d = DifficultyParams.fromQueryStringParams({
                 'aca-risk-rating': 'R|PG|r',
             }) as AcaDifficultyParams;
-            expect(d.effectiveRisk).toEqual([AcaRiskRating.PG, AcaRiskRating.R]);
+            expect(d.effectiveRisk).toEqual([AcaRiskSubRating.PG, AcaRiskSubRating.R]);
         });
 
         it('throws on invalid difficulty-type value', () => {
@@ -82,14 +82,14 @@ describe('DifficultyParams', () => {
                 difficultyType: 'ACA',
                 'aca-technical-rating': '1',
             }) as AcaDifficultyParams;
-            expect(d.technical).toEqual([AcaTechnicalRating.One]);
+            expect(d.technical).toEqual([AcaTechnicalSubRating.One]);
         });
 
         it('infers ACA when keys present without difficultyType', () => {
             const d = DifficultyParams.fromResult({
                 'aca-risk-rating': 'G',
             }) as AcaDifficultyParams;
-            expect(d.effectiveRisk).toEqual([AcaRiskRating.G]);
+            expect(d.effectiveRisk).toEqual([AcaRiskSubRating.G]);
         });
 
         it('returns null when empty difficulty object', () => {
@@ -112,7 +112,7 @@ describe('DifficultyParams', () => {
     describe('appendToUrlSearchParams', () => {
         it('merges active difficulty into URLSearchParams', () => {
             const diff = new AcaDifficultyParams(
-                [AcaTechnicalRating.One],
+                [AcaTechnicalSubRating.One],
                 [],
                 [],
                 [],
@@ -148,7 +148,7 @@ describe('isDifficultyParamsActive', () => {
     it('returns true when any axis is non-empty', () => {
         expect(
             isDifficultyParamsActive(
-                new AcaDifficultyParams([AcaTechnicalRating.One], [], [], []),
+                new AcaDifficultyParams([AcaTechnicalSubRating.One], [], [], []),
             ),
         ).toBe(true);
     });
@@ -158,15 +158,15 @@ describe('AcaDifficultyParams', () => {
     it('isActive is false when all axes empty', () => {
         const p = new AcaDifficultyParams([], [], [], []);
         expect(p.isActive()).toBe(false);
-        expect(p.difficultyType).toBe(DifficultyType.ACA);
+        expect(p.difficultyType).toBe(DifficultyRatingSystem.ACA);
     });
 
     it('toQueryString omits empty axes', () => {
         const p = new AcaDifficultyParams(
-            [AcaTechnicalRating.Two],
+            [AcaTechnicalSubRating.Two],
             [],
             [],
-            [AcaRiskRating.PG13],
+            [AcaRiskSubRating.PG13],
         );
         const q = new URLSearchParams(p.toQueryString());
         expect(q.get('difficulty-type')).toBe('aca');
@@ -181,8 +181,8 @@ describe('AcaDifficultyParams', () => {
                 'Aca-Water-Rating': 'a',
                 'Aca-Time-Rating': 'III',
             });
-            expect(p.water).toEqual([AcaWaterRating.A]);
-            expect(p.time).toEqual([AcaTimeRating.III]);
+            expect(p.water).toEqual([AcaWaterSubRating.A]);
+            expect(p.time).toEqual([AcaTimeSubRating.III]);
         });
     });
 
@@ -198,7 +198,7 @@ describe('AcaDifficultyParams', () => {
 
         it('returns same instance when active', () => {
             const p = new AcaDifficultyParams(
-                [AcaTechnicalRating.Four],
+                [AcaTechnicalSubRating.Four],
                 [],
                 [],
                 [],

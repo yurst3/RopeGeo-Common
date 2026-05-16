@@ -1,10 +1,10 @@
-import { DifficultyType } from '../../difficulty/difficulty';
+import { DifficultyRatingSystem } from '../../difficulty/difficultyRating';
 import {
-    AcaRiskRating,
-    AcaTechnicalRating,
-    AcaTimeRating,
-    AcaWaterRating,
-} from '../../difficulty/acaRatings';
+    AcaRiskSubRating,
+    AcaTechnicalSubRating,
+    AcaTimeSubRating,
+    AcaWaterSubRating,
+} from '../../difficulty/acaSubRatings';
 import {
     DifficultyParams,
     type DifficultyParamsQueryRecord,
@@ -63,18 +63,18 @@ function acaAxisKeysPresent(q: DifficultyParamsQueryRecord): boolean {
 }
 
 export class AcaDifficultyParams extends DifficultyParams {
-    readonly difficultyType = DifficultyType.ACA;
+    readonly difficultyType = DifficultyRatingSystem.ACA;
 
-    readonly technical: AcaTechnicalRating[];
-    readonly water: AcaWaterRating[];
-    readonly time: AcaTimeRating[];
-    readonly effectiveRisk: AcaRiskRating[];
+    readonly technical: AcaTechnicalSubRating[];
+    readonly water: AcaWaterSubRating[];
+    readonly time: AcaTimeSubRating[];
+    readonly effectiveRisk: AcaRiskSubRating[];
 
     constructor(
-        technical: AcaTechnicalRating[],
-        water: AcaWaterRating[],
-        time: AcaTimeRating[],
-        effectiveRisk: AcaRiskRating[],
+        technical: AcaTechnicalSubRating[],
+        water: AcaWaterSubRating[],
+        time: AcaTimeSubRating[],
+        effectiveRisk: AcaRiskSubRating[],
     ) {
         super();
         this.technical = [...technical];
@@ -121,22 +121,22 @@ export class AcaDifficultyParams extends DifficultyParams {
     ): AcaDifficultyParams {
         const technical = parseEnumTokens(
             q[Q_ACA_TECHNICAL] ?? q['Aca-Technical-Rating'],
-            Object.values(AcaTechnicalRating),
+            Object.values(AcaTechnicalSubRating),
             'aca-technical-rating',
         );
         const water = parseEnumTokens(
             q[Q_ACA_WATER] ?? q['Aca-Water-Rating'],
-            Object.values(AcaWaterRating),
+            Object.values(AcaWaterSubRating),
             'aca-water-rating',
         );
         const time = parseEnumTokens(
             q[Q_ACA_TIME] ?? q['Aca-Time-Rating'],
-            Object.values(AcaTimeRating),
+            Object.values(AcaTimeSubRating),
             'aca-time-rating',
         );
         const effectiveRisk = parseEnumTokens(
             q[Q_ACA_RISK] ?? q['Aca-Risk-Rating'],
-            Object.values(AcaRiskRating),
+            Object.values(AcaRiskSubRating),
             'aca-risk-rating',
         );
         return new AcaDifficultyParams(technical, water, time, effectiveRisk);
@@ -161,7 +161,7 @@ export class AcaDifficultyParams extends DifficultyParams {
                 Q_ACA_TECHNICAL,
                 'Aca-Technical-Rating',
             ),
-            Object.values(AcaTechnicalRating),
+            Object.values(AcaTechnicalSubRating),
             'aca-technical-rating',
         );
         const water = parseEnumTokens(
@@ -170,17 +170,17 @@ export class AcaDifficultyParams extends DifficultyParams {
                 Q_ACA_WATER,
                 'Aca-Water-Rating',
             ),
-            Object.values(AcaWaterRating),
+            Object.values(AcaWaterSubRating),
             'aca-water-rating',
         );
         const time = parseEnumTokens(
             AcaDifficultyParams.optionalString(obj, Q_ACA_TIME, 'Aca-Time-Rating'),
-            Object.values(AcaTimeRating),
+            Object.values(AcaTimeSubRating),
             'aca-time-rating',
         );
         const effectiveRisk = parseEnumTokens(
             AcaDifficultyParams.optionalString(obj, Q_ACA_RISK, 'Aca-Risk-Rating'),
-            Object.values(AcaRiskRating),
+            Object.values(AcaRiskSubRating),
             'aca-risk-rating',
         );
         return new AcaDifficultyParams(technical, water, time, effectiveRisk);
@@ -196,9 +196,9 @@ export class AcaDifficultyParams extends DifficultyParams {
 }
 
 registerDifficultyParamsQueryInference((q) =>
-    acaAxisKeysPresent(q) ? DifficultyType.ACA : null,
+    acaAxisKeysPresent(q) ? DifficultyRatingSystem.ACA : null,
 );
 
-registerDifficultyParamsQueryParser(DifficultyType.ACA, (q) =>
+registerDifficultyParamsQueryParser(DifficultyRatingSystem.ACA, (q) =>
     AcaDifficultyParams.fromQueryStringParams(q),
 );

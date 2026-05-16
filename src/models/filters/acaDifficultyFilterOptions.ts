@@ -1,14 +1,14 @@
-import { DifficultyType } from '../difficulty/difficulty';
+import { DifficultyRatingSystem } from '../difficulty/difficultyRating';
 import {
     ACA_RISK_ORDER,
     ACA_TECHNICAL_ORDER,
     ACA_TIME_ORDER,
     ACA_WATER_ORDER,
-    AcaRiskRating,
-    AcaTechnicalRating,
-    AcaTimeRating,
-    AcaWaterRating,
-} from '../difficulty/acaRatings';
+    AcaRiskSubRating,
+    AcaTechnicalSubRating,
+    AcaTimeSubRating,
+    AcaWaterSubRating,
+} from '../difficulty/acaSubRatings';
 import { DifficultyFilterOptions, registerDifficultyFilterOptionsParser } from './difficultyFilterOptions';
 import { AcaDifficultyParams } from '../api/params/acaDifficultyParams';
 
@@ -36,34 +36,34 @@ function expandInclusive<T extends string>(
     return orderedValues.filter((v) => order[v] >= lo && order[v] <= hi);
 }
 
-const TECHNICAL_ORDERED: AcaTechnicalRating[] = (
-    Object.entries(ACA_TECHNICAL_ORDER) as [AcaTechnicalRating, number][]
+const TECHNICAL_ORDERED: AcaTechnicalSubRating[] = (
+    Object.entries(ACA_TECHNICAL_ORDER) as [AcaTechnicalSubRating, number][]
 )
     .sort((a, b) => a[1] - b[1])
     .map(([k]) => k);
 
-const WATER_ORDERED: AcaWaterRating[] = (
-    Object.entries(ACA_WATER_ORDER) as [AcaWaterRating, number][]
+const WATER_ORDERED: AcaWaterSubRating[] = (
+    Object.entries(ACA_WATER_ORDER) as [AcaWaterSubRating, number][]
 )
     .sort((a, b) => a[1] - b[1])
     .map(([k]) => k);
 
-const TIME_ORDERED: AcaTimeRating[] = (
-    Object.entries(ACA_TIME_ORDER) as [AcaTimeRating, number][]
+const TIME_ORDERED: AcaTimeSubRating[] = (
+    Object.entries(ACA_TIME_ORDER) as [AcaTimeSubRating, number][]
 )
     .sort((a, b) => a[1] - b[1])
     .map(([k]) => k);
 
-const RISK_ORDERED: AcaRiskRating[] = (
-    Object.entries(ACA_RISK_ORDER) as [AcaRiskRating, number][]
+const RISK_ORDERED: AcaRiskSubRating[] = (
+    Object.entries(ACA_RISK_ORDER) as [AcaRiskSubRating, number][]
 )
     .sort((a, b) => a[1] - b[1])
     .map(([k]) => k);
 
 export class TechnicalMinMax {
-    readonly min: AcaTechnicalRating;
-    readonly max: AcaTechnicalRating;
-    constructor(min: AcaTechnicalRating, max: AcaTechnicalRating) {
+    readonly min: AcaTechnicalSubRating;
+    readonly max: AcaTechnicalSubRating;
+    constructor(min: AcaTechnicalSubRating, max: AcaTechnicalSubRating) {
         assertOrdered(min, max, ACA_TECHNICAL_ORDER, 'TechnicalMinMax');
         this.min = min;
         this.max = max;
@@ -71,9 +71,9 @@ export class TechnicalMinMax {
 }
 
 export class WaterMinMax {
-    readonly min: AcaWaterRating;
-    readonly max: AcaWaterRating;
-    constructor(min: AcaWaterRating, max: AcaWaterRating) {
+    readonly min: AcaWaterSubRating;
+    readonly max: AcaWaterSubRating;
+    constructor(min: AcaWaterSubRating, max: AcaWaterSubRating) {
         assertOrdered(min, max, ACA_WATER_ORDER, 'WaterMinMax');
         this.min = min;
         this.max = max;
@@ -81,9 +81,9 @@ export class WaterMinMax {
 }
 
 export class TimeMinMax {
-    readonly min: AcaTimeRating;
-    readonly max: AcaTimeRating;
-    constructor(min: AcaTimeRating, max: AcaTimeRating) {
+    readonly min: AcaTimeSubRating;
+    readonly max: AcaTimeSubRating;
+    constructor(min: AcaTimeSubRating, max: AcaTimeSubRating) {
         assertOrdered(min, max, ACA_TIME_ORDER, 'TimeMinMax');
         this.min = min;
         this.max = max;
@@ -91,9 +91,9 @@ export class TimeMinMax {
 }
 
 export class RiskMinMax {
-    readonly min: AcaRiskRating;
-    readonly max: AcaRiskRating;
-    constructor(min: AcaRiskRating, max: AcaRiskRating) {
+    readonly min: AcaRiskSubRating;
+    readonly max: AcaRiskSubRating;
+    constructor(min: AcaRiskSubRating, max: AcaRiskSubRating) {
         assertOrdered(min, max, ACA_RISK_ORDER, 'RiskMinMax');
         this.min = min;
         this.max = max;
@@ -101,7 +101,7 @@ export class RiskMinMax {
 }
 
 export class AcaDifficultyFilterOptions extends DifficultyFilterOptions {
-    readonly difficultyType = DifficultyType.ACA;
+    readonly difficultyType = DifficultyRatingSystem.ACA;
     readonly technical: TechnicalMinMax;
     readonly water: WaterMinMax;
     readonly time: TimeMinMax;
@@ -175,8 +175,8 @@ export class AcaDifficultyFilterOptions extends DifficultyFilterOptions {
         if (
             dtype !== undefined &&
             dtype !== null &&
-            (dtype !== DifficultyType.ACA &&
-                !(typeof dtype === 'string' && dtype.toUpperCase() === DifficultyType.ACA))
+            (dtype !== DifficultyRatingSystem.ACA &&
+                !(typeof dtype === 'string' && dtype.toUpperCase() === DifficultyRatingSystem.ACA))
         ) {
             throw new Error('AcaDifficultyFilterOptions.difficultyType must be ACA');
         }
@@ -186,19 +186,19 @@ export class AcaDifficultyFilterOptions extends DifficultyFilterOptions {
         const riskRec = r.effectiveRisk as Record<string, unknown>;
         return new AcaDifficultyFilterOptions(
             new TechnicalMinMax(
-                tech.min as AcaTechnicalRating,
-                tech.max as AcaTechnicalRating,
+                tech.min as AcaTechnicalSubRating,
+                tech.max as AcaTechnicalSubRating,
             ),
-            new WaterMinMax(water.min as AcaWaterRating, water.max as AcaWaterRating),
-            new TimeMinMax(time.min as AcaTimeRating, time.max as AcaTimeRating),
+            new WaterMinMax(water.min as AcaWaterSubRating, water.max as AcaWaterSubRating),
+            new TimeMinMax(time.min as AcaTimeSubRating, time.max as AcaTimeSubRating),
             new RiskMinMax(
-                riskRec.min as AcaRiskRating,
-                riskRec.max as AcaRiskRating,
+                riskRec.min as AcaRiskSubRating,
+                riskRec.max as AcaRiskSubRating,
             ),
         );
     }
 }
 
-registerDifficultyFilterOptionsParser(DifficultyType.ACA, (v) =>
+registerDifficultyFilterOptionsParser(DifficultyRatingSystem.ACA, (v) =>
     AcaDifficultyFilterOptions.fromResult(v),
 );

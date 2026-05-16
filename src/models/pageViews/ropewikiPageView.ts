@@ -1,5 +1,8 @@
-import '../difficulty/registerDifficultyParsers';
-import { Difficulty } from '../difficulty/difficulty';
+import '../difficulty/registerDifficultyRatingParsers';
+import {
+    DifficultyRating,
+    resolveDifficultyRatingFromRecord,
+} from '../difficulty/difficultyRating';
 import { PermitStatus } from '../permitStatus';
 import { FetchType } from '../fetchType';
 import { RouteType } from '../routes/routeType';
@@ -26,7 +29,7 @@ export abstract class RopewikiPageView {
     quality: number;
     userVotes: number;
     regions: { name: string; id: string }[];
-    difficulty: Difficulty;
+    difficultyRating: DifficultyRating;
     permit: PermitStatus | null;
     rappelCount: MinMax | number | null;
     jumps: number | null;
@@ -59,7 +62,7 @@ export abstract class RopewikiPageView {
         quality: number,
         userVotes: number,
         regions: { name: string; id: string }[],
-        difficulty: Difficulty,
+        difficultyRating: DifficultyRating,
         permit: PermitStatus | null,
         rappelCount: MinMax | number | null,
         jumps: number | null,
@@ -90,7 +93,7 @@ export abstract class RopewikiPageView {
         this.quality = quality;
         this.userVotes = userVotes;
         this.regions = Array.isArray(regions) ? regions.slice() : [];
-        this.difficulty = difficulty;
+        this.difficultyRating = difficultyRating;
         this.permit = permit;
         this.rappelCount = rappelCount;
         this.jumps = jumps;
@@ -147,7 +150,7 @@ export abstract class RopewikiPageView {
         RopewikiPageView.assertNumber(r, 'quality');
         RopewikiPageView.assertNumber(r, 'userVotes');
         RopewikiPageView.assertRegionsArray(r, 'regions');
-        RopewikiPageView.assertDifficulty(r, 'difficulty');
+        RopewikiPageView.assertDifficultyRating(r);
         RopewikiPageView.assertPermit(r, 'permit');
         RopewikiPageView.assertRappelCount(r, 'rappelCount');
         RopewikiPageView.assertNullableNumber(r, 'jumps');
@@ -175,7 +178,9 @@ export abstract class RopewikiPageView {
             );
         }
         r.latestRevisionDate = new Date(r.latestRevisionDate as string);
-        r.difficulty = Difficulty.fromResult(r.difficulty);
+        r.difficultyRating = DifficultyRating.fromResult(
+            resolveDifficultyRatingFromRecord(r),
+        );
     }
 
     private static assertPageViewType(obj: Record<string, unknown>, key: string): void {
@@ -317,30 +322,31 @@ export abstract class RopewikiPageView {
         }
     }
 
-    protected static assertDifficulty(
-        obj: Record<string, unknown>,
-        key: string,
-    ): void {
-        const v = obj[key];
+    protected static assertDifficultyRating(r: Record<string, unknown>): void {
+        const v = resolveDifficultyRatingFromRecord(r);
         if (v == null || typeof v !== 'object') {
-            throw new Error(`RopewikiPageView.${key} must be an object, got: ${typeof v}`);
+            throw new Error(
+                `RopewikiPageView.difficultyRating must be an object, got: ${typeof v}`,
+            );
         }
         const d = v as Record<string, unknown>;
         if (d.technical !== null && d.technical !== undefined && typeof d.technical !== 'string') {
-            throw new Error(`RopewikiPageView.${key}.technical must be string or null`);
+            throw new Error('RopewikiPageView.difficultyRating.technical must be string or null');
         }
         if (d.water !== null && d.water !== undefined && typeof d.water !== 'string') {
-            throw new Error(`RopewikiPageView.${key}.water must be string or null`);
+            throw new Error('RopewikiPageView.difficultyRating.water must be string or null');
         }
         if (d.time !== null && d.time !== undefined && typeof d.time !== 'string') {
-            throw new Error(`RopewikiPageView.${key}.time must be string or null`);
+            throw new Error('RopewikiPageView.difficultyRating.time must be string or null');
         }
         if (
             d.additionalRisk !== null &&
             d.additionalRisk !== undefined &&
             typeof d.additionalRisk !== 'string'
         ) {
-            throw new Error(`RopewikiPageView.${key}.additionalRisk must be string or null`);
+            throw new Error(
+                'RopewikiPageView.difficultyRating.additionalRisk must be string or null',
+            );
         }
     }
 

@@ -1,17 +1,17 @@
 import { describe, it, expect } from '@jest/globals';
 import {
-    AcaDifficulty,
-    AcaRiskRating,
-    AcaTechnicalRating,
-    AcaWaterRating,
-    AcaTimeRating,
-    Difficulty,
+    AcaDifficultyRating,
+    AcaRiskSubRating,
+    AcaTechnicalSubRating,
+    AcaWaterSubRating,
+    AcaTimeSubRating,
+    DifficultyRating,
 } from '../../src/models';
 
-describe('AcaDifficulty', () => {
+describe('AcaDifficultyRating', () => {
     describe('constructor', () => {
         it('parses null and empty ratings as null', () => {
-            const d = new AcaDifficulty(null, undefined, '', null);
+            const d = new AcaDifficultyRating(null, undefined, '', null);
             expect(d.technical).toBeNull();
             expect(d.water).toBeNull();
             expect(d.time).toBeNull();
@@ -20,101 +20,101 @@ describe('AcaDifficulty', () => {
         });
 
         it('parses valid technical ratings', () => {
-            expect(new AcaDifficulty('1', null, null, null).technical).toBe(
-                AcaTechnicalRating.One,
+            expect(new AcaDifficultyRating('1', null, null, null).technical).toBe(
+                AcaTechnicalSubRating.One,
             );
-            expect(new AcaDifficulty('4', null, null, null).technical).toBe(
-                AcaTechnicalRating.Four,
+            expect(new AcaDifficultyRating('4', null, null, null).technical).toBe(
+                AcaTechnicalSubRating.Four,
             );
         });
 
         it('trims whitespace when parsing', () => {
-            const d = new AcaDifficulty('  2  ', '  C  ', '  III  ', '  PG  ');
-            expect(d.technical).toBe(AcaTechnicalRating.Two);
-            expect(d.water).toBe(AcaWaterRating.C);
-            expect(d.time).toBe(AcaTimeRating.III);
-            expect(d.additionalRisk).toBe(AcaRiskRating.PG);
-            expect(d.effectiveRisk).toBe(AcaRiskRating.PG);
+            const d = new AcaDifficultyRating('  2  ', '  C  ', '  III  ', '  PG  ');
+            expect(d.technical).toBe(AcaTechnicalSubRating.Two);
+            expect(d.water).toBe(AcaWaterSubRating.C);
+            expect(d.time).toBe(AcaTimeSubRating.III);
+            expect(d.additionalRisk).toBe(AcaRiskSubRating.PG);
+            expect(d.effectiveRisk).toBe(AcaRiskSubRating.PG);
         });
 
         it('throws on invalid technical rating', () => {
-            expect(() => new AcaDifficulty('5', null, null, null)).toThrow(
+            expect(() => new AcaDifficultyRating('5', null, null, null)).toThrow(
                 'Invalid difficulty technical:',
             );
         });
 
         it('effectiveRisk defaults from technical when additionalRisk is null', () => {
-            expect(new AcaDifficulty('1', null, null, null).effectiveRisk).toBe(
-                AcaRiskRating.G,
+            expect(new AcaDifficultyRating('1', null, null, null).effectiveRisk).toBe(
+                AcaRiskSubRating.G,
             );
-            expect(new AcaDifficulty('2', null, null, null).effectiveRisk).toBe(
-                AcaRiskRating.PG,
+            expect(new AcaDifficultyRating('2', null, null, null).effectiveRisk).toBe(
+                AcaRiskSubRating.PG,
             );
-            expect(new AcaDifficulty('3', null, null, null).effectiveRisk).toBe(
-                AcaRiskRating.PG13,
+            expect(new AcaDifficultyRating('3', null, null, null).effectiveRisk).toBe(
+                AcaRiskSubRating.PG13,
             );
         });
 
         it('keeps explicit additionalRisk when not milder than default', () => {
-            const d = new AcaDifficulty('1', null, null, 'PG');
-            expect(d.additionalRisk).toBe(AcaRiskRating.PG);
-            expect(d.effectiveRisk).toBe(AcaRiskRating.PG);
+            const d = new AcaDifficultyRating('1', null, null, 'PG');
+            expect(d.additionalRisk).toBe(AcaRiskSubRating.PG);
+            expect(d.effectiveRisk).toBe(AcaRiskSubRating.PG);
         });
 
         it('upgrades effectiveRisk when explicit additionalRisk is milder than default', () => {
-            const d = new AcaDifficulty('3', null, null, 'G');
-            expect(d.additionalRisk).toBe(AcaRiskRating.G);
-            expect(d.effectiveRisk).toBe(AcaRiskRating.PG13);
+            const d = new AcaDifficultyRating('3', null, null, 'G');
+            expect(d.additionalRisk).toBe(AcaRiskSubRating.G);
+            expect(d.effectiveRisk).toBe(AcaRiskSubRating.PG13);
         });
 
         it('keeps explicit additionalRisk when no default (technical null)', () => {
-            const d = new AcaDifficulty(null, null, null, 'R');
-            expect(d.additionalRisk).toBe(AcaRiskRating.R);
-            expect(d.effectiveRisk).toBe(AcaRiskRating.R);
+            const d = new AcaDifficultyRating(null, null, null, 'R');
+            expect(d.additionalRisk).toBe(AcaRiskSubRating.R);
+            expect(d.effectiveRisk).toBe(AcaRiskSubRating.R);
         });
     });
 
     describe('fromResult', () => {
-        it('parses via Difficulty.fromResult with difficultyType ACA', () => {
-            const d = Difficulty.fromResult({
+        it('parses via DifficultyRating.fromResult with difficultyType ACA', () => {
+            const d = DifficultyRating.fromResult({
                 difficultyType: 'ACA',
                 technical: '2',
                 water: null,
                 time: null,
                 additionalRisk: 'PG',
-            }) as AcaDifficulty;
-            expect(d.technical).toBe(AcaTechnicalRating.Two);
-            expect(d.additionalRisk).toBe(AcaRiskRating.PG);
+            }) as AcaDifficultyRating;
+            expect(d.technical).toBe(AcaTechnicalSubRating.Two);
+            expect(d.additionalRisk).toBe(AcaRiskSubRating.PG);
         });
 
         it('defaults missing difficultyType to ACA', () => {
-            const d = Difficulty.fromResult({
+            const d = DifficultyRating.fromResult({
                 technical: '1',
                 additionalRisk: null,
-            }) as AcaDifficulty;
-            expect(d.technical).toBe(AcaTechnicalRating.One);
+            }) as AcaDifficultyRating;
+            expect(d.technical).toBe(AcaTechnicalSubRating.One);
         });
 
         it('applies explicit effectiveRisk override', () => {
-            const d = AcaDifficulty.fromResult({
+            const d = AcaDifficultyRating.fromResult({
                 difficultyType: 'ACA',
                 technical: '3',
                 additionalRisk: 'G',
                 effectiveRisk: 'R',
             });
-            expect(d.additionalRisk).toBe(AcaRiskRating.G);
-            expect(d.effectiveRisk).toBe(AcaRiskRating.R);
+            expect(d.additionalRisk).toBe(AcaRiskSubRating.G);
+            expect(d.effectiveRisk).toBe(AcaRiskSubRating.R);
         });
 
-        it('throws on unsupported difficultyType for AcaDifficulty.fromResult', () => {
+        it('throws on unsupported difficultyType for AcaDifficultyRating.fromResult', () => {
             expect(() =>
-                AcaDifficulty.fromResult({ difficultyType: 'SPORT' }),
-            ).toThrow(/Unsupported difficultyType/);
+                AcaDifficultyRating.fromResult({ difficultyType: 'SPORT' }),
+            ).toThrow(/Unsupported difficultyRatingSystem/);
         });
 
         it('throws when field is non-string', () => {
             expect(() =>
-                AcaDifficulty.fromResult({ technical: 1 }),
+                AcaDifficultyRating.fromResult({ technical: 1 }),
             ).toThrow(/must be string or null/);
         });
     });

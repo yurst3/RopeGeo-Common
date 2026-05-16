@@ -1,5 +1,5 @@
 import './api/results/registerAllResultParsers';
-import './difficulty/registerDifficultyParsers';
+import './difficulty/registerDifficultyRatingParsers';
 import './filters/registerDifficultyFilterOptionsParsers';
 import './api/params/registerDifficultyParamsParsers';
 import './betaSections/registerBetaSectionParsers';
@@ -9,30 +9,45 @@ import './pageViews/registerPageViewParsers';
 
 export { PageDataSource } from './pageDataSource';
 export {
-    DifficultyType,
-    Difficulty,
+    DifficultyRatingSystem,
+    DifficultyRating,
     registerDifficultyParser,
-} from './difficulty/difficulty';
+    resolveDifficultyRatingFromRecord,
+} from './difficulty/difficultyRating';
 export {
     ACA_RISK_ORDER,
     ACA_TECHNICAL_ORDER,
     ACA_TIME_ORDER,
     ACA_WATER_ORDER,
-    AcaRiskRating,
-    AcaTechnicalRating,
-    AcaTimeRating,
-    AcaWaterRating,
+    AcaRiskSubRating,
+    AcaTechnicalSubRating,
+    AcaTimeSubRating,
+    AcaWaterSubRating,
     RISK_ORDER,
-} from './difficulty/acaRatings';
-export { AcaDifficulty } from './difficulty/acaDifficulty';
-/** @deprecated Use AcaTechnicalRating */
-export { AcaTechnicalRating as DifficultyTechnical } from './difficulty/acaRatings';
-/** @deprecated Use AcaWaterRating */
-export { AcaWaterRating as DifficultyWater } from './difficulty/acaRatings';
-/** @deprecated Use AcaTimeRating */
-export { AcaTimeRating as DifficultyTime } from './difficulty/acaRatings';
-/** @deprecated Use AcaRiskRating */
-export { AcaRiskRating as DifficultyRisk } from './difficulty/acaRatings';
+} from './difficulty/acaSubRatings';
+export { AcaDifficultyRating } from './difficulty/acaDifficultyRating';
+/** @deprecated Use AcaTechnicalSubRating */
+export { AcaTechnicalSubRating as DifficultyTechnical } from './difficulty/acaSubRatings';
+/** @deprecated Use AcaWaterSubRating */
+export { AcaWaterSubRating as DifficultyWater } from './difficulty/acaSubRatings';
+/** @deprecated Use AcaTimeSubRating */
+export { AcaTimeSubRating as DifficultyTime } from './difficulty/acaSubRatings';
+/** @deprecated Use AcaRiskSubRating */
+export { AcaRiskSubRating as DifficultyRisk } from './difficulty/acaSubRatings';
+/** @deprecated Use DifficultyRatingSystem */
+export { DifficultyRatingSystem as DifficultyType } from './difficulty/difficultyRating';
+/** @deprecated Use DifficultyRating */
+export { DifficultyRating as Difficulty } from './difficulty/difficultyRating';
+/** @deprecated Use AcaDifficultyRating */
+export { AcaDifficultyRating as AcaDifficulty } from './difficulty/acaDifficultyRating';
+/** @deprecated Use AcaTechnicalSubRating */
+export { AcaTechnicalSubRating as AcaTechnicalRating } from './difficulty/acaSubRatings';
+/** @deprecated Use AcaWaterSubRating */
+export { AcaWaterSubRating as AcaWaterRating } from './difficulty/acaSubRatings';
+/** @deprecated Use AcaTimeSubRating */
+export { AcaTimeSubRating as AcaTimeRating } from './difficulty/acaSubRatings';
+/** @deprecated Use AcaRiskSubRating */
+export { AcaRiskSubRating as AcaRiskRating } from './difficulty/acaSubRatings';
 export {
     DifficultyParams,
     type DifficultyParamsQueryRecord,

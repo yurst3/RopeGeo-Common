@@ -83,23 +83,31 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
-| `DifficultyType` | N/A | Discriminator for difficulty scales (e.g. ACA). | `import { DifficultyType } from 'ropegeo-common/models'` |
-| `Difficulty` | N/A | Abstract base for page/route difficulty; `fromResult` dispatches by `difficultyType`. | `import { Difficulty } from 'ropegeo-common/models'` |
-| `registerDifficultyParser` | N/A | Registers a `Difficulty.fromResult` parser for a `DifficultyType`. | `import { registerDifficultyParser } from 'ropegeo-common/models'` |
+| `DifficultyRatingSystem` | N/A | Discriminator for difficulty rating scales (e.g. ACA). | `import { DifficultyRatingSystem } from 'ropegeo-common/models'` |
+| `DifficultyRating` | N/A | Abstract base for page/route difficulty ratings; `fromResult` dispatches by `difficultyRatingSystem`. | `import { DifficultyRating } from 'ropegeo-common/models'` |
+| `resolveDifficultyRatingFromRecord` | N/A | Reads nested difficulty rating JSON from `difficultyRating` or legacy `difficulty` keys. | `import { resolveDifficultyRatingFromRecord } from 'ropegeo-common/models'` |
+| `registerDifficultyParser` | N/A | Registers a `DifficultyRating.fromResult` parser for a `DifficultyRatingSystem`. | `import { registerDifficultyParser } from 'ropegeo-common/models'` |
 | `ACA_RISK_ORDER` | N/A | Numeric total order for ACA risk ratings. | `import { ACA_RISK_ORDER } from 'ropegeo-common/models'` |
 | `ACA_TECHNICAL_ORDER` | N/A | Numeric total order for ACA technical ratings. | `import { ACA_TECHNICAL_ORDER } from 'ropegeo-common/models'` |
 | `ACA_TIME_ORDER` | N/A | Numeric total order for ACA time ratings. | `import { ACA_TIME_ORDER } from 'ropegeo-common/models'` |
 | `ACA_WATER_ORDER` | N/A | Numeric total order for ACA water ratings. | `import { ACA_WATER_ORDER } from 'ropegeo-common/models'` |
-| `AcaTechnicalRating` | N/A | ACA technical rating enum (1–4). | `import { AcaTechnicalRating } from 'ropegeo-common/models'` |
-| `AcaWaterRating` | N/A | ACA water rating enum. | `import { AcaWaterRating } from 'ropegeo-common/models'` |
-| `AcaTimeRating` | N/A | ACA time rating enum (I–VI). | `import { AcaTimeRating } from 'ropegeo-common/models'` |
-| `AcaRiskRating` | N/A | ACA risk rating enum. | `import { AcaRiskRating } from 'ropegeo-common/models'` |
+| `AcaTechnicalSubRating` | N/A | ACA technical sub-rating enum (1–4). | `import { AcaTechnicalSubRating } from 'ropegeo-common/models'` |
+| `AcaWaterSubRating` | N/A | ACA water sub-rating enum. | `import { AcaWaterSubRating } from 'ropegeo-common/models'` |
+| `AcaTimeSubRating` | N/A | ACA time sub-rating enum (I–VI). | `import { AcaTimeSubRating } from 'ropegeo-common/models'` |
+| `AcaRiskSubRating` | N/A | ACA risk sub-rating enum. | `import { AcaRiskSubRating } from 'ropegeo-common/models'` |
 | `RISK_ORDER` | N/A | Deprecated alias for `ACA_RISK_ORDER`. | `import { RISK_ORDER } from 'ropegeo-common/models'` |
-| `AcaDifficulty` | `Difficulty` | ACA difficulty from DB/API strings; raw vs effective risk. | `import { AcaDifficulty } from 'ropegeo-common/models'` |
-| `DifficultyTechnical` | N/A | Deprecated alias for `AcaTechnicalRating`. | `import { DifficultyTechnical } from 'ropegeo-common/models'` |
-| `DifficultyWater` | N/A | Deprecated alias for `AcaWaterRating`. | `import { DifficultyWater } from 'ropegeo-common/models'` |
-| `DifficultyTime` | N/A | Deprecated alias for `AcaTimeRating`. | `import { DifficultyTime } from 'ropegeo-common/models'` |
-| `DifficultyRisk` | N/A | Deprecated alias for `AcaRiskRating`. | `import { DifficultyRisk } from 'ropegeo-common/models'` |
+| `AcaDifficultyRating` | `DifficultyRating` | ACA difficulty rating from DB/API strings; raw vs effective risk. | `import { AcaDifficultyRating } from 'ropegeo-common/models'` |
+| `DifficultyType` | N/A | Deprecated alias for `DifficultyRatingSystem`. | `import { DifficultyType } from 'ropegeo-common/models'` |
+| `Difficulty` | N/A | Deprecated alias for `DifficultyRating`. | `import { Difficulty } from 'ropegeo-common/models'` |
+| `AcaDifficulty` | N/A | Deprecated alias for `AcaDifficultyRating`. | `import { AcaDifficulty } from 'ropegeo-common/models'` |
+| `AcaTechnicalRating` | N/A | Deprecated alias for `AcaTechnicalSubRating`. | `import { AcaTechnicalRating } from 'ropegeo-common/models'` |
+| `AcaWaterRating` | N/A | Deprecated alias for `AcaWaterSubRating`. | `import { AcaWaterRating } from 'ropegeo-common/models'` |
+| `AcaTimeRating` | N/A | Deprecated alias for `AcaTimeSubRating`. | `import { AcaTimeRating } from 'ropegeo-common/models'` |
+| `AcaRiskRating` | N/A | Deprecated alias for `AcaRiskSubRating`. | `import { AcaRiskRating } from 'ropegeo-common/models'` |
+| `DifficultyTechnical` | N/A | Deprecated alias for `AcaTechnicalSubRating`. | `import { DifficultyTechnical } from 'ropegeo-common/models'` |
+| `DifficultyWater` | N/A | Deprecated alias for `AcaWaterSubRating`. | `import { DifficultyWater } from 'ropegeo-common/models'` |
+| `DifficultyTime` | N/A | Deprecated alias for `AcaTimeSubRating`. | `import { DifficultyTime } from 'ropegeo-common/models'` |
+| `DifficultyRisk` | N/A | Deprecated alias for `AcaRiskSubRating`. | `import { DifficultyRisk } from 'ropegeo-common/models'` |
 
 ### API query parameters (`src/models/api/params/`)
 
@@ -110,7 +118,7 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 | `DifficultyParams` | N/A | Abstract GET-query difficulty filter; `fromQueryStringParams` / `fromResult`. | `import { DifficultyParams } from 'ropegeo-common/models'` |
 | `DifficultyParamsQueryRecord` | N/A | Flat string map for difficulty query parsing. | `import type { DifficultyParamsQueryRecord } from 'ropegeo-common/models'` |
 | `registerDifficultyParamsQueryInference` | N/A | Registers inference when `difficulty-type` is omitted. | `import { registerDifficultyParamsQueryInference } from 'ropegeo-common/models'` |
-| `registerDifficultyParamsQueryParser` | N/A | Registers a query parser for a `DifficultyType`. | `import { registerDifficultyParamsQueryParser } from 'ropegeo-common/models'` |
+| `registerDifficultyParamsQueryParser` | N/A | Registers a query parser for a `DifficultyRatingSystem`. | `import { registerDifficultyParamsQueryParser } from 'ropegeo-common/models'` |
 | `isDifficultyParamsActive` | N/A | True if difficulty params are non-null and active. | `import { isDifficultyParamsActive } from 'ropegeo-common/models'` |
 | `AcaDifficultyParams` | `DifficultyParams` | ACA pipe-list allow-lists for routes/search query strings. | `import { AcaDifficultyParams } from 'ropegeo-common/models'` |
 | `Q_DIFFICULTY_TYPE` | N/A | Query key constant for difficulty type. | `import { Q_DIFFICULTY_TYPE } from 'ropegeo-common/models'` |

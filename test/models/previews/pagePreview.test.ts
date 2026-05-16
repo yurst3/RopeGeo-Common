@@ -1,10 +1,10 @@
 import { describe, it, expect } from '@jest/globals';
 import {
-    AcaDifficulty,
-    AcaRiskRating,
-    AcaTechnicalRating,
-    AcaTimeRating,
-    AcaWaterRating,
+    AcaDifficultyRating,
+    AcaRiskSubRating,
+    AcaTechnicalSubRating,
+    AcaTimeSubRating,
+    AcaWaterSubRating,
 } from '../../../src/models';
 import { PermitStatus } from '../../../src/models/permitStatus';
 import { PageDataSource } from '../../../src/models/pageDataSource';
@@ -48,13 +48,13 @@ describe('PagePreview', () => {
             expect(preview.externalLink).toBe('https://ropewiki.com/page');
             expect(preview.mapData).toBeNull();
             expect(preview.permit).toBe(PermitStatus.Yes);
-            expect(preview.difficulty).toBeInstanceOf(AcaDifficulty);
-            const d = preview.difficulty as AcaDifficulty;
-            expect(d.technical).toBe(AcaTechnicalRating.Two);
-            expect(d.water).toBe(AcaWaterRating.C);
-            expect(d.time).toBe(AcaTimeRating.III);
-            expect(d.additionalRisk).toBe(AcaRiskRating.PG);
-            expect(d.effectiveRisk).toBe(AcaRiskRating.PG);
+            expect(preview.difficultyRating).toBeInstanceOf(AcaDifficultyRating);
+            const d = preview.difficultyRating as AcaDifficultyRating;
+            expect(d.technical).toBe(AcaTechnicalSubRating.Two);
+            expect(d.water).toBe(AcaWaterSubRating.C);
+            expect(d.time).toBe(AcaTimeSubRating.III);
+            expect(d.additionalRisk).toBe(AcaRiskSubRating.PG);
+            expect(d.effectiveRisk).toBe(AcaRiskSubRating.PG);
         });
 
         it('uses optional regions override when provided', () => {
@@ -90,9 +90,9 @@ describe('PagePreview', () => {
         it('sets effectiveRisk from technical when additionalRisk not in row', () => {
             const row = { ...baseRow, riskRating: null };
             const preview = PagePreview.fromDbRow(row, null);
-            const d = preview.difficulty as AcaDifficulty;
+            const d = preview.difficultyRating as AcaDifficultyRating;
             expect(d.additionalRisk).toBeNull();
-            expect(d.effectiveRisk).toBe(AcaRiskRating.PG);
+            expect(d.effectiveRisk).toBe(AcaRiskSubRating.PG);
         });
 
         it('passes mapData through', () => {

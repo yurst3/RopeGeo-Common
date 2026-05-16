@@ -3,8 +3,8 @@ import { SearchCursor } from '../../../../src/models/api/params/cursors/searchCu
 import { SearchParams } from '../../../../src/models/api/params/searchParams';
 import {
     AcaDifficultyParams,
-    AcaTechnicalRating,
-    AcaWaterRating,
+    AcaTechnicalSubRating,
+    AcaWaterSubRating,
 } from '../../../../src/models';
 import { PageDataSource } from '../../../../src/models/pageDataSource';
 
@@ -90,7 +90,7 @@ describe('SearchParams', () => {
         });
 
         it('throws when difficulty active and includePages false', () => {
-            const diff = new AcaDifficultyParams([AcaTechnicalRating.One], [], [], []);
+            const diff = new AcaDifficultyParams([AcaTechnicalSubRating.One], [], [], []);
             expect(
                 () =>
                     new SearchParams(
@@ -186,10 +186,10 @@ describe('SearchParams', () => {
             expect(x.difficulty).toBeInstanceOf(AcaDifficultyParams);
             const d = x.difficulty as AcaDifficultyParams;
             expect(d.technical).toEqual([
-                AcaTechnicalRating.One,
-                AcaTechnicalRating.Two,
+                AcaTechnicalSubRating.One,
+                AcaTechnicalSubRating.Two,
             ]);
-            expect(d.water).toEqual([AcaWaterRating.B]);
+            expect(d.water).toEqual([AcaWaterSubRating.B]);
             const again = SearchParams.fromQueryStringParams(
                 Object.fromEntries(new URLSearchParams(x.toQueryString())),
             );
