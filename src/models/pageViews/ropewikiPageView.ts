@@ -4,6 +4,7 @@ import {
     resolveDifficultyRatingFromRecord,
 } from '../difficulty/difficultyRating';
 import { PermitStatus } from '../permitStatus';
+import { VehicleType } from '../vehicleType';
 import { FetchType } from '../fetchType';
 import { RouteType } from '../routes/routeType';
 import { PageViewType } from './pageViewType';
@@ -33,7 +34,7 @@ export abstract class RopewikiPageView {
     permit: PermitStatus | null;
     rappelCount: MinMax | number | null;
     jumps: number | null;
-    vehicle: string | null;
+    vehicle: VehicleType | null;
     rappelLongest: number | null;
     shuttleTime: number | null;
     overallLength: number | null;
@@ -66,7 +67,7 @@ export abstract class RopewikiPageView {
         permit: PermitStatus | null,
         rappelCount: MinMax | number | null,
         jumps: number | null,
-        vehicle: string | null,
+        vehicle: VehicleType | null,
         rappelLongest: number | null,
         shuttleTime: number | null,
         overallLength: number | null,
@@ -154,7 +155,7 @@ export abstract class RopewikiPageView {
         RopewikiPageView.assertPermit(r, 'permit');
         RopewikiPageView.assertRappelCount(r, 'rappelCount');
         RopewikiPageView.assertNullableNumber(r, 'jumps');
-        RopewikiPageView.assertNullableString(r, 'vehicle');
+        RopewikiPageView.assertVehicle(r, 'vehicle');
         RopewikiPageView.assertNullableNumber(r, 'rappelLongest');
         RopewikiPageView.assertNullableNumber(r, 'shuttleTime');
         RopewikiPageView.assertNullableNumber(r, 'overallLength');
@@ -346,6 +347,22 @@ export abstract class RopewikiPageView {
         ) {
             throw new Error(
                 'RopewikiPageView.difficultyRating.additionalRisk must be string or null',
+            );
+        }
+    }
+
+    protected static assertVehicle(obj: Record<string, unknown>, key: string): void {
+        const v = obj[key];
+        if (v === null || v === undefined) return;
+        if (typeof v !== 'string') {
+            throw new Error(
+                `RopewikiPageView.${key} must be VehicleType or null, got: ${typeof v}`,
+            );
+        }
+        const values = Object.values(VehicleType);
+        if (!values.includes(v as VehicleType)) {
+            throw new Error(
+                `RopewikiPageView.${key} must be one of [${values.join(', ')}] or null, got: ${v}`,
             );
         }
     }

@@ -76,6 +76,7 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 | --- | --- | --- | --- |
 | `PageDataSource` | N/A | Where linked page content comes from (e.g. Ropewiki). | `import { PageDataSource } from 'ropegeo-common/models'` |
 | `PermitStatus` | N/A | Permit state for a canyon page (Yes, No, Restricted, Closed). | `import { PermitStatus } from 'ropegeo-common/models'` |
+| `VehicleType` | N/A | Vehicle requirement for a canyon page (passenger, highClearance, fourWd, etc.). | `import { VehicleType } from 'ropegeo-common/models'` |
 | `FetchType` | N/A | Online/offline discriminator type (`'online' \| 'offline'`). | `import type { FetchType } from 'ropegeo-common/models'` |
 | `PageViewType` | N/A | Discriminator enum for page view families (currently Ropewiki). | `import { PageViewType } from 'ropegeo-common/models'` |
 

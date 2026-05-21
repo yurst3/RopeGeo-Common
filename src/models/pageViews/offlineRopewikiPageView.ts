@@ -9,6 +9,7 @@ import { PageDataSource } from '../pageDataSource';
 import { OfflinePageView } from './offlinePageView';
 import { registerRopewikiPageViewParser, RopewikiPageView } from './ropewikiPageView';
 import { RouteType } from '../routes/routeType';
+import { VehicleType } from '../vehicleType';
 
 export class OfflineRopewikiPageView extends RopewikiPageView implements OfflinePageView {
     readonly fetchType = 'offline' as const;
@@ -29,7 +30,7 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
         permit: import('../permitStatus').PermitStatus | null,
         rappelCount: { min: number; max: number } | number | null,
         jumps: number | null,
-        vehicle: string | null,
+        vehicle: VehicleType | null,
         rappelLongest: number | null,
         shuttleTime: number | null,
         overallLength: number | null,

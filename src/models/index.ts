@@ -79,6 +79,7 @@ export { SearchFilter } from './filters/searchFilter';
 export { SavedPagesFilter, type SavedPagesOrder } from './filters/savedPagesFilter';
 export { SavedFilters } from './filters/savedFilters';
 export { PermitStatus } from './permitStatus';
+export { VehicleType } from './vehicleType';
 export { Preview, PreviewType } from './previews/preview';
 export { GetRopewikiPagePreviewRow, PagePreview } from './previews/pagePreview';
 export { OnlinePagePreview } from './previews/onlinePagePreview';
