@@ -17,7 +17,7 @@ import { OfflineRopewikiPageView } from './offlineRopewikiPageView';
 import { OnlinePageView } from './onlinePageView';
 import { registerRopewikiPageViewParser, RopewikiPageView } from './ropewikiPageView';
 import { RouteType } from '../routes/routeType';
-import { VehicleType } from '../vehicleType';
+import { RopewikiVehicleType } from '../ropewikiVehicleType';
 import { PageViewType } from './pageViewType';
 
 export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePageView {
@@ -39,7 +39,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
         permit: import('../permitStatus').PermitStatus | null,
         rappelCount: { min: number; max: number } | number | null,
         jumps: number | null,
-        vehicle: VehicleType | null,
+        vehicle: RopewikiVehicleType | null,
         rappelLongest: number | null,
         shuttleTime: number | null,
         overallLength: number | null,
