@@ -1,7 +1,7 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 
-jest.mock('../../../src/helpers/httpRequest', () => ({
-    httpRequest: jest.fn(),
+jest.mock('../../../src/download/helpers/downloadHttpRequest', () => ({
+    downloadHttpRequest: jest.fn(),
 }));
 
 import '../helpers/preloadDownloadTasks';
@@ -20,9 +20,9 @@ import {
     PAGE_ID,
     REGION_ID,
 } from '../helpers/mockPlatformHarness';
-import { httpRequest } from '../../../src/helpers/httpRequest';
+import { downloadHttpRequest } from '../../../src/download/helpers/downloadHttpRequest';
 
-const mockHttpRequest = jest.mocked(httpRequest);
+const mockDownloadHttpRequest = jest.mocked(downloadHttpRequest);
 
 function routeFeature(id: string): Record<string, unknown> {
     return {
@@ -46,7 +46,7 @@ function routesResponse(features: Record<string, unknown>[], total = features.le
 
 describe('FetchRegionRouteListTask', () => {
     beforeEach(() => {
-        mockHttpRequest.mockReset();
+        mockDownloadHttpRequest.mockReset();
     });
 
     it('completes immediately when routeCount is 0', async () => {
@@ -79,13 +79,13 @@ describe('FetchRegionRouteListTask', () => {
         const task = new FetchRegionRouteListTask(0);
         const result = await task.runTick(ctx, harness, new AbortController().signal);
         expect(result.done).toBe(true);
-        expect(mockHttpRequest).not.toHaveBeenCalled();
+        expect(mockDownloadHttpRequest).not.toHaveBeenCalled();
         expect(harness.writeTextFile).toHaveBeenCalled();
         expect(deps[DownloadDependencyKeys.SaveOfflinePageMiniMap]).toBeDefined();
     });
 
     it('fetches routes and writes geojson for centered region minimap', async () => {
-        mockHttpRequest.mockResolvedValue(routesResponse([routeFeature('route-1')]));
+        mockDownloadHttpRequest.mockResolvedValue(routesResponse([routeFeature('route-1')]));
         const harness = createMockPlatformHarness();
         const routesParams = RoutesParams.fromResult(
             { region: { id: REGION_ID, name: 'Region', source: 'ropewiki' }, limit: 50 },
@@ -115,7 +115,7 @@ describe('FetchRegionRouteListTask', () => {
         const task = new FetchRegionRouteListTask(1);
         const result = await task.runTick(ctx, harness, new AbortController().signal);
         expect(result.done).toBe(true);
-        expect(mockHttpRequest).toHaveBeenCalledTimes(1);
+        expect(mockDownloadHttpRequest).toHaveBeenCalledTimes(1);
         const miniMapDep = deps[DownloadDependencyKeys.SaveOfflinePageMiniMap] as SaveOfflinePageMiniMapTaskDependency;
         expect(miniMapDep.offlineMiniMapWire.miniMapType).toBe('centeredRegion');
     });

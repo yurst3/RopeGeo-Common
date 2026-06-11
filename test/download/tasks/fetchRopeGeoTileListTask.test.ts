@@ -1,7 +1,7 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 
-jest.mock('../../../src/helpers/httpRequest', () => ({
-    httpRequest: jest.fn(),
+jest.mock('../../../src/download/helpers/downloadHttpRequest', () => ({
+    downloadHttpRequest: jest.fn(),
 }));
 
 import '../helpers/preloadDownloadTasks';
@@ -19,9 +19,9 @@ import {
     MAP_DATA_ID,
     PAGE_ID,
 } from '../helpers/mockPlatformHarness';
-import { httpRequest } from '../../../src/helpers/httpRequest';
+import { downloadHttpRequest } from '../../../src/download/helpers/downloadHttpRequest';
 
-const mockHttpRequest = jest.mocked(httpRequest);
+const mockDownloadHttpRequest = jest.mocked(downloadHttpRequest);
 
 const pageMiniMapWire = {
     miniMapType: MiniMapType.Page,
@@ -50,7 +50,7 @@ function tileListResponse(urls: string[], total = urls.length): Response {
 
 describe('FetchRopeGeoTileListTask', () => {
     beforeEach(() => {
-        mockHttpRequest.mockReset();
+        mockDownloadHttpRequest.mockReset();
     });
 
     it('completes immediately when tileCount is 0', async () => {
@@ -78,13 +78,13 @@ describe('FetchRopeGeoTileListTask', () => {
         const task = new FetchRopeGeoTileListTask(0);
         const result = await task.runTick(ctx, harness, new AbortController().signal);
         expect(result.done).toBe(true);
-        expect(mockHttpRequest).not.toHaveBeenCalled();
+        expect(mockDownloadHttpRequest).not.toHaveBeenCalled();
         const filesDep = deps[DownloadDependencyKeys.FetchRopeGeoTileFiles] as FetchRopeGeoTileFilesTaskDependency;
         expect(filesDep.tileUrls).toEqual([]);
     });
 
     it('fetches tile URLs and seeds tile files dependency', async () => {
-        mockHttpRequest.mockResolvedValue(
+        mockDownloadHttpRequest.mockResolvedValue(
             tileListResponse([
                 'https://api.example.com/tiles/0/0/0.pbf',
                 'https://api.example.com/tiles/0/0/1.pbf',
@@ -114,7 +114,7 @@ describe('FetchRopeGeoTileListTask', () => {
         const task = new FetchRopeGeoTileListTask(2);
         const result = await task.runTick(ctx, harness, new AbortController().signal);
         expect(result.done).toBe(true);
-        expect(mockHttpRequest).toHaveBeenCalledTimes(1);
+        expect(mockDownloadHttpRequest).toHaveBeenCalledTimes(1);
         const filesDep = deps[DownloadDependencyKeys.FetchRopeGeoTileFiles] as FetchRopeGeoTileFilesTaskDependency;
         expect(filesDep.tileUrls).toHaveLength(2);
     });

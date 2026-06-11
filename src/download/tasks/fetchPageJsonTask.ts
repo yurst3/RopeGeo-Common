@@ -1,4 +1,4 @@
-import { httpRequest } from '../../helpers/httpRequest';
+import { downloadHttpRequest } from '../helpers/downloadHttpRequest';
 import '../../models/api/results/registerAllResultParsers';
 import { Result } from '../../models/api/results/result';
 import { OnlineRopewikiPageView } from '../../models/pageViews/onlineRopewikiPageView';
@@ -45,13 +45,10 @@ export class FetchPageJsonTask extends DownloadTask {
             ctx,
             DownloadDependencyKeys.FetchPageJson,
         );
-        const response = await httpRequest(
-            dep.pageUrl,
-            5,
-            signal,
-            { method: 'GET', headers: { Accept: 'application/json' } },
-            false,
-        );
+        const response = await downloadHttpRequest(dep.pageUrl, signal, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+        });
         const text = await response.text();
         const parsedResponse = Result.fromResponseBody(unwrapData(JSON.parse(text) as unknown));
         const view = parsedResponse.result as OnlineRopewikiPageView;

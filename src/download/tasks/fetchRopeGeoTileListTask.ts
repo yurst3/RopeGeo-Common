@@ -1,4 +1,4 @@
-import { httpRequest } from '../../helpers/httpRequest';
+import { downloadHttpRequest } from '../helpers/downloadHttpRequest';
 import '../../models/api/results/registerAllResultParsers';
 import { PaginationResults } from '../../models/api/results/paginationResults';
 import { DownloadDependencyKeys } from '../dependencies/downloadDependencyKeys';
@@ -111,13 +111,10 @@ export class FetchRopeGeoTileListTask extends DownloadTask {
         );
         url.searchParams.set('page', String(page));
         url.searchParams.set('limit', String(dep.listPageLimit));
-        const response = await httpRequest(
-            url.toString(),
-            5,
-            signal,
-            { method: 'GET', headers: { Accept: 'application/json' } },
-            false,
-        );
+        const response = await downloadHttpRequest(url.toString(), signal, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+        });
         const text = await response.text();
         const parsedBody = unwrapData(JSON.parse(text) as unknown);
         const pageResult = PaginationResults.fromResponseBody(parsedBody);

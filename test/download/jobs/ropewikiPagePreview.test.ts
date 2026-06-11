@@ -15,13 +15,13 @@ import '../../../src/models/betaSections/registerBetaSectionParsers';
 import '../../../src/models/minimap/registerMiniMapParsers';
 import '../../../src/models/previews/registerPreviewParsers';
 
-jest.mock('../../../src/helpers/httpRequest', () => ({
-    httpRequest: jest.fn(),
+jest.mock('../../../src/download/helpers/downloadHttpRequest', () => ({
+    downloadHttpRequest: jest.fn(),
 }));
 
-import { httpRequest } from '../../../src/helpers/httpRequest';
+import { downloadHttpRequest } from '../../../src/download/helpers/downloadHttpRequest';
 
-const mockHttpRequest = jest.mocked(httpRequest);
+const mockDownloadHttpRequest = jest.mocked(downloadHttpRequest);
 
 const ROUTE_ID = '38f5c3fa-7248-41ed-815e-8b9e6aae5d61';
 const IMAGE_ID_A = '550e8400-e29b-41d4-a716-446655440000';
@@ -143,7 +143,7 @@ function taskKinds(job: { phases: { tasks: { taskKind: string }[] }[] }): string
 
 describe('OnlinePagePreview download job planning', () => {
     beforeEach(() => {
-        mockHttpRequest.mockReset();
+        mockDownloadHttpRequest.mockReset();
     });
 
     it('starts with delete then fetch page JSON phases only', () => {
@@ -162,7 +162,7 @@ describe('OnlinePagePreview download job planning', () => {
     });
 
     it('appends explore-path content phases after FetchPageJsonTask completes', async () => {
-        mockHttpRequest.mockResolvedValue({
+        mockDownloadHttpRequest.mockResolvedValue({
             text: async () =>
                 JSON.stringify({
                     resultType: 'ropewikiPageView',
@@ -187,7 +187,7 @@ describe('OnlinePagePreview download job planning', () => {
     });
 
     it('round-trips expanded job through stored state', async () => {
-        mockHttpRequest.mockResolvedValue({
+        mockDownloadHttpRequest.mockResolvedValue({
             text: async () =>
                 JSON.stringify({
                     resultType: 'ropewikiPageView',

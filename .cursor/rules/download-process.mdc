@@ -115,7 +115,8 @@ List tasks use `LIST_HTTP_BATCH_SIZE`; file tasks use `pendingFileTransfer` reco
 ## Tests
 
 - **Explore path** — `test/download/jobs/ropewikiPageView.test.ts`: all `planDownloadPhases` / `toDownloadJob` variations; phase 1 always delete; no `FetchPageJsonTask`.
-- **Preview path** — `test/download/jobs/ropewikiPagePreview.test.ts`: initial 2 phases; mock `httpRequest`; assert `appendPhases` matches explore plan; stored-state round-trip.
+- **Preview path** — `test/download/jobs/ropewikiPagePreview.test.ts`: initial 2 phases; mock `downloadHttpRequest`; assert `appendPhases` matches explore plan; stored-state round-trip.
+- **HTTP in download tasks** — use `helpers/downloadHttpRequest.ts` (global `fetch` only; single attempt; 30s timeout; abort via signal). Do **not** import `helpers/httpRequest` from download tasks (keeps RN Metro free of `undici`).
 - Do **not** put download job planning tests under `test/models/pageViews/`.
 
 ## Package export

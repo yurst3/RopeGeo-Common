@@ -1,4 +1,4 @@
-import { httpRequest } from '../../helpers/httpRequest';
+import { downloadHttpRequest } from '../helpers/downloadHttpRequest';
 import '../../models/api/results/registerAllResultParsers';
 import { PaginationResults } from '../../models/api/results/paginationResults';
 import { RoutesGeojson } from '../../models/api/results/routeGeojson';
@@ -123,13 +123,10 @@ export class FetchRegionRouteListTask extends DownloadTask {
         const params = dep.routesParams.withPage(page);
         const query = params.toQueryString();
         const url = new URL(query.length > 0 ? `/routes?${query}` : '/routes', ctx.config.webScraperBaseUrl);
-        const response = await httpRequest(
-            url.toString(),
-            5,
-            signal,
-            { method: 'GET', headers: { Accept: 'application/json' } },
-            false,
-        );
+        const response = await downloadHttpRequest(url.toString(), signal, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+        });
         const text = await response.text();
         const parsed = PaginationResults.fromResponseBody(unwrapData(JSON.parse(text) as unknown));
         const results = parsed.results.map((item) => RouteGeoJsonFeature.fromResult(item));

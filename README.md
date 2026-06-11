@@ -273,7 +273,7 @@ Abstract classes live under `minimap/abstract/`, concrete under `minimap/concret
 
 ### Download orchestration (`src/download/`)
 
-Import from **`ropegeo-common/download`**. Platform I/O (Expo FileSystem, Mapbox, AsyncStorage) is implemented by Mobile via `DownloadPlatformHarness`; Common owns job planning and task logic only.
+Import from **`ropegeo-common/download`**. Platform I/O (Expo FileSystem, Mapbox, AsyncStorage) is implemented by Mobile via `DownloadPlatformHarness`; Common owns job planning and task logic only. List/page JSON fetches inside download tasks use `downloadHttpRequest` (global `fetch` only), not `httpRequest` (Lambda proxy / undici).
 
 | Name | Description | Import |
 | --- | --- | --- |

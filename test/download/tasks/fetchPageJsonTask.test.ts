@@ -1,7 +1,7 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 
-jest.mock('../../../src/helpers/httpRequest', () => ({
-    httpRequest: jest.fn(),
+jest.mock('../../../src/download/helpers/downloadHttpRequest', () => ({
+    downloadHttpRequest: jest.fn(),
 }));
 
 import '../helpers/preloadDownloadTasks';
@@ -17,9 +17,9 @@ import {
     MAP_DATA_ID,
     PAGE_ID,
 } from '../helpers/mockPlatformHarness';
-import { httpRequest } from '../../../src/helpers/httpRequest';
+import { downloadHttpRequest } from '../../../src/download/helpers/downloadHttpRequest';
 
-const mockHttpRequest = jest.mocked(httpRequest);
+const mockDownloadHttpRequest = jest.mocked(downloadHttpRequest);
 
 function pageJson(): Record<string, unknown> {
     return {
@@ -73,11 +73,11 @@ function pageJson(): Record<string, unknown> {
 
 describe('FetchPageJsonTask', () => {
     beforeEach(() => {
-        mockHttpRequest.mockReset();
+        mockDownloadHttpRequest.mockReset();
     });
 
     it('fetches page JSON, appends phases, and seeds dependencies', async () => {
-        mockHttpRequest.mockResolvedValue({
+        mockDownloadHttpRequest.mockResolvedValue({
             text: async () =>
                 JSON.stringify({
                     resultType: 'ropewikiPageView',
@@ -111,12 +111,10 @@ describe('FetchPageJsonTask', () => {
         const result = await task.runTick(ctx, harness, new AbortController().signal);
 
         expect(result.done).toBe(true);
-        expect(mockHttpRequest).toHaveBeenCalledWith(
+        expect(mockDownloadHttpRequest).toHaveBeenCalledWith(
             expect.stringContaining(PAGE_ID),
-            5,
             expect.any(AbortSignal),
             expect.objectContaining({ method: 'GET' }),
-            false,
         );
         expect(appendedPhases.length).toBeGreaterThan(0);
         expect(deps[DownloadDependencyKeys.SaveOfflinePageView]).toBeDefined();
