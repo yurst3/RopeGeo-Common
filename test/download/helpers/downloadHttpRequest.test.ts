@@ -84,4 +84,27 @@ describe('downloadHttpRequest', () => {
         expect((err as Error).message).toContain('downloadHttpRequest aborted:');
         expect(mockGlobalFetch).not.toHaveBeenCalled();
     });
+
+    it('does not use AbortSignal.timeout (RN-safe)', async () => {
+        const originalTimeout = AbortSignal.timeout;
+        const originalAny = AbortSignal.any;
+        // @ts-expect-error simulate React Native where these static methods are missing
+        AbortSignal.timeout = undefined;
+        // @ts-expect-error simulate React Native where these static methods are missing
+        AbortSignal.any = undefined;
+
+        mockGlobalFetch.mockResolvedValue({
+            ok: true,
+            status: 200,
+            statusText: 'OK',
+        } as unknown as FetchResponse);
+
+        try {
+            await downloadHttpRequest('https://example.com/');
+            expect(mockGlobalFetch).toHaveBeenCalledTimes(1);
+        } finally {
+            AbortSignal.timeout = originalTimeout;
+            AbortSignal.any = originalAny;
+        }
+    });
 });

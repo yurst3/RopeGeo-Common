@@ -3,6 +3,8 @@
  * so the download module graph is safe for React Native Metro bundling.
  */
 
+import { mergeParentSignalWithDeadline } from '../../helpers/network/networkRequestPolicy';
+
 const DEFAULT_HEADERS: Record<string, string> = {
     Accept: 'application/json, text/html, application/xml, */*',
     'Accept-Language': 'en-US,en;q=0.9',
@@ -30,6 +32,21 @@ const buildNonOkMessage = async (
     );
 };
 
+function abortSignalAfterMs(ms: number): { signal: AbortSignal; dispose: () => void } {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+        if (!controller.signal.aborted) {
+            controller.abort();
+        }
+    }, ms);
+    return {
+        signal: controller.signal,
+        dispose: () => {
+            clearTimeout(timeoutId);
+        },
+    };
+}
+
 /**
  * Send a single HTTP request for download list/page JSON fetches.
  * Aborts when `abortSignal` fires or after 30 seconds. Throws on non-OK responses.
@@ -51,11 +68,13 @@ export async function downloadHttpRequest(
         );
     }
 
-    const timeoutSignal = AbortSignal.timeout(DOWNLOAD_HTTP_REQUEST_TIMEOUT_MS);
-    const requestSignal =
+    const deadline =
         abortSignal != null
-            ? AbortSignal.any([abortSignal, timeoutSignal])
-            : timeoutSignal;
+            ? mergeParentSignalWithDeadline(abortSignal, DOWNLOAD_HTTP_REQUEST_TIMEOUT_MS)
+            : null;
+    const timeoutOnly =
+        deadline == null ? abortSignalAfterMs(DOWNLOAD_HTTP_REQUEST_TIMEOUT_MS) : null;
+    const requestSignal = deadline?.signal ?? timeoutOnly!.signal;
 
     let response: Response;
     try {
@@ -66,6 +85,9 @@ export async function downloadHttpRequest(
         });
     } catch (error) {
         throw new Error(`downloadHttpRequest failed: requestUrl=${requestUrl} error=${error}`);
+    } finally {
+        deadline?.dispose();
+        timeoutOnly?.dispose();
     }
 
     if (!response.ok) {
