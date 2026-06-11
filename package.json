@@ -1,6 +1,6 @@
 {
     "name": "ropegeo-common",
-    "version": "1.17.2",
+    "version": "1.18.0",
     "description": "Shared domain models and helpers for RopeGeo and WebScraper",
     "license": "ISC",
     "repository": {
@@ -30,6 +30,10 @@
         "./components": {
             "types": "./dist/components/index.d.ts",
             "default": "./dist/components/index.js"
+        },
+        "./download": {
+            "types": "./dist/download/index.d.ts",
+            "default": "./dist/download/index.js"
         }
     },
     "scripts": {

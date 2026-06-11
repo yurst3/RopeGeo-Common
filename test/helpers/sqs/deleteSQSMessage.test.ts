@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import deleteSQSMessage from '../../../src/helpers/sqs/deleteSQSMessage';
 import { resetSQSClientForTests } from '../../../src/helpers/sqs/getSQSClient';
+import { mockConsoleWarn } from '../mockConsole';
 
 // Mock @aws-sdk/client-sqs
 const mockSend = jest.fn<() => Promise<any>>();
@@ -22,6 +23,7 @@ const { SQSClient, DeleteMessageCommand } = require('@aws-sdk/client-sqs');
 describe('deleteSQSMessage', () => {
     const originalEnv = process.env;
     let consoleLogSpy: ReturnType<typeof jest.spyOn>;
+    let consoleWarnSpy: ReturnType<typeof mockConsoleWarn>;
     let MockSQSClient: any;
     let MockDeleteMessageCommand: any;
 
@@ -31,6 +33,7 @@ describe('deleteSQSMessage', () => {
         process.env = { ...originalEnv };
         
         consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        consoleWarnSpy = mockConsoleWarn();
         
         MockSQSClient = SQSClient;
         MockDeleteMessageCommand = DeleteMessageCommand;
@@ -40,6 +43,7 @@ describe('deleteSQSMessage', () => {
     afterEach(() => {
         process.env = originalEnv;
         consoleLogSpy.mockRestore();
+        consoleWarnSpy.mockRestore();
     });
 
     it('successfully deletes a message from the queue', async () => {

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import sendSQSMessage from '../../../src/helpers/sqs/sendSQSMessage';
 import { resetSQSClientForTests } from '../../../src/helpers/sqs/getSQSClient';
+import { mockConsoleWarn } from '../mockConsole';
 
 // Mock @aws-sdk/client-sqs
 const mockSend = jest.fn<() => Promise<unknown>>();
@@ -26,6 +27,7 @@ const { SQSClient: MockSQSClientConstructor, SendMessageCommand: MockSendMessage
 describe('sendSQSMessage', () => {
     const originalEnv = process.env;
     let consoleLogSpy: ReturnType<typeof jest.spyOn>;
+    let consoleWarnSpy: ReturnType<typeof mockConsoleWarn>;
 
     beforeEach(() => {
         resetSQSClientForTests();
@@ -33,12 +35,14 @@ describe('sendSQSMessage', () => {
         process.env = { ...originalEnv };
 
         consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        consoleWarnSpy = mockConsoleWarn();
         mockSend.mockResolvedValue({});
     });
 
     afterEach(() => {
         process.env = originalEnv;
         consoleLogSpy.mockRestore();
+        consoleWarnSpy.mockRestore();
     });
 
     it('successfully sends a message with body and queueUrl', async () => {

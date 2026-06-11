@@ -11,10 +11,20 @@ import { RegionMiniMap, registerRegionMiniMapParser } from '../abstract/regionMi
 export class OnlineRegionMiniMap extends RegionMiniMap implements OnlineMiniMap {
     readonly fetchType = 'online' as const;
     routesParams: RoutesParams;
+    routeCount: number;
+    totalBytes: number;
 
-    constructor(routesParams: RoutesParams, bounds: Bounds | null, title: string) {
+    constructor(
+        routesParams: RoutesParams,
+        bounds: Bounds | null,
+        title: string,
+        routeCount: number,
+        totalBytes: number,
+    ) {
         super(bounds, title);
         this.routesParams = routesParams;
+        this.routeCount = routeCount;
+        this.totalBytes = totalBytes;
     }
 
     static fromResult(result: unknown): OnlineRegionMiniMap {
@@ -45,7 +55,15 @@ export class OnlineRegionMiniMap extends RegionMiniMap implements OnlineMiniMap 
             );
         }
         const routesParams = RoutesParams.fromResult(rp, true);
-        return new OnlineRegionMiniMap(routesParams, bounds, title);
+        const routeCount =
+            r.routeCount === undefined
+                ? 0
+                : MiniMap.assertNonNegativeInteger(r.routeCount, 'OnlineRegionMiniMap.routeCount');
+        const totalBytes =
+            r.totalBytes === undefined
+                ? 0
+                : MiniMap.assertNonNegativeInteger(r.totalBytes, 'OnlineRegionMiniMap.totalBytes');
+        return new OnlineRegionMiniMap(routesParams, bounds, title, routeCount, totalBytes);
     }
 }
 

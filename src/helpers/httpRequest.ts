@@ -3,8 +3,6 @@
  * detailed messages, and optionally routes through a proxy in Lambda dev/prod.
  */
 
-import { ProxyAgent, fetch as undiciFetch } from 'undici';
-
 const DEFAULT_HEADERS: Record<string, string> = {
     Accept: 'application/json, text/html, application/xml, */*',
     'Accept-Language': 'en-US,en;q=0.9',
@@ -16,13 +14,25 @@ const shouldUseProxy = (): boolean => {
     if (!isLambda()) return false;
     const env = process.env.DEV_ENVIRONMENT;
     return env === 'dev' || env === 'production';
-}
+};
 
-const getProxyDispatcher = (): ProxyAgent => {
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+type UndiciModule = typeof import('undici');
+
+let undiciModulePromise: Promise<UndiciModule> | null = null;
+
+const loadUndici = (): Promise<UndiciModule> => {
+    if (undiciModulePromise == null) {
+        undiciModulePromise = import('undici');
+    }
+    return undiciModulePromise;
+};
+
+const getProxyDispatcher = async (): Promise<InstanceType<UndiciModule['ProxyAgent']>> => {
+    const undici = await loadUndici();
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     const proxyUrl = process.env.PROXY_URL ?? process.env.HTTP_PROXY ?? process.env.HTTPS_PROXY;
     if (!proxyUrl) throw new Error(`PROXY_URL not defined in ${process.env.DEV_ENVIRONMENT} environment`);
-    return new ProxyAgent(proxyUrl);
+    return new undici.ProxyAgent(proxyUrl);
 };
 
 const buildNonOkMessage = async (
@@ -46,9 +56,9 @@ const buildNonOkMessage = async (
 };
 
 /** Request timeout in ms when using proxy (avoids Lambda hanging until 900s timeout). */
-const REQUEST_TIMEOUT_MS_PROXY = 30_000;
+const HTTP_REQUEST_TIMEOUT_MS_PROXY = 30_000;
 /** Request timeout in ms when not using proxy (avoids hang on slow or stuck connections). */
-const REQUEST_TIMEOUT_MS_NO_PROXY = 60_000;
+const HTTP_REQUEST_TIMEOUT_MS_NO_PROXY = 60_000;
 
 /**
  * Send an HTTP request with default headers and optional proxy (Lambda + dev/prod only by default).
@@ -68,8 +78,7 @@ export async function httpRequest(
 ): Promise<Response> {
     const requestUrl = typeof url === 'string' ? url : url.toString();
     const useProxyResolved = useProxy === undefined ? shouldUseProxy() : useProxy;
-    const dispatcher = useProxyResolved ? getProxyDispatcher() : undefined;
-    const timeoutMs = dispatcher ? REQUEST_TIMEOUT_MS_PROXY : REQUEST_TIMEOUT_MS_NO_PROXY;
+    const timeoutMs = useProxyResolved ? HTTP_REQUEST_TIMEOUT_MS_PROXY : HTTP_REQUEST_TIMEOUT_MS_NO_PROXY;
 
     let lastError: Error | null = null;
     const maxAttempts = retryCount + 1;
@@ -86,6 +95,16 @@ export async function httpRequest(
                 ? AbortSignal.any([abortSignal, timeoutSignal])
                 : timeoutSignal;
 
+        let dispatcher: InstanceType<UndiciModule['ProxyAgent']> | undefined;
+        let fetchImpl: typeof fetch;
+        if (useProxyResolved) {
+            const undici = await loadUndici();
+            fetchImpl = undici.fetch as unknown as typeof fetch;
+            dispatcher = await getProxyDispatcher();
+        } else {
+            fetchImpl = globalThis.fetch.bind(globalThis);
+        }
+
         const requestOptions = {
             headers: DEFAULT_HEADERS,
             ...(dispatcher ? { dispatcher } : {}),
@@ -95,10 +114,10 @@ export async function httpRequest(
 
         let response: Response;
         try {
-            response = (await undiciFetch(
+            response = (await fetchImpl(
                 requestUrl,
-                requestOptions as Parameters<typeof undiciFetch>[1],
-            )) as unknown as Response;
+                requestOptions as RequestInit,
+            )) as Response;
         } catch (error) {
             lastError = new Error(`httpRequest failed: requestUrl=${requestUrl} error=${error}`);
             if (abortSignal?.aborted) {

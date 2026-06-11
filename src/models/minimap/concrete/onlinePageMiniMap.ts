@@ -1,4 +1,5 @@
 import { Bounds } from '../bounds';
+import { MiniMap } from '../abstract/miniMap';
 import type { OnlineMiniMap } from '../abstract/onlineMiniMap';
 import { PageMiniMap, registerPageMiniMapParser } from '../abstract/pageMiniMap';
 import type { LegendItem } from '../legend/abstract/legendItem';
@@ -7,6 +8,8 @@ import { OfflinePageMiniMap } from './offlinePageMiniMap';
 export class OnlinePageMiniMap extends PageMiniMap implements OnlineMiniMap {
     readonly fetchType = 'online' as const;
     onlineTilesTemplate: string;
+    tileCount: number;
+    tileTotalBytes: number;
 
     constructor(
         polyLineLayerId: string,
@@ -14,10 +17,14 @@ export class OnlinePageMiniMap extends PageMiniMap implements OnlineMiniMap {
         onlineTilesTemplate: string,
         bounds: Bounds,
         title: string,
+        tileCount: number,
+        tileTotalBytes: number,
         legend?: Record<string, LegendItem>,
     ) {
         super(polyLineLayerId, pointLayerId, bounds, title, legend);
         this.onlineTilesTemplate = onlineTilesTemplate;
+        this.tileCount = tileCount;
+        this.tileTotalBytes = tileTotalBytes;
     }
 
     toOffline(offlineTilesTemplate: string): OfflinePageMiniMap {
@@ -38,6 +45,17 @@ export class OnlinePageMiniMap extends PageMiniMap implements OnlineMiniMap {
         const r = result as Record<string, unknown>;
         PageMiniMap.validateCommonFields(r, 'online', 'OnlinePageMiniMap');
         PageMiniMap.assertTemplate(r.onlineTilesTemplate, 'OnlinePageMiniMap.onlineTilesTemplate');
+        r.tileCount =
+            r.tileCount === undefined
+                ? 0
+                : MiniMap.assertNonNegativeInteger(r.tileCount, 'OnlinePageMiniMap.tileCount');
+        r.tileTotalBytes =
+            r.tileTotalBytes === undefined
+                ? 0
+                : MiniMap.assertNonNegativeInteger(
+                      r.tileTotalBytes,
+                      'OnlinePageMiniMap.tileTotalBytes',
+                  );
         Object.setPrototypeOf(r, OnlinePageMiniMap.prototype);
         return r as unknown as OnlinePageMiniMap;
     }

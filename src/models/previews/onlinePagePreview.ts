@@ -1,5 +1,14 @@
 import { OfflinePagePreview } from './offlinePagePreview';
 import { PagePreview, registerPagePreviewParser } from './pagePreview';
+import { DownloadJob } from '../../download/downloadJob';
+import type { DownloadJobConfig } from '../../download/types';
+import { DownloadPhase } from '../../download/downloadPhase';
+import { buildDeleteStoredPagePhase, titleForPhase } from '../../download/helpers/downloadPhaseTitles';
+import { DownloadDependencyKeys } from '../../download/dependencies/downloadDependencyKeys';
+import { FetchPageJsonTaskDependency } from '../../download/dependencies/fetchPageJsonTaskDependency';
+import { FetchPageJsonTask } from '../../download/tasks/fetchPageJsonTask';
+import { PageDataSource } from '../pageDataSource';
+import { PageViewType } from '../pageViews/pageViewType';
 
 export class OnlinePagePreview extends PagePreview {
     readonly fetchType = 'online' as const;
@@ -50,6 +59,31 @@ export class OnlinePagePreview extends PagePreview {
             this.externalLink,
             this.permit,
         );
+    }
+
+    toDownloadJob(config: DownloadJobConfig): DownloadJob {
+        const pageViewType =
+            this.source === PageDataSource.Ropewiki
+                ? PageViewType.Ropewiki
+                : null;
+        if (pageViewType == null) {
+            throw new Error(`Unsupported page preview source "${String(this.source)}"`);
+        }
+        const fetchPageTask = new FetchPageJsonTask();
+        const fetchPagePhase = new DownloadPhase({
+            title: titleForPhase([fetchPageTask]),
+            tasks: [fetchPageTask],
+        });
+        return new DownloadJob({
+            pageId: this.id,
+            pageViewType,
+            config,
+            phases: [buildDeleteStoredPagePhase(), fetchPagePhase],
+            taskDependencies: {
+                [DownloadDependencyKeys.FetchPageJson]:
+                    FetchPageJsonTaskDependency.fromPreview(this, config),
+            },
+        });
     }
 
     static fromResult(result: unknown): OnlinePagePreview {

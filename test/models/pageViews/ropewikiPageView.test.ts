@@ -111,11 +111,11 @@ describe('RopewikiPageView models', () => {
         expect(offline).toBeInstanceOf(OfflineRopewikiPageView);
     });
 
-    it('collects downloadable image tuples', () => {
+    it('builds fetch image task dependency with downloadable slots', () => {
         const page = OnlineRopewikiPageView.fromResult(onlineResult());
-        const tuples = page.getImageIdsToDownload();
-        expect(tuples).toHaveLength(2);
-        expect(tuples.map((t) => t[0])).toEqual([IMAGE_ID_A, IMAGE_ID_B]);
+        const dep = page.getFetchImagesTaskDependency();
+        expect(dep.slots).toHaveLength(2);
+        expect(dep.slots.map((s) => s.imageId)).toEqual([IMAGE_ID_A, IMAGE_ID_B]);
     });
 
     it('toOffline maps missing image ids to null offline paths (1:1 online/offline images)', () => {

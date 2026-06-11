@@ -12,6 +12,7 @@ npm install ropegeo-common
 
 - **Models** — `import { … } from 'ropegeo-common/models'` (or `import type { … }` for symbols that are type-only in TypeScript). The package root `ropegeo-common` re-exports everything from `./models` for convenience. The subpath `ropegeo-common/classes` is kept as an alias of `./models` for older imports until dependents switch over.
 - **Helpers** — `import { … } from 'ropegeo-common/helpers'` (and `import type { … }` for helper types such as `GetS3ObjectResult`). The full barrel includes Node-only modules (S3 folder upload uses `fs`); **React Native / Metro** should use **`ropegeo-common/helpers/network`** (sources under `src/helpers/network/`, barrel `index.ts`) for the request-timeout / abort helpers only (`NETWORK_REQUEST_*`, `installNetworkRequestPolicyTimers`, `mergeParentSignalWithDeadline`, `resolveRequestTimeoutMs`, `isAbortError`, `isNetworkRequestTimeoutError`, and related types).
+- **Download** — `import { … } from 'ropegeo-common/download'` for job orchestration (`DownloadJobQueue`, `DownloadJob`, tasks, dependencies). Not re-exported from `ropegeo-common/models`. Mobile implements `DownloadPlatformHarness` in its own `lib/download/` folder.
 
 Helper tables use columns **Name**, **Description**, **Import**. Model tables add **Base class** after **Name** (`N/A` for enums, TypeScript-only type aliases, constants, registration functions, and classes without an exported superclass; otherwise the direct superclass).
 
@@ -261,14 +262,44 @@ Abstract classes live under `minimap/abstract/`, concrete under `minimap/concret
 | `OfflineMiniMap` | N/A | Interface: `fetchType: "offline"` and `miniMapType`. | `import type { OfflineMiniMap } from 'ropegeo-common/models'` |
 | `MiniMap` | N/A | Abstract base for minimaps; `fromResult` parses API wire types only. | `import { MiniMap } from 'ropegeo-common/models'` |
 | `RegionMiniMap` | `MiniMap` | Abstract region minimap (`miniMapType: region`); online/offline concrete subclasses. | `import { RegionMiniMap } from 'ropegeo-common/models'` |
-| `OnlineRegionMiniMap` | `RegionMiniMap` | API region routes (`routesParams`, `bounds` or null, `fetchType: "online"`). | `import { OnlineRegionMiniMap } from 'ropegeo-common/models'` |
+| `OnlineRegionMiniMap` | `RegionMiniMap` | API region routes (`routesParams`, `bounds` or null, `routeCount`, `totalBytes`, `fetchType: "online"`). | `import { OnlineRegionMiniMap } from 'ropegeo-common/models'` |
 | `OfflineRegionMiniMap` | `RegionMiniMap` | Bundled region routes GeoJSON path (`downloadedGeojson`, `fetchType: "offline"`). | `import { OfflineRegionMiniMap } from 'ropegeo-common/models'` |
 | `PageMiniMap` | `MiniMap` | Abstract page minimap (`miniMapType: page`); MVT `polyLineLayerId` / `pointLayerId`, tile templates, optional `legend`. | `import { PageMiniMap } from 'ropegeo-common/models'` |
-| `OnlinePageMiniMap` | `PageMiniMap` | API page tiles (`onlineTilesTemplate`, `fetchType: "online"`). | `import { OnlinePageMiniMap } from 'ropegeo-common/models'` |
+| `OnlinePageMiniMap` | `PageMiniMap` | API page tiles (`onlineTilesTemplate`, `tileCount`, `tileTotalBytes`, `fetchType: "online"`). | `import { OnlinePageMiniMap } from 'ropegeo-common/models'` |
 | `OfflinePageMiniMap` | `PageMiniMap` | Local page tiles (`offlineTilesTemplate`, `fetchType: "offline"`). | `import { OfflinePageMiniMap } from 'ropegeo-common/models'` |
 | `CenteredRegionMiniMap` | `MiniMap` | Abstract centered-route minimap (`miniMapType: centeredRegion`). | `import { CenteredRegionMiniMap } from 'ropegeo-common/models'` |
-| `OnlineCenteredRegionMiniMap` | `CenteredRegionMiniMap` | API centered-route fallback (`routesParams`, `fetchType: "online"`). | `import { OnlineCenteredRegionMiniMap } from 'ropegeo-common/models'` |
+| `OnlineCenteredRegionMiniMap` | `CenteredRegionMiniMap` | API centered-route fallback (`routesParams`, `routeCount`, `totalBytes`, `fetchType: "online"`). | `import { OnlineCenteredRegionMiniMap } from 'ropegeo-common/models'` |
 | `OfflineCenteredRegionMiniMap` | `CenteredRegionMiniMap` | Persisted local centered-route geojson (`downloadedGeojson`, `fetchType: "offline"`). | `import { OfflineCenteredRegionMiniMap } from 'ropegeo-common/models'` |
+
+### Download orchestration (`src/download/`)
+
+Import from **`ropegeo-common/download`**. Platform I/O (Expo FileSystem, Mapbox, AsyncStorage) is implemented by Mobile via `DownloadPlatformHarness`; Common owns job planning and task logic only.
+
+| Name | Description | Import |
+| --- | --- | --- |
+| `DownloadJobQueue` | FIFO queue: enqueue jobs, foreground/background ticks, persist/restore. | `import { DownloadJobQueue } from 'ropegeo-common/download'` |
+| `DownloadJob` | Single page download: mutable `phases`, `taskDependencies`, `runTick`, `appendPhases`. | `import { DownloadJob } from 'ropegeo-common/download'` |
+| `DownloadPhase` | Parallel task group with shared title and progress. | `import { DownloadPhase } from 'ropegeo-common/download'` |
+| `DownloadTask` | Abstract unit of work per tick; concrete tasks in `src/download/tasks/`. | `import { DownloadTask } from 'ropegeo-common/download'` |
+| `DownloadPlatformHarness` | Platform adapter type (file I/O, Mapbox pack, job store). | `import type { DownloadPlatformHarness } from 'ropegeo-common/download'` |
+| `DownloadJobConfig` | Job config: `savedAt`, `mapboxStyleUrl`, `webScraperBaseUrl`, optional `onProgress`. | `import type { DownloadJobConfig } from 'ropegeo-common/download'` |
+| `DownloadJobUISnapshot` | Runtime UI progress (phase title, step/total, percent). | `import type { DownloadJobUISnapshot } from 'ropegeo-common/download'` |
+| `DownloadJobQueueStoredState` | Persisted queue envelope (`queueOrder`, `jobs`). | `import type { DownloadJobQueueStoredState } from 'ropegeo-common/download'` |
+| `DownloadJobStoredState` | Persisted single in-flight job. | `import type { DownloadJobStoredState } from 'ropegeo-common/download'` |
+| `DownloadDependencyKeys` | String keys for task dependency map entries. | `import { DownloadDependencyKeys } from 'ropegeo-common/download'` |
+| `planDownloadPhases` | Builds content phases for a full `OnlineRopewikiPageView` (explore path). | `import { planDownloadPhases } from 'ropegeo-common/download'` |
+| `seedConsumerDependencies` | Seeds dependency objects for tasks in a phase plan. | `import { seedConsumerDependencies } from 'ropegeo-common/download'` |
+| `DeleteStoredPageTask` | Phase 1: delete existing offline bundle for the page. | `import { DeleteStoredPageTask } from 'ropegeo-common/download'` |
+| `FetchPageJsonTask` | Preview path: fetch page JSON and append content phases. | `import { FetchPageJsonTask } from 'ropegeo-common/download'` |
+| `FetchImageFilesTask` | Download beta/banner image files. | `import { FetchImageFilesTask } from 'ropegeo-common/download'` |
+| `FetchMapboxPackTask` | Download Mapbox offline pack for page minimap bounds. | `import { FetchMapboxPackTask } from 'ropegeo-common/download'` |
+| `FetchRopeGeoTileListTask` | Parallel paginated tile key list fetches. | `import { FetchRopeGeoTileListTask } from 'ropegeo-common/download'` |
+| `FetchRopeGeoTileFilesTask` | Download `.pbf` tile files. | `import { FetchRopeGeoTileFilesTask } from 'ropegeo-common/download'` |
+| `FetchRegionRouteListTask` | Parallel paginated region route list fetches. | `import { FetchRegionRouteListTask } from 'ropegeo-common/download'` |
+| `SaveOfflinePageTask` | Persist offline page view, images, and minimap data. | `import { SaveOfflinePageTask } from 'ropegeo-common/download'` |
+| `InvalidDownloadJobStoredStateError` | Thrown when persisted job state fails validation. | `import { InvalidDownloadJobStoredStateError } from 'ropegeo-common/download'` |
+| `reconcilePendingFileTransfer` | Reconcile native file transfer state with expected progress. | `import { reconcilePendingFileTransfer } from 'ropegeo-common/download'` |
+| `enqueuePendingFileTransfer` | Enqueue a native background file download. | `import { enqueuePendingFileTransfer } from 'ropegeo-common/download'` |
 
 ### Minimap legend (`src/models/minimap/legend/`)
 

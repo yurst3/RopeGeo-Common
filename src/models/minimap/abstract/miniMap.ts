@@ -33,6 +33,13 @@ export abstract class MiniMap {
         return value;
     }
 
+    static assertNonNegativeInteger(value: unknown, field: string): number {
+        if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || !Number.isInteger(value)) {
+            throw new Error(`${field} must be a non-negative integer, got: ${JSON.stringify(value)}`);
+        }
+        return value;
+    }
+
     /**
      * Validates `miniMapType` and delegates to the matching API minimap parser.
      */

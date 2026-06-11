@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import changeSQSMessageVisibilityTimeout from '../../../src/helpers/sqs/changeSQSMessageVisibilityTimeout';
 import { resetSQSClientForTests } from '../../../src/helpers/sqs/getSQSClient';
+import { mockConsoleWarn } from '../mockConsole';
 
 // Mock @aws-sdk/client-sqs
 const mockSend = jest.fn<() => Promise<any>>();
@@ -22,6 +23,7 @@ const { SQSClient, ChangeMessageVisibilityCommand } = require('@aws-sdk/client-s
 describe('changeSQSMessageVisibilityTimeout', () => {
     const originalEnv = process.env;
     let consoleLogSpy: ReturnType<typeof jest.spyOn>;
+    let consoleWarnSpy: ReturnType<typeof mockConsoleWarn>;
     let MockSQSClient: any;
     let MockChangeMessageVisibilityCommand: any;
 
@@ -31,6 +33,7 @@ describe('changeSQSMessageVisibilityTimeout', () => {
         process.env = { ...originalEnv };
         
         consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        consoleWarnSpy = mockConsoleWarn();
         
         MockSQSClient = SQSClient;
         MockChangeMessageVisibilityCommand = ChangeMessageVisibilityCommand;
@@ -40,6 +43,7 @@ describe('changeSQSMessageVisibilityTimeout', () => {
     afterEach(() => {
         process.env = originalEnv;
         consoleLogSpy.mockRestore();
+        consoleWarnSpy.mockRestore();
     });
 
     it('successfully sets visibility timeout for a message', async () => {

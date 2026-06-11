@@ -1,0 +1,123 @@
+---
+description: Download job orchestration in ropegeo-common — architecture, persistence, tasks, and how to extend
+globs: src/download/**/*.ts, src/models/pageViews/**/*.ts, src/models/previews/**/*.ts, test/download/**/*.ts, package.json, README.md
+alwaysApply: false
+---
+
+# Download process (ropegeo-common)
+
+Download orchestration lives in **`src/download/`** and is published as **`ropegeo-common/download`**. Common owns job planning, phases, tasks, and persistence types. **Mobile** (Phase 3) implements `DownloadPlatformHarness` — Expo FileSystem, Mapbox, AsyncStorage — in `Mobile/lib/download/`. Do **not** re-export Common download symbols from Mobile.
+
+Shared download types live in **`src/download/types.ts`**. Types used by only one class stay in that class's file (e.g. private `TileListPage` in `FetchRopeGeoTileListTask`).
+
+Custom download errors live in **`src/download/errors.ts`**.
+
+Helper functions and registries live in **`src/download/helpers/`** (one module per file: constants, phase titles, planning, seeding, hydration registries, pending file transfer).
+
+See also **document-package-exports.mdc** when adding README table rows for new public exports.
+
+## Architecture
+
+```
+DownloadJobQueue → DownloadJob → DownloadPhase → DownloadTask (concrete)
+                      ↑
+         OnlinePageView.toDownloadJob()     (explore — full plan at enqueue)
+         OnlinePagePreview.toDownloadJob()  (saved — delete + fetch JSON, then append)
+```
+
+| Type | Role |
+| --- | --- |
+| `DownloadJobQueue` | FIFO orchestration, persist/restore, foreground + BG ticks |
+| `DownloadJob` | Mutable `phases[]`, `taskDependencies`, `runTick`, `appendPhases` |
+| `DownloadPhase` | Parallel `tasks`, `title`, `progressPercent` |
+| `DownloadTask` | One unit of work per tick; `dependencyKeys` (one or more) |
+| `DownloadTaskDependency` | Per-consumer payload; `toStoredState` / `fromStoredState` |
+| `DownloadPlatformHarness` | Common type; Mobile implements file/Mapbox/store I/O |
+| `DownloadJobQueueStoredState` | Persisted queue envelope |
+| `DownloadJobStoredState` | Persisted single job |
+| `DownloadJobUISnapshot` | Runtime UI progress (not persisted) |
+
+**Phase 1 is always** `[DeleteStoredPageTask]` on both explore and preview paths.
+
+## Job entry points
+
+- **Explore** — `OnlineRopewikiPageView.toDownloadJob(config)`: `buildDeleteStoredPagePhase()` + `planDownloadPhases(view)`. No `FetchPageJsonTask`.
+- **Saved screen** — `OnlinePagePreview.toDownloadJob(config)`: delete phase + `FetchPageJsonTask` phase only at enqueue. `FetchPageJsonTask` calls `appendPhases(planDownloadPhases(view))` after page JSON is fetched.
+
+## Dependencies
+
+- Each dependency **key** is consumed by **exactly one** task.
+- A task may consume **multiple keys** (e.g. `SaveOfflinePageTask` reads `saveOfflinePageView`, optional `saveOfflinePageImages`, `saveOfflinePageMiniMap`).
+- **No merge helpers** — upstream tasks call `ctx.setDependency(key, dep)` for each downstream consumer key.
+
+Keys live in `dependencies/downloadDependencyKeys.ts`. Register parsers in `helpers/downloadDependencyRegistry.ts`.
+
+## Adding or updating a DownloadTask
+
+1. Add `*TaskDependency` class + key in `downloadDependencyKeys.ts`.
+2. Register `dependencyKind` in `helpers/downloadDependencyRegistry.ts`.
+3. Subclass `DownloadTask`; set `dependencyKeys`; implement `runTick`, `toStoredState`, `fromStoredState`.
+4. In `runTick`: `requireAllDependencies(ctx)` before work; on completion `ctx.setDependency()` for each produced key.
+5. Wire into `planDownloadPhases()` + `seedConsumerDependencies()`. Preview jobs: only `FetchPageJsonTask` at build time; others appear after JSON fetch.
+6. Register `taskKind` in `helpers/downloadTaskRegistry.ts`.
+7. Add Jest coverage under `test/download/tasks/`; job-plan tests in `test/download/jobs/`.
+
+## Coding guidelines
+
+**Use `toDownloadJob()` on models — not standalone factory modules**
+
+```typescript
+// ✅ GOOD
+const job = view.toDownloadJob(config);
+
+// ❌ BAD
+const job = buildDownloadJobFromView(view, config);
+```
+
+**Use `fromStoredState` for persistence — not `fromResult`**
+
+```typescript
+// ✅ GOOD
+DownloadJob.fromStoredState(raw);
+
+// ❌ BAD
+DownloadJob.fromResult(apiBody);
+```
+
+**Cap parallel HTTP / file work per tick**
+
+```typescript
+// ✅ GOOD
+for (const batch of chunk(pending, LIST_HTTP_BATCH_SIZE)) {
+  await Promise.all(batch.map((item) => enqueueOrReconcile(item, platformHarness)));
+}
+
+// ❌ BAD
+await Promise.all(pending.map((item) => enqueueOrReconcile(item, platformHarness)));
+```
+
+List tasks use `LIST_HTTP_BATCH_SIZE`; file tasks use `pendingFileTransfer` reconcile + enqueue batches (`TILE_FILE_BATCH_SIZE`).
+
+## Phase titles
+
+`titleForPhase(tasks)` in `helpers/downloadPhaseTitles.ts`:
+
+| Condition | Title |
+| --- | --- |
+| Single `DeleteStoredPageTask` | Deleting stored page |
+| Single `FetchPageJsonTask` | Downloading page |
+| Contains `FetchImageFilesTask` with `total > 0` | Downloading Media |
+| Contains `FetchRegionRouteListTask` | Downloading local routes |
+| Contains `FetchMapboxPackTask` | Downloading Mapbox Pack |
+| Contains `FetchRopeGeoTileFilesTask` | Downloading map data |
+| Contains `SaveOfflinePageTask` | Saving page |
+
+## Tests
+
+- **Explore path** — `test/download/jobs/ropewikiPageView.test.ts`: all `planDownloadPhases` / `toDownloadJob` variations; phase 1 always delete; no `FetchPageJsonTask`.
+- **Preview path** — `test/download/jobs/ropewikiPagePreview.test.ts`: initial 2 phases; mock `httpRequest`; assert `appendPhases` matches explore plan; stored-state round-trip.
+- Do **not** put download job planning tests under `test/models/pageViews/`.
+
+## Package export
+
+Add public symbols to `src/download/index.ts` and a matching row in **README.md** (`ropegeo-common/download`). Do **not** re-export download from `src/models/index.ts`.

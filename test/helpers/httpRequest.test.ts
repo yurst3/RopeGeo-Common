@@ -1,18 +1,27 @@
-import { describe, it, expect, afterEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { fetch as undiciFetch } from 'undici';
 import { httpRequest } from '../../src/helpers/httpRequest';
+import { mockConsoleWarn } from './mockConsole';
 
 jest.mock('undici', () => ({
   ...jest.requireActual<typeof import('undici')>('undici'),
   fetch: jest.fn(),
 }));
 
-const mockFetch = jest.mocked(undiciFetch);
+const mockUndiciFetch = jest.mocked(undiciFetch);
 
-type UndiciResponse = Awaited<ReturnType<typeof undiciFetch>>;
+type FetchResponse = Awaited<ReturnType<typeof fetch>>;
 
 describe('httpRequest', () => {
   const originalEnv = process.env;
+  const originalFetch = globalThis.fetch;
+  const mockGlobalFetch = jest.fn<typeof fetch>();
+  let consoleWarnSpy: ReturnType<typeof mockConsoleWarn>;
+
+  beforeEach(() => {
+    globalThis.fetch = mockGlobalFetch as typeof fetch;
+    consoleWarnSpy = mockConsoleWarn();
+  });
 
   afterEach(() => {
     process.env = { ...originalEnv };
@@ -21,7 +30,10 @@ describe('httpRequest', () => {
     delete process.env.PROXY_URL;
     delete process.env.HTTP_PROXY;
     delete process.env.HTTPS_PROXY;
-    mockFetch.mockClear();
+    mockGlobalFetch.mockReset();
+    mockUndiciFetch.mockClear();
+    globalThis.fetch = originalFetch;
+    consoleWarnSpy.mockRestore();
   });
 
   it('throws when proxy should be used but PROXY_URL is not set (Lambda + dev)', async () => {
@@ -51,17 +63,18 @@ describe('httpRequest', () => {
   });
 
   it('sends request with default headers when fetch succeeds', async () => {
-    mockFetch.mockResolvedValue({
+    mockGlobalFetch.mockResolvedValue({
       ok: true,
       status: 200,
       statusText: 'OK',
       json: async () => ({}),
-    } as unknown as UndiciResponse);
+    } as unknown as FetchResponse);
 
     await httpRequest('https://example.com/');
 
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    const [url, init] = mockFetch.mock.calls[0]!;
+    expect(mockGlobalFetch).toHaveBeenCalledTimes(1);
+    expect(mockUndiciFetch).not.toHaveBeenCalled();
+    const [url, init] = mockGlobalFetch.mock.calls[0]!;
     expect(url).toBe('https://example.com/');
     const headers = (init as RequestInit).headers as Record<string, string>;
     expect(headers['Accept']).toBe('application/json, text/html, application/xml, */*');
@@ -70,14 +83,14 @@ describe('httpRequest', () => {
 
   it('throws when response is not OK', async () => {
     const mockErrorBody = 'Forbidden';
-    mockFetch.mockResolvedValue({
+    mockGlobalFetch.mockResolvedValue({
       ok: false,
       status: 403,
       statusText: 'Forbidden',
       url: 'https://example.com/',
       headers: { get: () => null },
       clone: () => ({ text: () => Promise.resolve(mockErrorBody) }),
-    } as unknown as UndiciResponse);
+    } as unknown as FetchResponse);
 
     const err = await httpRequest('https://example.com/').catch((e) => e);
     expect(err).toBeInstanceOf(Error);
@@ -89,7 +102,7 @@ describe('httpRequest', () => {
 
   it('throws when fetch fails', async () => {
     const networkError = new Error('network failure');
-    mockFetch.mockRejectedValue(networkError);
+    mockGlobalFetch.mockRejectedValue(networkError);
 
     const err = await httpRequest('https://example.com/').catch((e) => e);
     expect(err).toBeInstanceOf(Error);
@@ -103,16 +116,16 @@ describe('httpRequest', () => {
     delete process.env.AWS_LAMBDA_FUNCTION_NAME;
     delete process.env.DEV_ENVIRONMENT;
     delete process.env.PROXY_URL;
-    mockFetch.mockResolvedValue({
+    mockGlobalFetch.mockResolvedValue({
       ok: true,
       status: 200,
       statusText: 'OK',
-    } as unknown as UndiciResponse);
+    } as unknown as FetchResponse);
 
     await httpRequest('https://example.com/');
 
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    const init = mockFetch.mock.calls[0]![1] as RequestInit;
+    expect(mockGlobalFetch).toHaveBeenCalledTimes(1);
+    const init = mockGlobalFetch.mock.calls[0]![1] as RequestInit;
     expect(init).not.toHaveProperty('dispatcher');
   });
 
@@ -120,16 +133,16 @@ describe('httpRequest', () => {
     process.env.AWS_LAMBDA_FUNCTION_NAME = 'test-function';
     process.env.DEV_ENVIRONMENT = 'local';
     process.env.PROXY_URL = 'http://proxy.example.com:8080';
-    mockFetch.mockResolvedValue({
+    mockGlobalFetch.mockResolvedValue({
       ok: true,
       status: 200,
       statusText: 'OK',
-    } as unknown as UndiciResponse);
+    } as unknown as FetchResponse);
 
     await httpRequest('https://example.com/');
 
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    const init = mockFetch.mock.calls[0]![1] as RequestInit;
+    expect(mockGlobalFetch).toHaveBeenCalledTimes(1);
+    const init = mockGlobalFetch.mock.calls[0]![1] as RequestInit;
     expect(init).not.toHaveProperty('dispatcher');
   });
 
@@ -137,16 +150,17 @@ describe('httpRequest', () => {
     delete process.env.AWS_LAMBDA_FUNCTION_NAME;
     process.env.DEV_ENVIRONMENT = 'dev';
     process.env.PROXY_URL = 'http://proxy.example.com:8080';
-    mockFetch.mockResolvedValue({
+    mockUndiciFetch.mockResolvedValue({
       ok: true,
       status: 200,
       statusText: 'OK',
-    } as unknown as UndiciResponse);
+    } as unknown as Awaited<ReturnType<typeof undiciFetch>>);
 
     await httpRequest('https://example.com/', 5, undefined, undefined, true);
 
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    const init = mockFetch.mock.calls[0]![1] as RequestInit;
+    expect(mockUndiciFetch).toHaveBeenCalledTimes(1);
+    expect(mockGlobalFetch).not.toHaveBeenCalled();
+    const init = mockUndiciFetch.mock.calls[0]![1] as RequestInit;
     expect(init).toHaveProperty('dispatcher');
   });
 
@@ -154,21 +168,22 @@ describe('httpRequest', () => {
     process.env.AWS_LAMBDA_FUNCTION_NAME = 'test-function';
     process.env.DEV_ENVIRONMENT = 'dev';
     process.env.PROXY_URL = 'http://proxy.example.com:8080';
-    mockFetch.mockResolvedValue({
+    mockGlobalFetch.mockResolvedValue({
       ok: true,
       status: 200,
       statusText: 'OK',
-    } as unknown as UndiciResponse);
+    } as unknown as FetchResponse);
 
     await httpRequest('https://example.com/', 5, undefined, undefined, false);
 
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    const init = mockFetch.mock.calls[0]![1] as RequestInit;
+    expect(mockGlobalFetch).toHaveBeenCalledTimes(1);
+    expect(mockUndiciFetch).not.toHaveBeenCalled();
+    const init = mockGlobalFetch.mock.calls[0]![1] as RequestInit;
     expect(init).not.toHaveProperty('dispatcher');
   });
 
   it('retries on 500 and succeeds on second attempt', async () => {
-    mockFetch
+    mockGlobalFetch
       .mockResolvedValueOnce({
         ok: false,
         status: 500,
@@ -176,64 +191,64 @@ describe('httpRequest', () => {
         url: 'https://example.com/',
         headers: { get: () => null },
         clone: () => ({ text: () => Promise.resolve('error') }),
-      } as unknown as UndiciResponse)
+      } as unknown as FetchResponse)
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
         statusText: 'OK',
-      } as unknown as UndiciResponse);
+      } as unknown as FetchResponse);
 
     const response = await httpRequest('https://example.com/');
 
     expect(response.ok).toBe(true);
-    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(mockGlobalFetch).toHaveBeenCalledTimes(2);
   });
 
   it('retries on fetch throw and succeeds on second attempt', async () => {
-    mockFetch
+    mockGlobalFetch
       .mockRejectedValueOnce(new Error('network failure'))
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
         statusText: 'OK',
-      } as unknown as UndiciResponse);
+      } as unknown as FetchResponse);
 
     const response = await httpRequest('https://example.com/');
 
     expect(response.ok).toBe(true);
-    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(mockGlobalFetch).toHaveBeenCalledTimes(2);
   });
 
   it('throws after exhausting retries on 500', async () => {
-    mockFetch.mockResolvedValue({
+    mockGlobalFetch.mockResolvedValue({
       ok: false,
       status: 500,
       statusText: 'Internal Server Error',
       url: 'https://example.com/',
       headers: { get: () => null },
       clone: () => ({ text: () => Promise.resolve('error') }),
-    } as unknown as UndiciResponse);
+    } as unknown as FetchResponse);
 
     const err = await httpRequest('https://example.com/', 2).catch((e) => e);
 
     expect(err).toBeInstanceOf(Error);
     expect((err as Error).message).toContain('httpRequest non-OK: status=500');
-    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(mockGlobalFetch).toHaveBeenCalledTimes(3);
   });
 
   it('throws after exhausting retries on fetch error', async () => {
-    mockFetch.mockRejectedValue(new Error('network failure'));
+    mockGlobalFetch.mockRejectedValue(new Error('network failure'));
 
     const err = await httpRequest('https://example.com/', 2).catch((e) => e);
 
     expect(err).toBeInstanceOf(Error);
     expect((err as Error).message).toContain('httpRequest failed:');
     expect((err as Error).message).toContain('network failure');
-    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(mockGlobalFetch).toHaveBeenCalledTimes(3);
   });
 
   it('retries on 403 and succeeds on second attempt', async () => {
-    mockFetch
+    mockGlobalFetch
       .mockResolvedValueOnce({
         ok: false,
         status: 403,
@@ -241,51 +256,51 @@ describe('httpRequest', () => {
         url: 'https://example.com/',
         headers: { get: () => null },
         clone: () => ({ text: () => Promise.resolve('Forbidden') }),
-      } as unknown as UndiciResponse)
+      } as unknown as FetchResponse)
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
         statusText: 'OK',
-      } as unknown as UndiciResponse);
+      } as unknown as FetchResponse);
 
     const response = await httpRequest('https://example.com/');
 
     expect(response.ok).toBe(true);
-    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(mockGlobalFetch).toHaveBeenCalledTimes(2);
   });
 
   it('does not retry on other error status (e.g. 404)', async () => {
-    mockFetch.mockResolvedValue({
+    mockGlobalFetch.mockResolvedValue({
       ok: false,
       status: 404,
       statusText: 'Not Found',
       url: 'https://example.com/',
       headers: { get: () => null },
       clone: () => ({ text: () => Promise.resolve('Not Found') }),
-    } as unknown as UndiciResponse);
+    } as unknown as FetchResponse);
 
     const err = await httpRequest('https://example.com/').catch((e) => e);
 
     expect(err).toBeInstanceOf(Error);
     expect((err as Error).message).toContain('status=404');
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockGlobalFetch).toHaveBeenCalledTimes(1);
   });
 
   it('does not retry on 502 (Bad Gateway)', async () => {
-    mockFetch.mockResolvedValue({
+    mockGlobalFetch.mockResolvedValue({
       ok: false,
       status: 502,
       statusText: 'Bad Gateway',
       url: 'https://example.com/',
       headers: { get: () => null },
       clone: () => ({ text: () => Promise.resolve('Bad Gateway') }),
-    } as unknown as UndiciResponse);
+    } as unknown as FetchResponse);
 
     const err = await httpRequest('https://example.com/', 2).catch((e) => e);
 
     expect(err).toBeInstanceOf(Error);
     expect((err as Error).message).toContain('status=502');
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockGlobalFetch).toHaveBeenCalledTimes(1);
   });
 
   describe('abortSignal', () => {
@@ -298,7 +313,7 @@ describe('httpRequest', () => {
       expect(err).toBeInstanceOf(Error);
       expect((err as Error).message).toContain('httpRequest aborted:');
       expect((err as Error).message).toContain('requestUrl=https://example.com/');
-      expect(mockFetch).not.toHaveBeenCalled();
+      expect(mockGlobalFetch).not.toHaveBeenCalled();
     });
 
     it('throws with abort reason when abortSignal is already aborted with reason', async () => {
@@ -311,12 +326,12 @@ describe('httpRequest', () => {
       expect(err).toBeInstanceOf(Error);
       expect((err as Error).message).toContain('httpRequest aborted:');
       expect((err as Error).message).toContain('Cancelled by caller');
-      expect(mockFetch).not.toHaveBeenCalled();
+      expect(mockGlobalFetch).not.toHaveBeenCalled();
     });
 
     it('does not retry when abortSignal aborts after first attempt fails', async () => {
       const controller = new AbortController();
-      mockFetch.mockImplementation(() => {
+      mockGlobalFetch.mockImplementation(() => {
         if (!controller.signal.aborted) {
           queueMicrotask(() => controller.abort());
         }
@@ -327,21 +342,21 @@ describe('httpRequest', () => {
 
       expect(err).toBeInstanceOf(Error);
       expect((err as Error).message).toContain('httpRequest failed:');
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockGlobalFetch).toHaveBeenCalledTimes(1);
     });
 
     it('passes combined signal to fetch when abortSignal is provided', async () => {
       const controller = new AbortController();
-      mockFetch.mockResolvedValue({
+      mockGlobalFetch.mockResolvedValue({
         ok: true,
         status: 200,
         statusText: 'OK',
-      } as unknown as UndiciResponse);
+      } as unknown as FetchResponse);
 
       await httpRequest('https://example.com/', 5, controller.signal);
 
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-      const init = mockFetch.mock.calls[0]![1] as RequestInit;
+      expect(mockGlobalFetch).toHaveBeenCalledTimes(1);
+      const init = mockGlobalFetch.mock.calls[0]![1] as RequestInit;
       expect(init.signal).toBeDefined();
       expect(init.signal).toBeInstanceOf(AbortSignal);
     });

@@ -2,7 +2,6 @@ import { BetaSection } from '../betaSections/betaSection';
 import { OfflineBetaSection } from '../betaSections/offlineBetaSection';
 import { OnlineBetaSection } from '../betaSections/onlineBetaSection';
 import { OnlineBetaSectionImage } from '../betaSections/onlineBetaSectionImage';
-import { DownloadBytes } from '../betaSections/downloadBytes';
 import { MiniMapType } from '../minimap/abstract/miniMapType';
 import { OnlineCenteredRegionMiniMap } from '../minimap/concrete/onlineCenteredRegionMiniMap';
 import { OnlinePageMiniMap } from '../minimap/concrete/onlinePageMiniMap';
@@ -19,6 +18,13 @@ import { registerRopewikiPageViewParser, RopewikiPageView } from './ropewikiPage
 import { RouteType } from '../routes/routeType';
 import { RopewikiVehicleType } from '../ropewikiVehicleType';
 import { PageViewType } from './pageViewType';
+import { buildDeleteStoredPagePhase } from '../../download/helpers/downloadPhaseTitles';
+import { DownloadJob } from '../../download/downloadJob';
+import type { DownloadJobConfig, FetchImageFilesSlot } from '../../download/types';
+import { FetchImageFilesTaskDependency } from '../../download/dependencies/fetchImageFilesTaskDependency';
+import { planDownloadPhases } from '../../download/helpers/planDownloadPhases';
+import { seedConsumerDependencies } from '../../download/helpers/seedConsumerDependencies';
+import type { DownloadPhase } from '../../download/downloadPhase';
 
 export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePageView {
     readonly fetchType = 'online' as const;
@@ -98,11 +104,23 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
         this.miniMap = miniMap;
     }
 
-    getImageIdsToDownload(): Array<[string, DownloadBytes]> {
-        const tuples: Array<[string, DownloadBytes]> = [];
+    getFetchImagesTaskDependency(): FetchImageFilesTaskDependency {
+        const slots: FetchImageFilesSlot[] = [];
         const collect = (image: OnlineBetaSectionImage): void => {
-            if (image.downloadBytes != null) {
-                tuples.push([image.id, image.downloadBytes]);
+            const versions: FetchImageFilesSlot['versions'] = {
+                preview: image.bannerUrl,
+                banner: image.bannerUrl,
+                full: image.fullUrl,
+            };
+            const hasDownloadableVersion =
+                (versions.preview != null && versions.preview.length > 0) ||
+                (versions.banner != null && versions.banner.length > 0) ||
+                (versions.full != null && versions.full.length > 0);
+            if (hasDownloadableVersion) {
+                slots.push({
+                    imageId: image.id,
+                    versions,
+                });
             }
         };
         if (this.bannerImage != null) {
@@ -113,7 +131,35 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
                 collect(image);
             }
         }
-        return tuples;
+        return new FetchImageFilesTaskDependency(slots);
+    }
+
+    toDownloadJob(config: DownloadJobConfig): DownloadJob {
+        const contentPhases = OnlineRopewikiPageView.planDownloadPhases(this);
+        const allPhases = [buildDeleteStoredPagePhase(), ...contentPhases];
+        const dependencies = seedConsumerDependencies(
+            this,
+            allPhases.flatMap((phase) => phase.tasks),
+        );
+        return new DownloadJob({
+            pageId: this.id,
+            pageViewType: this.pageViewType,
+            config,
+            phases: allPhases,
+            taskDependencies: dependencies,
+        });
+    }
+
+    toPlain(): Record<string, unknown> {
+        return JSON.parse(
+            JSON.stringify(this, (_key, value) =>
+                value instanceof Date ? value.toISOString() : value,
+            ),
+        ) as Record<string, unknown>;
+    }
+
+    static planDownloadPhases(view: OnlineRopewikiPageView): DownloadPhase[] {
+        return planDownloadPhases(view);
     }
 
     toOffline(
