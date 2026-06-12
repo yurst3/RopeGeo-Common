@@ -3,7 +3,7 @@ import { ImageVersion } from '../../../src/models/mobile/imageVersions';
 import { DownloadDependencyKeys } from '../../../src/download/dependencies/downloadDependencyKeys';
 import { FetchImageFilesTaskDependency } from '../../../src/download/dependencies/fetchImageFilesTaskDependency';
 import { FetchImageFilesTask } from '../../../src/download/tasks/fetchImageFilesTask';
-import { TILE_FILE_BATCH_SIZE } from '../../../src/download/helpers/downloadConstants';
+import { IMAGE_FILE_BATCH_SIZE } from '../../../src/download/helpers/downloadConstants';
 import { PageViewType } from '../../../src/models/pageViews/pageViewType';
 import type { DownloadJobContext } from '../../../src/download/types';
 import {
@@ -43,7 +43,7 @@ describe('FetchImageFilesTask', () => {
 
     it('downloads image versions in batches', async () => {
         const harness = createMockPlatformHarness();
-        const slots = Array.from({ length: TILE_FILE_BATCH_SIZE + 1 }, (_, i) => ({
+        const slots = Array.from({ length: IMAGE_FILE_BATCH_SIZE + 1 }, (_, i) => ({
             imageId: `img-${i}`,
             versions: {
                 banner: `https://example.com/${i}.avif`,
@@ -59,8 +59,8 @@ describe('FetchImageFilesTask', () => {
 
         const first = await task.runTick(ctx, harness, signal);
         expect(first.done).toBe(false);
-        expect(task.completed).toBe(TILE_FILE_BATCH_SIZE);
-        expect(harness.downloadFile).toHaveBeenCalledTimes(TILE_FILE_BATCH_SIZE * 2);
+        expect(task.completed).toBe(IMAGE_FILE_BATCH_SIZE);
+        expect(harness.downloadFile).toHaveBeenCalledTimes(IMAGE_FILE_BATCH_SIZE * 2);
 
         const second = await task.runTick(ctx, harness, signal);
         expect(second.done).toBe(true);

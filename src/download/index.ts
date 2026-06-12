@@ -32,6 +32,7 @@ export { titleForPhase, buildDeleteStoredPagePhase } from './helpers/downloadPha
 export {
     TILE_LIST_PAGE_LIMIT,
     LIST_HTTP_BATCH_SIZE,
+    IMAGE_FILE_BATCH_SIZE,
     TILE_FILE_BATCH_SIZE,
     REGION_PAGES_PER_CHUNK,
 } from './helpers/downloadConstants';

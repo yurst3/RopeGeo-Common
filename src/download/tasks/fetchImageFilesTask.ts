@@ -2,7 +2,7 @@ import { ImageVersion } from '../../models/mobile/imageVersions';
 import { DownloadDependencyKeys } from '../dependencies/downloadDependencyKeys';
 import { FetchImageFilesTaskDependency } from '../dependencies/fetchImageFilesTaskDependency';
 import { SaveOfflinePageImagesTaskDependency } from '../dependencies/saveOfflinePageImagesTaskDependency';
-import { TILE_FILE_BATCH_SIZE } from '../helpers/downloadConstants';
+import { IMAGE_FILE_BATCH_SIZE } from '../helpers/downloadConstants';
 import type {
     DownloadJobContext,
     DownloadPlatformHarness,
@@ -61,7 +61,7 @@ export class FetchImageFilesTask extends DownloadTask {
             return { done: true };
         }
 
-        const end = Math.min(dep.slots.length, this.cursor + TILE_FILE_BATCH_SIZE);
+        const end = Math.min(dep.slots.length, this.cursor + IMAGE_FILE_BATCH_SIZE);
         for (let i = this.cursor; i < end; i += 1) {
             if (signal.aborted) {
                 break;
@@ -91,14 +91,12 @@ export class FetchImageFilesTask extends DownloadTask {
         platformHarness: DownloadPlatformHarness,
         slot: FetchImageFilesSlot,
     ): Promise<Partial<Record<ImageVersion, string | null>>> {
-        const output: Partial<Record<ImageVersion, string | null>> = {};
         const downloadVersion = async (
             version: ImageVersion,
             url: string | null | undefined,
-        ): Promise<void> => {
+        ): Promise<[ImageVersion, string | null]> => {
             if (url == null || url.length === 0) {
-                output[version] = null;
-                return;
+                return [version, null];
             }
             const destPath = platformHarness.paths.imageDest(
                 ctx.pageId,
@@ -112,12 +110,18 @@ export class FetchImageFilesTask extends DownloadTask {
                 destPath,
                 background: true,
             });
-            output[version] = destPath;
+            return [version, destPath];
         };
 
-        await downloadVersion(ImageVersion.preview, slot.versions.preview);
-        await downloadVersion(ImageVersion.banner, slot.versions.banner);
-        await downloadVersion(ImageVersion.full, slot.versions.full);
+        const results = await Promise.all([
+            downloadVersion(ImageVersion.preview, slot.versions.preview),
+            downloadVersion(ImageVersion.banner, slot.versions.banner),
+            downloadVersion(ImageVersion.full, slot.versions.full),
+        ]);
+        const output: Partial<Record<ImageVersion, string | null>> = {};
+        for (const [version, destPath] of results) {
+            output[version] = destPath;
+        }
         return output;
     }
 
