@@ -3,8 +3,10 @@ import { OnlineCenteredRegionMiniMap } from '../../models/minimap/concrete/onlin
 import { OnlinePageMiniMap } from '../../models/minimap/concrete/onlinePageMiniMap';
 import { OnlineRopewikiPageView } from '../../models/pageViews/onlineRopewikiPageView';
 import { DownloadDependencyKeys } from '../dependencies/downloadDependencyKeys';
+import { FetchDownloadFolderTaskDependency } from '../dependencies/fetchDownloadFolderTaskDependency';
 import { titleForPhase } from './downloadPhaseTitles';
 import { DownloadPhase } from '../downloadPhase';
+import { FetchDownloadFolderTask } from '../tasks/fetchDownloadFolderTask';
 import { FetchImageFilesTask } from '../tasks/fetchImageFilesTask';
 import { FetchMapboxPackTask } from '../tasks/fetchMapboxPackTask';
 import { FetchRegionRouteListTask } from '../tasks/fetchRegionRouteListTask';
@@ -13,7 +15,35 @@ import { FetchRopeGeoTileListTask } from '../tasks/fetchRopeGeoTileListTask';
 import { SaveOfflinePageTask } from '../tasks/saveOfflinePageTask';
 import type { DownloadTask } from '../tasks/abstractDownloadTask';
 
-export function planDownloadPhases(view: OnlineRopewikiPageView): DownloadPhase[] {
+export function hasBundleDownloadFolder(view: {
+    downloadFolder?: string | null;
+}): boolean {
+    return view.downloadFolder != null && view.downloadFolder.length > 0;
+}
+
+function needsParallelMapboxForBundle(view: OnlineRopewikiPageView): boolean {
+    const miniMap = view.miniMap;
+    return (
+        miniMap != null &&
+        miniMap.fetchType === 'online' &&
+        miniMap.miniMapType === MiniMapType.Page
+    );
+}
+
+export function planBundleDownloadPhases(view: OnlineRopewikiPageView): DownloadPhase[] {
+    const tasks: DownloadTask[] = [new FetchDownloadFolderTask()];
+    if (needsParallelMapboxForBundle(view)) {
+        tasks.push(new FetchMapboxPackTask());
+    }
+    return [
+        new DownloadPhase({
+            title: titleForPhase(tasks),
+            tasks,
+        }),
+    ];
+}
+
+export function planLegacyDownloadPhases(view: OnlineRopewikiPageView): DownloadPhase[] {
     const phases: DownloadPhase[] = [];
     const firstPhaseTasks: DownloadTask[] = [];
 
@@ -80,4 +110,20 @@ export function planDownloadPhases(view: OnlineRopewikiPageView): DownloadPhase[
     );
 
     return phases;
+}
+
+export function planDownloadPhases(view: OnlineRopewikiPageView): DownloadPhase[] {
+    if (hasBundleDownloadFolder(view)) {
+        return planBundleDownloadPhases(view);
+    }
+    return planLegacyDownloadPhases(view);
+}
+
+export function bundleDownloadFolderDependency(
+    view: OnlineRopewikiPageView,
+): FetchDownloadFolderTaskDependency {
+    return new FetchDownloadFolderTaskDependency({
+        downloadFolderUrl: view.downloadFolder!,
+        parallelMapbox: needsParallelMapboxForBundle(view),
+    });
 }

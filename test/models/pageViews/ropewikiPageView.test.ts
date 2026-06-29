@@ -181,6 +181,67 @@ describe('RopewikiPageView models', () => {
         expect(sectionImage?.downloadedFullPath).toBe('/tmp/b-full.avif');
     });
 
+    it('fromResult hydrates relative bundle paths when pageRoot is provided', () => {
+        const view = OfflineRopewikiPageView.fromResult(
+            {
+                ...onlineResult(),
+                fetchType: 'offline',
+                bannerImage: {
+                    fetchType: 'offline',
+                    order: 0,
+                    id: IMAGE_ID_A,
+                    downloadedBannerPath: 'images/a-banner.avif',
+                    downloadedFullPath: 'images/a-full.avif',
+                    linkUrl: 'https://example.com',
+                    caption: null,
+                    latestRevisionDate: '2024-01-01T00:00:00.000Z',
+                },
+                betaSections: [],
+                miniMap: {
+                    fetchType: 'offline',
+                    miniMapType: MiniMapType.Page,
+                    polyLineLayerId: 'PolyLines',
+                    pointLayerId: 'Points',
+                    offlineTilesTemplate: 'mapdata/tiles/map-1/{z}/{x}/{y}.pbf',
+                    bounds: { north: 1, south: 0, east: 1, west: 0 },
+                    title: 'Map',
+                },
+            },
+            'file:///root/',
+        );
+        expect(view.bannerImage?.downloadedBannerPath).toBe(
+            'file:///root/images/a-banner.avif',
+        );
+        expect(view.bannerImage?.downloadedFullPath).toBe('file:///root/images/a-full.avif');
+        const pageMiniMap = view.miniMap as OfflinePageMiniMap;
+        expect(pageMiniMap.offlineTilesTemplate).toBe(
+            'file:///root/mapdata/tiles/map-1/{z}/{x}/{y}.pbf',
+        );
+    });
+
+    it('fromResult leaves absolute paths unchanged when pageRoot is provided', () => {
+        const view = OfflineRopewikiPageView.fromResult(
+            {
+                ...onlineResult(),
+                fetchType: 'offline',
+                bannerImage: {
+                    fetchType: 'offline',
+                    order: 0,
+                    id: IMAGE_ID_A,
+                    downloadedBannerPath: 'file:///existing/banner.avif',
+                    downloadedFullPath: null,
+                    linkUrl: 'https://example.com',
+                    caption: null,
+                    latestRevisionDate: '2024-01-01T00:00:00.000Z',
+                },
+                betaSections: [],
+                miniMap: null,
+            },
+            'file:///root/',
+        );
+        expect(view.bannerImage?.downloadedBannerPath).toBe('file:///existing/banner.avif');
+    });
+
     it('offline parser validates offline miniMap type', () => {
         expect(() =>
             OfflineRopewikiPageView.fromResult({

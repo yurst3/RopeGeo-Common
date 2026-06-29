@@ -118,10 +118,12 @@ function createMockHarness(): DownloadPlatformHarness {
         ensureParentDir: jest.fn(async () => undefined),
         deletePageBundle: jest.fn(async () => undefined),
         gunzipTileIfNeeded: jest.fn(async () => undefined),
+        extractZipArchive: jest.fn(async () => undefined),
         paths: {
-            pageRoot: () => '/pages/x',
-            pageJson: () => '/pages/x/page.json',
-            pageJsonTemp: () => '/pages/x/page.json.tmp',
+            pageRoot: () => '/pages/x/',
+            pageJson: () => '/pages/x/page-response.json',
+            pageJsonTemp: () => '/pages/x/page-response.json.tmp',
+            zipTemp: () => '/pages/x/download.zip.tmp',
             imageDest: () => '/pages/x/img',
             tileDest: () => '/pages/x/tile',
             regionGeojson: () => '/pages/x/routes.geojson',
@@ -205,5 +207,30 @@ describe('OnlinePagePreview download job planning', () => {
         const restored = DownloadJob.fromStoredState(job.toStoredState());
         expect(restored.phases.length).toBe(job.phases.length);
         expect(restored.toUISnapshot().displayTotal).toBe(job.phases.length);
+    });
+
+    it('plans bundle download when downloadFolder is set on preview', () => {
+        const preview = new OnlinePagePreview(
+            ROUTE_ID,
+            PageDataSource.Ropewiki,
+            'https://example.com/thumb.jpg',
+            4,
+            10,
+            'Test Page',
+            ['Region'],
+            [],
+            new AcaDifficultyRating(null, null, null, null),
+            null,
+            'https://ropewiki.com/page',
+            null,
+            'https://cdn.example.com/page-zips/e84e6ca6.zip',
+        );
+        const job = preview.toDownloadJob(downloadConfig);
+        expect(taskKinds(job)).toEqual([
+            ['deleteStoredPage'],
+            ['fetchDownloadFolder'],
+        ]);
+        expect(job.taskDependencies[DownloadDependencyKeys.FetchDownloadFolder]).toBeDefined();
+        expect(job.taskDependencies[DownloadDependencyKeys.FetchPageJson]).toBeUndefined();
     });
 });

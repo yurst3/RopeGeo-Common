@@ -245,4 +245,31 @@ describe('OnlineRopewikiPageView download job planning', () => {
         const planned = planDownloadPhases(view);
         expect(taskKinds(job).slice(1)).toEqual(planned.map((phase) => phase.tasks.map((task) => task.taskKind)));
     });
+
+    it('plans bundle download when downloadFolder is set', () => {
+        const view = OnlineRopewikiPageView.fromResult({
+            ...onlineResult(pageMiniMap({ tileCount: 5, tileTotalBytes: 5000 })),
+            mapDataId: ROUTE_ID,
+            downloadFolder: 'https://cdn.example.com/page-zips/e84e6ca6.zip',
+        });
+        const job = view.toDownloadJob(downloadConfig);
+        expect(taskKinds(job)).toEqual([
+            ['deleteStoredPage'],
+            ['fetchDownloadFolder', 'fetchMapboxPack'],
+        ]);
+        expect(job.taskDependencies[DownloadDependencyKeys.FetchDownloadFolder]).toBeDefined();
+        expect(job.taskDependencies[DownloadDependencyKeys.FetchImageFiles]).toBeUndefined();
+    });
+
+    it('plans bundle download without parallel mapbox when minimap is centered region', () => {
+        const view = OnlineRopewikiPageView.fromResult({
+            ...onlineResult(centeredRegionMiniMap({ routeCount: 3, totalBytes: 1000 })),
+            downloadFolder: 'https://cdn.example.com/page-zips/e84e6ca6.zip',
+        });
+        const job = view.toDownloadJob(downloadConfig);
+        expect(taskKinds(job)).toEqual([
+            ['deleteStoredPage'],
+            ['fetchDownloadFolder'],
+        ]);
+    });
 });

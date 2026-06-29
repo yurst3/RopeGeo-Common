@@ -1,5 +1,6 @@
 import { MiniMapType } from '../../models/minimap/abstract/miniMapType';
 import { OnlinePageMiniMap } from '../../models/minimap/concrete/onlinePageMiniMap';
+import { offlineTilesTemplateRelative } from '../../helpers/offlinePageBundlePaths';
 import { DownloadDependencyKeys } from '../dependencies/downloadDependencyKeys';
 import { FetchRopeGeoTileFilesTaskDependency } from '../dependencies/fetchRopeGeoTileFilesTaskDependency';
 import { SaveOfflinePageMiniMapTaskDependency } from '../dependencies/saveOfflinePageMiniMapTaskDependency';
@@ -57,7 +58,7 @@ export class FetchRopeGeoTileFilesTask extends DownloadTask {
                 if (signal.aborted) {
                     return;
                 }
-                const relativePath = relativePathFromTileUrl(tileUrl);
+                const relativePath = `mapdata/tiles/${relativePathFromTileUrl(tileUrl)}`;
                 const destPath = platformHarness.paths.tileDest(ctx.pageId, relativePath);
                 await platformHarness.ensureParentDir(destPath);
                 await platformHarness.downloadFile({
@@ -90,7 +91,7 @@ export class FetchRopeGeoTileFilesTask extends DownloadTask {
         const onlineMiniMap = OnlinePageMiniMap.fromResult(wire);
         const offlineTemplate = platformHarness.paths.tileDest(
             ctx.pageId,
-            `${dep.mapDataId}/{z}/{x}/{y}.pbf`,
+            offlineTilesTemplateRelative(dep.mapDataId),
         );
         const offlineMiniMap = onlineMiniMap.toOffline(offlineTemplate);
         ctx.setDependency(

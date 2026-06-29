@@ -6,13 +6,17 @@ import { DownloadPhase } from '../../download/downloadPhase';
 import { buildDeleteStoredPagePhase, titleForPhase } from '../../download/helpers/downloadPhaseTitles';
 import { DownloadDependencyKeys } from '../../download/dependencies/downloadDependencyKeys';
 import { FetchPageJsonTaskDependency } from '../../download/dependencies/fetchPageJsonTaskDependency';
+import { FetchDownloadFolderTaskDependency } from '../../download/dependencies/fetchDownloadFolderTaskDependency';
+import { FetchDownloadFolderTask } from '../../download/tasks/fetchDownloadFolderTask';
 import { FetchPageJsonTask } from '../../download/tasks/fetchPageJsonTask';
+import { hasBundleDownloadFolder } from '../../download/helpers/planDownloadPhases';
 import { PageDataSource } from '../pageDataSource';
 import { PageViewType } from '../pageViews/pageViewType';
 
 export class OnlinePagePreview extends PagePreview {
     readonly fetchType = 'online' as const;
     imageUrl: string | null;
+    downloadFolder: string | null;
 
     constructor(
         id: string,
@@ -27,6 +31,7 @@ export class OnlinePagePreview extends PagePreview {
         mapData: string | null,
         externalLink: string | null,
         permit: import('../permitStatus').PermitStatus | null,
+        downloadFolder: string | null = null,
     ) {
         super(
             id,
@@ -42,6 +47,7 @@ export class OnlinePagePreview extends PagePreview {
             permit,
         );
         this.imageUrl = imageUrl;
+        this.downloadFolder = downloadFolder;
     }
 
     toOffline(downloadedImagePath: string | null): OfflinePagePreview {
@@ -69,6 +75,26 @@ export class OnlinePagePreview extends PagePreview {
         if (pageViewType == null) {
             throw new Error(`Unsupported page preview source "${String(this.source)}"`);
         }
+        if (hasBundleDownloadFolder(this)) {
+            const folderTask = new FetchDownloadFolderTask();
+            const bundlePhase = new DownloadPhase({
+                title: titleForPhase([folderTask]),
+                tasks: [folderTask],
+            });
+            return new DownloadJob({
+                pageId: this.id,
+                pageViewType,
+                config,
+                phases: [buildDeleteStoredPagePhase(), bundlePhase],
+                taskDependencies: {
+                    [DownloadDependencyKeys.FetchDownloadFolder]:
+                        new FetchDownloadFolderTaskDependency({
+                            downloadFolderUrl: this.downloadFolder!,
+                            parallelMapbox: false,
+                        }),
+                },
+            });
+        }
         const fetchPageTask = new FetchPageJsonTask();
         const fetchPagePhase = new DownloadPhase({
             title: titleForPhase([fetchPageTask]),
@@ -93,6 +119,11 @@ export class OnlinePagePreview extends PagePreview {
         const r = result as Record<string, unknown>;
         PagePreview.validateCommonFields(r, 'online', 'OnlinePagePreview');
         PagePreview.assertNullableString(r, 'imageUrl');
+        if (r.downloadFolder !== undefined && r.downloadFolder !== null) {
+            PagePreview.assertNullableString(r, 'downloadFolder');
+        } else {
+            r.downloadFolder = null;
+        }
         Object.setPrototypeOf(r, OnlinePagePreview.prototype);
         return r as unknown as OnlinePagePreview;
     }

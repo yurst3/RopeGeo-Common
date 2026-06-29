@@ -54,5 +54,7 @@ export { FetchImageFilesTask } from './tasks/fetchImageFilesTask';
 export { FetchMapboxPackTask } from './tasks/fetchMapboxPackTask';
 export { FetchRopeGeoTileFilesTask } from './tasks/fetchRopeGeoTileFilesTask';
 export { FetchRegionRouteListTask } from './tasks/fetchRegionRouteListTask';
+export { FetchDownloadFolderTask } from './tasks/fetchDownloadFolderTask';
 export { SaveOfflinePageTask } from './tasks/saveOfflinePageTask';
-export { planDownloadPhases } from './helpers/planDownloadPhases';
+export { planDownloadPhases, planLegacyDownloadPhases, planBundleDownloadPhases, hasBundleDownloadFolder, bundleDownloadFolderDependency } from './helpers/planDownloadPhases';
+export { FetchDownloadFolderTaskDependency } from './dependencies/fetchDownloadFolderTaskDependency';

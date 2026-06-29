@@ -22,7 +22,8 @@ import { buildDeleteStoredPagePhase } from '../../download/helpers/downloadPhase
 import { DownloadJob } from '../../download/downloadJob';
 import type { DownloadJobConfig, FetchImageFilesSlot } from '../../download/types';
 import { FetchImageFilesTaskDependency } from '../../download/dependencies/fetchImageFilesTaskDependency';
-import { planDownloadPhases } from '../../download/helpers/planDownloadPhases';
+import { planDownloadPhases, hasBundleDownloadFolder, bundleDownloadFolderDependency } from '../../download/helpers/planDownloadPhases';
+import { DownloadDependencyKeys } from '../../download/dependencies/downloadDependencyKeys';
 import { seedConsumerDependencies } from '../../download/helpers/seedConsumerDependencies';
 import type { DownloadPhase } from '../../download/downloadPhase';
 
@@ -31,6 +32,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
     bannerImage: OnlineBetaSectionImage | null;
     betaSections: OnlineBetaSection[];
     miniMap: OnlinePageMiniMap | OnlineCenteredRegionMiniMap | null;
+    downloadFolder: string | null;
 
     constructor(
         id: string,
@@ -66,6 +68,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
         mapDataId: string | null,
         miniMap: OnlinePageMiniMap | OnlineCenteredRegionMiniMap | null,
         coordinates: { lat: number; lon: number } | null,
+        downloadFolder: string | null = null,
     ) {
         super(
             id,
@@ -102,6 +105,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
         this.bannerImage = bannerImage;
         this.betaSections = betaSections;
         this.miniMap = miniMap;
+        this.downloadFolder = downloadFolder;
     }
 
     getFetchImagesTaskDependency(): FetchImageFilesTaskDependency {
@@ -141,6 +145,10 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
             this,
             allPhases.flatMap((phase) => phase.tasks),
         );
+        if (hasBundleDownloadFolder(this)) {
+            dependencies[DownloadDependencyKeys.FetchDownloadFolder] =
+                bundleDownloadFolderDependency(this);
+        }
         return new DownloadJob({
             pageId: this.id,
             pageViewType: this.pageViewType,
@@ -255,6 +263,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
             mapData,
             this.url,
             this.permit,
+            this.downloadFolder,
         );
     }
 
@@ -296,6 +305,16 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
             throw new Error(
                 `OnlineRopewikiPageView.miniMap must be object or null, got: ${typeof r.miniMap}`,
             );
+        }
+
+        if (r.downloadFolder !== undefined && r.downloadFolder !== null) {
+            if (typeof r.downloadFolder !== 'string') {
+                throw new Error(
+                    `OnlineRopewikiPageView.downloadFolder must be string or null, got: ${typeof r.downloadFolder}`,
+                );
+            }
+        } else {
+            r.downloadFolder = null;
         }
 
         Object.setPrototypeOf(r, OnlineRopewikiPageView.prototype);

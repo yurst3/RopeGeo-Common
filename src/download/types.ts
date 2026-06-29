@@ -73,10 +73,12 @@ export type DownloadPlatformHarness = {
     ensureParentDir(filePath: string): Promise<void>;
     deletePageBundle(pageId: string): Promise<void>;
     gunzipTileIfNeeded(path: string): Promise<void>;
+    extractZipArchive(args: { zipPath: string; destRoot: string }): Promise<void>;
     paths: {
         pageRoot(pageId: string): string;
         pageJson(pageId: string): string;
         pageJsonTemp(pageId: string): string;
+        zipTemp(pageId: string): string;
         imageDest(pageId: string, imageId: string, slot: string, ext: string): string;
         tileDest(pageId: string, relativePath: string): string;
         regionGeojson(pageId: string, regionId: string): string;

@@ -1,5 +1,6 @@
 export const DownloadDependencyKeys = {
     FetchPageJson: 'fetchPageJson',
+    FetchDownloadFolder: 'fetchDownloadFolder',
     FetchImageFiles: 'fetchImageFiles',
     FetchMapboxPack: 'fetchMapboxPack',
     FetchRopeGeoTileList: 'fetchRopeGeoTileList',

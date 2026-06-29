@@ -27,3 +27,13 @@ export { default as deleteSQSMessage } from './sqs/deleteSQSMessage';
 export { default as changeSQSMessageVisibilityTimeout } from './sqs/changeSQSMessageVisibilityTimeout';
 
 export { createCloudFrontInvalidation } from './cloudfront/createCloudFrontInvalidation';
+
+export {
+    imageFileRelativePath,
+    mapDataTilesDirectoryRelative,
+    tileFileRelativePath,
+    offlineTilesTemplateRelative,
+    regionRoutesGeojsonRelativePath,
+    joinPageRootUri,
+} from './offlinePageBundlePaths';
+export { hydrateOfflinePageWirePaths } from './hydrateOfflinePageWirePaths';

@@ -10,6 +10,7 @@ import { OfflinePageView } from './offlinePageView';
 import { registerRopewikiPageViewParser, RopewikiPageView } from './ropewikiPageView';
 import { RouteType } from '../routes/routeType';
 import { RopewikiVehicleType } from '../ropewikiVehicleType';
+import { hydrateOfflinePageWirePaths } from '../../helpers/hydrateOfflinePageWirePaths';
 
 export class OfflineRopewikiPageView extends RopewikiPageView implements OfflinePageView {
     readonly fetchType = 'offline' as const;
@@ -110,12 +111,15 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
         );
     }
 
-    static fromResult(result: unknown): OfflineRopewikiPageView {
+    static fromResult(result: unknown, pageRoot?: string | null): OfflineRopewikiPageView {
         if (result == null || typeof result !== 'object') {
             throw new Error('OfflineRopewikiPageView result must be an object');
         }
         const r = result as Record<string, unknown>;
         RopewikiPageView.validateCommonFields(r, 'offline', 'OfflineRopewikiPageView');
+        if (pageRoot != null && pageRoot.length > 0) {
+            hydrateOfflinePageWirePaths(pageRoot, r);
+        }
         r.bannerImage =
             r.bannerImage == null
                 ? null

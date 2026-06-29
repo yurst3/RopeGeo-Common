@@ -36,14 +36,17 @@ export function createMockPlatformHarness(
         ensureParentDir: jest.fn(async () => undefined),
         deletePageBundle,
         gunzipTileIfNeeded: jest.fn(async () => undefined),
+        extractZipArchive: jest.fn(async () => undefined),
         paths: {
-            pageRoot: (pageId) => `/pages/${pageId}`,
-            pageJson: (pageId) => `/pages/${pageId}/page.json`,
-            pageJsonTemp: (pageId) => `/pages/${pageId}/page.json.tmp`,
+            pageRoot: (pageId) => `/pages/${pageId}/`,
+            pageJson: (pageId) => `/pages/${pageId}/page-response.json`,
+            pageJsonTemp: (pageId) => `/pages/${pageId}/page-response.json.tmp`,
+            zipTemp: (pageId) => `/pages/${pageId}/download.zip.tmp`,
             imageDest: (pageId, imageId, slot, ext) =>
-                `/pages/${pageId}/images/${imageId}/${slot}${ext}`,
-            tileDest: (pageId, relativePath) => `/pages/${pageId}/tiles/${relativePath}`,
-            regionGeojson: (pageId, regionId) => `/pages/${pageId}/routes/${regionId}.geojson`,
+                `/pages/${pageId}/images/${imageId}-${slot}${ext}`,
+            tileDest: (pageId, relativePath) => `/pages/${pageId}/${relativePath}`,
+            regionGeojson: (pageId, regionId) =>
+                `/pages/${pageId}/regions/${regionId}/routes.geojson`,
         },
         mapbox: {
             startPack: jest.fn(async () => undefined),

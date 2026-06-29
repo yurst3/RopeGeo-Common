@@ -12,7 +12,7 @@ npm install ropegeo-common
 
 - **Models** — `import { … } from 'ropegeo-common/models'` (or `import type { … }` for symbols that are type-only in TypeScript). The package root `ropegeo-common` re-exports everything from `./models` for convenience. The subpath `ropegeo-common/classes` is kept as an alias of `./models` for older imports until dependents switch over.
 - **Helpers** — `import { … } from 'ropegeo-common/helpers'` (and `import type { … }` for helper types such as `GetS3ObjectResult`). The full barrel includes Node-only modules (S3 folder upload uses `fs`); **React Native / Metro** should use **`ropegeo-common/helpers/network`** (sources under `src/helpers/network/`, barrel `index.ts`) for the request-timeout / abort helpers only (`NETWORK_REQUEST_*`, `installNetworkRequestPolicyTimers`, `mergeParentSignalWithDeadline`, `resolveRequestTimeoutMs`, `isAbortError`, `isNetworkRequestTimeoutError`, and related types).
-- **Download** — `import { … } from 'ropegeo-common/download'` for job orchestration (`DownloadJobQueue`, `DownloadJob`, tasks, dependencies). Not re-exported from `ropegeo-common/models`. Mobile implements `DownloadPlatformHarness` in its own `lib/download/` folder.
+- **Download** — `import { … } from 'ropegeo-common/download'` for job orchestration (`DownloadJobQueue`, `DownloadJob`, tasks, dependencies). Not re-exported from `ropegeo-common/models`. Mobile implements `DownloadPlatformHarness` in its own `lib/download/` folder (including `paths.pageJson` for the offline page JSON filename/location).
 
 Helper tables use columns **Name**, **Description**, **Import**. Model tables add **Base class** after **Name** (`N/A` for enums, TypeScript-only type aliases, constants, registration functions, and classes without an exported superclass; otherwise the direct superclass).
 
@@ -68,6 +68,19 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 | Name | Description | Import |
 | --- | --- | --- |
 | `createCloudFrontInvalidation` | Creates a CloudFront cache invalidation for the given distribution paths. | `import { createCloudFrontInvalidation } from 'ropegeo-common/helpers'` |
+
+### Offline page bundle paths (`src/helpers/offlinePageBundlePaths.ts`)
+
+Shared relative paths for server-built ZIP bundles and client on-disk storage. Backend zipper and mobile extract both use the same layout under the page root. The page JSON filename comes from `DownloadPlatformHarness.paths.pageJson`; path hydration after ZIP extract is handled by `OfflineRopewikiPageView.fromResult(wire, pageRoot)`.
+
+| Name | Description | Import |
+| --- | --- | --- |
+| `imageFileRelativePath` | Relative path for a downloaded image slot. | `import { imageFileRelativePath } from 'ropegeo-common/helpers'` |
+| `tileFileRelativePath` | Relative path for a vector tile (`.pbf`). | `import { tileFileRelativePath } from 'ropegeo-common/helpers'` |
+| `offlineTilesTemplateRelative` | Mapbox-style tile URL template with `{z}/{x}/{y}` placeholders. | `import { offlineTilesTemplateRelative } from 'ropegeo-common/helpers'` |
+| `regionRoutesGeojsonRelativePath` | Relative path for centered-region routes GeoJSON. | `import { regionRoutesGeojsonRelativePath } from 'ropegeo-common/helpers'` |
+| `joinPageRootUri` | Joins page root URI with a relative bundle path. | `import { joinPageRootUri } from 'ropegeo-common/helpers'` |
+| `hydrateOfflinePageWirePaths` | Rewrites relative paths in offline page wire JSON to absolute URIs (used by `OfflineRopewikiPageView.fromResult`). | `import { hydrateOfflinePageWirePaths } from 'ropegeo-common/helpers'` |
 
 ---
 
@@ -287,10 +300,16 @@ Import from **`ropegeo-common/download`**. Platform I/O (Expo FileSystem, Mapbox
 | `DownloadJobQueueStoredState` | Persisted queue envelope (`queueOrder`, `jobs`). | `import type { DownloadJobQueueStoredState } from 'ropegeo-common/download'` |
 | `DownloadJobStoredState` | Persisted single in-flight job. | `import type { DownloadJobStoredState } from 'ropegeo-common/download'` |
 | `DownloadDependencyKeys` | String keys for task dependency map entries. | `import { DownloadDependencyKeys } from 'ropegeo-common/download'` |
-| `planDownloadPhases` | Builds content phases for a full `OnlineRopewikiPageView` (explore path). | `import { planDownloadPhases } from 'ropegeo-common/download'` |
+| `planDownloadPhases` | Routes to bundle or legacy phase plans based on `downloadFolder` on the page view/preview. | `import { planDownloadPhases } from 'ropegeo-common/download'` |
+| `planBundleDownloadPhases` | Bundle path: `FetchDownloadFolder` (+ parallel Mapbox when page minimap bounds are known). | `import { planBundleDownloadPhases } from 'ropegeo-common/download'` |
+| `planLegacyDownloadPhases` | Legacy multi-request path (images, tiles, region routes, save). | `import { planLegacyDownloadPhases } from 'ropegeo-common/download'` |
+| `hasBundleDownloadFolder` | Returns true when a preview/view has a non-empty `downloadFolder` URL. | `import { hasBundleDownloadFolder } from 'ropegeo-common/download'` |
+| `bundleDownloadFolderDependency` | Builds `FetchDownloadFolderTaskDependency` from an online view. | `import { bundleDownloadFolderDependency } from 'ropegeo-common/download'` |
 | `seedConsumerDependencies` | Seeds dependency objects for tasks in a phase plan. | `import { seedConsumerDependencies } from 'ropegeo-common/download'` |
 | `DeleteStoredPageTask` | Phase 1: delete existing offline bundle for the page. | `import { DeleteStoredPageTask } from 'ropegeo-common/download'` |
 | `FetchPageJsonTask` | Preview path: fetch page JSON and append content phases. | `import { FetchPageJsonTask } from 'ropegeo-common/download'` |
+| `FetchDownloadFolderTask` | Bundle path: download ZIP, extract, hydrate `page-response.json`, set route previews. | `import { FetchDownloadFolderTask } from 'ropegeo-common/download'` |
+| `FetchDownloadFolderTaskDependency` | Dependency: `downloadFolderUrl`, `parallelMapbox`. | `import { FetchDownloadFolderTaskDependency } from 'ropegeo-common/download'` |
 | `FetchImageFilesTask` | Download beta/banner image files. | `import { FetchImageFilesTask } from 'ropegeo-common/download'` |
 | `FetchMapboxPackTask` | Download Mapbox offline pack for page minimap bounds. | `import { FetchMapboxPackTask } from 'ropegeo-common/download'` |
 | `FetchRopeGeoTileListTask` | Parallel paginated tile key list fetches. | `import { FetchRopeGeoTileListTask } from 'ropegeo-common/download'` |

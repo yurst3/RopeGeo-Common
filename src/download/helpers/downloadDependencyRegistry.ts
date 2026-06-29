@@ -1,6 +1,7 @@
 import type { DownloadTaskDependency } from '../types';
 import { FetchImageFilesTaskDependency } from '../dependencies/fetchImageFilesTaskDependency';
 import { FetchMapboxPackTaskDependency } from '../dependencies/fetchMapboxPackTaskDependency';
+import { FetchDownloadFolderTaskDependency } from '../dependencies/fetchDownloadFolderTaskDependency';
 import { FetchPageJsonTaskDependency } from '../dependencies/fetchPageJsonTaskDependency';
 import { FetchRegionRouteListTaskDependency } from '../dependencies/fetchRegionRouteListTaskDependency';
 import { FetchRopeGeoTileFilesTaskDependency } from '../dependencies/fetchRopeGeoTileFilesTaskDependency';
@@ -13,6 +14,7 @@ type DependencyParser = (raw: unknown) => DownloadTaskDependency;
 
 const dependencyParsers: Record<string, DependencyParser> = {
     fetchPageJson: FetchPageJsonTaskDependency.fromStoredState,
+    fetchDownloadFolder: FetchDownloadFolderTaskDependency.fromStoredState,
     fetchImageFiles: FetchImageFilesTaskDependency.fromStoredState,
     fetchMapboxPack: FetchMapboxPackTaskDependency.fromStoredState,
     fetchRopeGeoTileList: FetchRopeGeoTileListTaskDependency.fromStoredState,

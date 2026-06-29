@@ -2,6 +2,7 @@ import { DownloadPhase } from '../downloadPhase';
 import { DeleteStoredPageTask } from '../tasks/deleteStoredPageTask';
 import { FetchImageFilesTask } from '../tasks/fetchImageFilesTask';
 import { FetchMapboxPackTask } from '../tasks/fetchMapboxPackTask';
+import { FetchDownloadFolderTask } from '../tasks/fetchDownloadFolderTask';
 import { FetchPageJsonTask } from '../tasks/fetchPageJsonTask';
 import { FetchRegionRouteListTask } from '../tasks/fetchRegionRouteListTask';
 import { FetchRopeGeoTileFilesTask } from '../tasks/fetchRopeGeoTileFilesTask';
@@ -14,6 +15,9 @@ export function titleForPhase(tasks: DownloadTask[]): string {
     }
     if (tasks.length === 1 && tasks[0] instanceof FetchPageJsonTask) {
         return 'Downloading page';
+    }
+    if (tasks.some((task) => task instanceof FetchDownloadFolderTask)) {
+        return 'Downloading page bundle';
     }
     if (tasks.some((task) => task instanceof FetchRopeGeoTileFilesTask)) {
         return 'Downloading map data';

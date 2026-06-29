@@ -4,6 +4,7 @@ import type { DownloadTaskStoredState } from '../types';
 import { DeleteStoredPageTask } from '../tasks/deleteStoredPageTask';
 import { FetchImageFilesTask } from '../tasks/fetchImageFilesTask';
 import { FetchMapboxPackTask } from '../tasks/fetchMapboxPackTask';
+import { FetchDownloadFolderTask } from '../tasks/fetchDownloadFolderTask';
 import { FetchPageJsonTask } from '../tasks/fetchPageJsonTask';
 import { FetchRegionRouteListTask } from '../tasks/fetchRegionRouteListTask';
 import { FetchRopeGeoTileFilesTask } from '../tasks/fetchRopeGeoTileFilesTask';
@@ -15,6 +16,7 @@ type TaskParser = (raw: unknown) => DownloadTask;
 const taskParsers: Record<string, TaskParser> = {
     deleteStoredPage: DeleteStoredPageTask.fromStoredState,
     fetchPageJson: FetchPageJsonTask.fromStoredState,
+    fetchDownloadFolder: FetchDownloadFolderTask.fromStoredState,
     fetchImageFiles: FetchImageFilesTask.fromStoredState,
     fetchMapboxPack: FetchMapboxPackTask.fromStoredState,
     fetchRopeGeoTileList: FetchRopeGeoTileListTask.fromStoredState,
