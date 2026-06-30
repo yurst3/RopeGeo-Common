@@ -2,7 +2,7 @@ import { ImageVersions } from '../../models/mobile/imageVersions';
 import { MiniMapType } from '../../models/minimap/abstract/miniMapType';
 import { OfflineCenteredRegionMiniMap } from '../../models/minimap/concrete/offlineCenteredRegionMiniMap';
 import { OfflinePageMiniMap } from '../../models/minimap/concrete/offlinePageMiniMap';
-import { OnlineRopewikiPageView } from '../../models/pageViews/onlineRopewikiPageView';
+import { PageView } from '../../models/pageViews/pageView';
 import { DownloadDependencyKeys } from '../dependencies/downloadDependencyKeys';
 import { SaveOfflinePageImagesTaskDependency } from '../dependencies/saveOfflinePageImagesTaskDependency';
 import { SaveOfflinePageMiniMapTaskDependency } from '../dependencies/saveOfflinePageMiniMapTaskDependency';
@@ -35,7 +35,7 @@ export class SaveOfflinePageTask extends DownloadTask {
             ctx,
             DownloadDependencyKeys.SaveOfflinePageView,
         );
-        const onlineView = OnlineRopewikiPageView.fromResult(viewDep.onlineViewWire);
+        const onlineView = PageView.fromResult(viewDep.onlineViewWire);
         const downloadedImages = this.getDownloadedImages(ctx);
         const offlineMiniMap = this.getOfflineMiniMapIfPresent(ctx);
         const offlineView = onlineView.toOffline(downloadedImages, offlineMiniMap);

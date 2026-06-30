@@ -7,9 +7,11 @@ import { OfflinePageMiniMap } from '../minimap/concrete/offlinePageMiniMap';
 import { OfflinePagePreview } from '../previews/offlinePagePreview';
 import { PageDataSource } from '../pageDataSource';
 import { OfflinePageView } from './offlinePageView';
+import { registerOfflinePageViewParser } from './pageView';
 import { registerRopewikiPageViewParser, RopewikiPageView } from './ropewikiPageView';
 import { RouteType } from '../routes/routeType';
 import { RopewikiVehicleType } from '../ropewikiVehicleType';
+import { PageViewType } from './pageViewType';
 import { hydrateOfflinePageWirePaths } from '../../helpers/hydrateOfflinePageWirePaths';
 
 export class OfflineRopewikiPageView extends RopewikiPageView implements OfflinePageView {
@@ -49,7 +51,6 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
         latestRevisionDate: Date,
         bannerImage: OfflineBetaSectionImage | null,
         betaSections: OfflineBetaSection[],
-        mapDataId: string | null,
         miniMap: OfflinePageMiniMap | OfflineCenteredRegionMiniMap | null,
         coordinates: { lat: number; lon: number } | null,
     ) {
@@ -82,7 +83,6 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
             exitElevGain,
             months,
             latestRevisionDate,
-            mapDataId,
             coordinates,
         );
         this.bannerImage = bannerImage;
@@ -93,7 +93,7 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
     toPagePreview(): OfflinePagePreview {
         const mapData =
             this.miniMap != null && this.miniMap.miniMapType === MiniMapType.Page
-                ? this.mapDataId
+                ? (this.miniMap as OfflinePageMiniMap).mapDataId
                 : null;
         return new OfflinePagePreview(
             this.id,
@@ -111,12 +111,20 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
         );
     }
 
+    getMapboxPackBounds(): import('../minimap/bounds').Bounds | null {
+        if (this.miniMap != null && this.miniMap.miniMapType === MiniMapType.Page) {
+            return (this.miniMap as OfflinePageMiniMap).getBounds();
+        }
+        return null;
+    }
+
     static fromResult(result: unknown, pageRoot?: string | null): OfflineRopewikiPageView {
         if (result == null || typeof result !== 'object') {
             throw new Error('OfflineRopewikiPageView result must be an object');
         }
         const r = result as Record<string, unknown>;
         RopewikiPageView.validateCommonFields(r, 'offline', 'OfflineRopewikiPageView');
+        RopewikiPageView.rejectLegacyTopLevelMapDataId(r, 'OfflineRopewikiPageView');
         if (pageRoot != null && pageRoot.length > 0) {
             hydrateOfflinePageWirePaths(pageRoot, r);
         }
@@ -155,7 +163,7 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
     }
 }
 
-registerRopewikiPageViewParser('offline', (result) =>
-    OfflineRopewikiPageView.fromResult(result),
+registerRopewikiPageViewParser('offline', (result) => OfflineRopewikiPageView.fromResult(result));
+registerOfflinePageViewParser(PageViewType.Ropewiki, (result, pageRoot) =>
+    OfflineRopewikiPageView.fromResult(result, pageRoot),
 );
-

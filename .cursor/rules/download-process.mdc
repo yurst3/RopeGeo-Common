@@ -12,7 +12,7 @@ Shared download types live in **`src/download/types.ts`**. Types used by only on
 
 Custom download errors live in **`src/download/errors.ts`**.
 
-Helper functions and registries live in **`src/download/helpers/`** (one module per file: constants, phase titles, planning, seeding, hydration registries, pending file transfer).
+Helper functions and registries live in **`src/download/helpers/`** (constants, phase titles, dependency/task registries, pending file transfer). Phase planning and dependency seeding live on **`OnlinePageView`** (`planDownloadPhases`, `getDependenciesForPhases`).
 
 See also **document-package-exports.mdc** when adding README table rows for new public exports.
 
@@ -41,8 +41,9 @@ DownloadJobQueue → DownloadJob → DownloadPhase → DownloadTask (concrete)
 
 ## Job entry points
 
-- **Explore** — `OnlineRopewikiPageView.toDownloadJob(config)`: `buildDeleteStoredPagePhase()` + `planDownloadPhases(view)`. No `FetchPageJsonTask`.
-- **Saved screen** — `OnlinePagePreview.toDownloadJob(config)`: delete phase + `FetchPageJsonTask` phase only at enqueue. `FetchPageJsonTask` calls `appendPhases(planDownloadPhases(view))` after page JSON is fetched.
+- **Explore** — `OnlineRopewikiPageView.toDownloadJob(config)`: `buildDeleteStoredPagePhase()` + `view.planDownloadPhases()`. Dependencies from `view.getDependenciesForPhases(allPhases)`. No `FetchPageJsonTask`.
+- **Saved screen** — `OnlinePagePreview.toDownloadJob(config)`: delete phase + `FetchPageJsonTask` phase only at enqueue. `FetchPageJsonTask` calls `appendPhases(onlineView.planDownloadPhases())` and seeds via `onlineView.getDependenciesForPhases(appendedPhases)` after page JSON is fetched.
+- **Bundle path** — when `downloadFolder` is set, phases include `FetchDownloadFolderTask`, which parses wire via `PageView.fromResult` and builds offline JSON via `toOfflineFromExtractedBundle(pageRoot, harness)` (absolute paths, no hydration).
 
 ## Dependencies
 
@@ -58,7 +59,7 @@ Keys live in `dependencies/downloadDependencyKeys.ts`. Register parsers in `help
 2. Register `dependencyKind` in `helpers/downloadDependencyRegistry.ts`.
 3. Subclass `DownloadTask`; set `dependencyKeys`; implement `runTick`, `toStoredState`, `fromStoredState`.
 4. In `runTick`: `requireAllDependencies(ctx)` before work; on completion `ctx.setDependency()` for each produced key.
-5. Wire into `planDownloadPhases()` + `seedConsumerDependencies()`. Preview jobs: only `FetchPageJsonTask` at build time; others appear after JSON fetch.
+5. Wire into concrete `OnlinePageView.planDownloadPhases()` + `getDependenciesForPhases()`. Preview jobs: only `FetchPageJsonTask` at build time; others appear after JSON fetch.
 6. Register `taskKind` in `helpers/downloadTaskRegistry.ts`.
 7. Add Jest coverage under `test/download/tasks/`; job-plan tests in `test/download/jobs/`.
 
@@ -114,7 +115,8 @@ List tasks use `LIST_HTTP_BATCH_SIZE`; file tasks use `pendingFileTransfer` reco
 
 ## Tests
 
-- **Explore path** — `test/download/jobs/ropewikiPageView.test.ts`: all `planDownloadPhases` / `toDownloadJob` variations; phase 1 always delete; no `FetchPageJsonTask`.
+- **Explore path** — `test/download/jobs/ropewikiPageView.test.ts`: `view.planDownloadPhases()` / `toDownloadJob` variations; phase 1 always delete; no `FetchPageJsonTask`.
+- **Dependencies** — `test/download/getDependenciesForPhases.test.ts`: `getDependenciesForPhases` seeds match planned tasks.
 - **Preview path** — `test/download/jobs/ropewikiPagePreview.test.ts`: initial 2 phases; mock `downloadHttpRequest`; assert `appendPhases` matches explore plan; stored-state round-trip.
 - **HTTP in download tasks** — use `helpers/downloadHttpRequest.ts` (global `fetch` only; single attempt; 30s timeout; abort via signal). Do **not** import `helpers/httpRequest` from download tasks (keeps RN Metro free of `undici`).
 - Do **not** put download job planning tests under `test/models/pageViews/`.

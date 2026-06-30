@@ -71,7 +71,7 @@ Helper tables use columns **Name**, **Description**, **Import**. Model tables ad
 
 ### Offline page bundle paths (`src/helpers/offlinePageBundlePaths.ts`)
 
-Shared relative paths for server-built ZIP bundles and client on-disk storage. Backend zipper and mobile extract both use the same layout under the page root. The page JSON filename comes from `DownloadPlatformHarness.paths.pageJson`; path hydration after ZIP extract is handled by `OfflineRopewikiPageView.fromResult(wire, pageRoot)`.
+Shared relative paths for server-built ZIP bundles and client on-disk storage. Backend zipper and mobile extract both use the same layout under the page root. The page JSON filename comes from `DownloadPlatformHarness.paths.pageJson`. Bundle extraction resolves absolute paths via `OnlinePageView.toOfflineFromExtractedBundle()` (no wire hydration).
 
 | Name | Description | Import |
 | --- | --- | --- |
@@ -200,11 +200,12 @@ Shared relative paths for server-built ZIP bundles and client on-disk storage. B
 
 | Name | Base class | Description | Import |
 | --- | --- | --- | --- |
+| `PageView` | N/A | Registry: `fromResult()` → `OnlinePageView`, `fromOfflineResult()` → `OfflinePageView`. | `import { PageView } from 'ropegeo-common/models'` |
 | `RopewikiPageView` | `BaseRopewikiPageView` | Backward-compatible alias exported as the online page view class. | `import { RopewikiPageView } from 'ropegeo-common/models'` |
-| `BaseRopewikiPageView` | N/A | Abstract Ropewiki page view base; includes optional `mapDataId` (vector tile record id) alongside shared validation/fields. | `import { BaseRopewikiPageView } from 'ropegeo-common/models'` |
-| `OnlineRopewikiPageView` | `BaseRopewikiPageView` | Online Ropewiki page view with API image URLs and online minimap variants. | `import { OnlineRopewikiPageView } from 'ropegeo-common/models'` |
+| `BaseRopewikiPageView` | N/A | Abstract Ropewiki page view base with shared validation/fields. | `import { BaseRopewikiPageView } from 'ropegeo-common/models'` |
+| `OnlineRopewikiPageView` | `BaseRopewikiPageView` | Online Ropewiki page view: `planDownloadPhases()`, `getDependenciesForPhases()`, `toOfflineFromExtractedBundle()`. | `import { OnlineRopewikiPageView } from 'ropegeo-common/models'` |
 | `OfflineRopewikiPageView` | `BaseRopewikiPageView` | Offline Ropewiki page view with downloaded paths and offline minimap variants. | `import { OfflineRopewikiPageView } from 'ropegeo-common/models'` |
-| `OnlinePageView` | N/A | Interface for online page-view behavior (`toOffline`, `toSavedPage`, etc.). | `import type { OnlinePageView } from 'ropegeo-common/models'` |
+| `OnlinePageView` | N/A | Interface for online page-view behavior (`planDownloadPhases`, `getDependenciesForPhases`, `toOffline`, `toDownloadJob`, etc.). | `import type { OnlinePageView } from 'ropegeo-common/models'` |
 | `OfflinePageView` | N/A | Interface for offline page-view behavior (`toPagePreview`). | `import type { OfflinePageView } from 'ropegeo-common/models'` |
 | `RopewikiPageViewResult` | `Result` | API result wrapping `RopewikiPageView`. | `import { RopewikiPageViewResult } from 'ropegeo-common/models'` |
 
@@ -300,15 +301,9 @@ Import from **`ropegeo-common/download`**. Platform I/O (Expo FileSystem, Mapbox
 | `DownloadJobQueueStoredState` | Persisted queue envelope (`queueOrder`, `jobs`). | `import type { DownloadJobQueueStoredState } from 'ropegeo-common/download'` |
 | `DownloadJobStoredState` | Persisted single in-flight job. | `import type { DownloadJobStoredState } from 'ropegeo-common/download'` |
 | `DownloadDependencyKeys` | String keys for task dependency map entries. | `import { DownloadDependencyKeys } from 'ropegeo-common/download'` |
-| `planDownloadPhases` | Routes to bundle or legacy phase plans based on `downloadFolder` on the page view/preview. | `import { planDownloadPhases } from 'ropegeo-common/download'` |
-| `planBundleDownloadPhases` | Bundle path: `FetchDownloadFolder` (+ parallel Mapbox when page minimap bounds are known). | `import { planBundleDownloadPhases } from 'ropegeo-common/download'` |
-| `planLegacyDownloadPhases` | Legacy multi-request path (images, tiles, region routes, save). | `import { planLegacyDownloadPhases } from 'ropegeo-common/download'` |
-| `hasBundleDownloadFolder` | Returns true when a preview/view has a non-empty `downloadFolder` URL. | `import { hasBundleDownloadFolder } from 'ropegeo-common/download'` |
-| `bundleDownloadFolderDependency` | Builds `FetchDownloadFolderTaskDependency` from an online view. | `import { bundleDownloadFolderDependency } from 'ropegeo-common/download'` |
-| `seedConsumerDependencies` | Seeds dependency objects for tasks in a phase plan. | `import { seedConsumerDependencies } from 'ropegeo-common/download'` |
 | `DeleteStoredPageTask` | Phase 1: delete existing offline bundle for the page. | `import { DeleteStoredPageTask } from 'ropegeo-common/download'` |
-| `FetchPageJsonTask` | Preview path: fetch page JSON and append content phases. | `import { FetchPageJsonTask } from 'ropegeo-common/download'` |
-| `FetchDownloadFolderTask` | Bundle path: download ZIP, extract, hydrate `page-response.json`, set route previews. | `import { FetchDownloadFolderTask } from 'ropegeo-common/download'` |
+| `FetchPageJsonTask` | Preview path: fetch page JSON, append `planDownloadPhases()`, seed `getDependenciesForPhases()`. | `import { FetchPageJsonTask } from 'ropegeo-common/download'` |
+| `FetchDownloadFolderTask` | Bundle path: download ZIP, extract, `PageView.fromResult` + `toOfflineFromExtractedBundle`. | `import { FetchDownloadFolderTask } from 'ropegeo-common/download'` |
 | `FetchDownloadFolderTaskDependency` | Dependency: `downloadFolderUrl`, `parallelMapbox`. | `import { FetchDownloadFolderTaskDependency } from 'ropegeo-common/download'` |
 | `FetchImageFilesTask` | Download beta/banner image files. | `import { FetchImageFilesTask } from 'ropegeo-common/download'` |
 | `FetchMapboxPackTask` | Download Mapbox offline pack for page minimap bounds. | `import { FetchMapboxPackTask } from 'ropegeo-common/download'` |

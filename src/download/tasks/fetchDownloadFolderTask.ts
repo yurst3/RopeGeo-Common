@@ -1,6 +1,4 @@
-import { MiniMapType } from '../../models/minimap/abstract/miniMapType';
-import { OfflinePageMiniMap } from '../../models/minimap/concrete/offlinePageMiniMap';
-import { OfflineRopewikiPageView } from '../../models/pageViews/offlineRopewikiPageView';
+import { PageView } from '../../models/pageViews/pageView';
 import { DownloadDependencyKeys } from '../dependencies/downloadDependencyKeys';
 import { FetchDownloadFolderTaskDependency } from '../dependencies/fetchDownloadFolderTaskDependency';
 import type { DownloadJobContext, DownloadPlatformHarness, DownloadTaskStoredState, TaskTickResult } from '../types';
@@ -31,7 +29,7 @@ export class FetchDownloadFolderTask extends DownloadTask {
             DownloadDependencyKeys.FetchDownloadFolder,
         );
 
-        await this.downloadExtractAndHydrate(ctx, platformHarness, dep);
+        await this.downloadExtractAndConvert(ctx, platformHarness, dep);
         if (!dep.parallelMapbox) {
             await this.maybeAppendMapboxPhaseAfterExtract(ctx, platformHarness);
         }
@@ -39,27 +37,27 @@ export class FetchDownloadFolderTask extends DownloadTask {
         return { done: true };
     }
 
-    private async downloadExtractAndHydrate(
+    private async downloadExtractAndConvert(
         ctx: DownloadJobContext,
         platformHarness: DownloadPlatformHarness,
-        dep: FetchDownloadFolderTaskDependency,
+        _dep: FetchDownloadFolderTaskDependency,
     ): Promise<void> {
         const pageRoot = platformHarness.paths.pageRoot(ctx.pageId);
         const zipPath = platformHarness.paths.zipTemp(ctx.pageId);
         await platformHarness.downloadFile({
-            url: dep.downloadFolderUrl,
+            url: _dep.downloadFolderUrl,
             destPath: zipPath,
             background: true,
         });
         await platformHarness.extractZipArchive({ zipPath, destRoot: pageRoot });
         const jsonPath = platformHarness.paths.pageJson(ctx.pageId);
         const rawJson = await platformHarness.readTextFile(jsonPath);
-        const offlineView = OfflineRopewikiPageView.fromResult(
-            JSON.parse(rawJson) as unknown,
-            pageRoot,
-        );
+        const onlineView = PageView.fromResult(JSON.parse(rawJson) as unknown);
+        const offlineView = await onlineView.toOfflineFromExtractedBundle(pageRoot, platformHarness);
         await platformHarness.writeTextFile(jsonPath, JSON.stringify(offlineView));
-        await platformHarness.setRoutePreviewsForPage(ctx.pageId, [offlineView.toPagePreview()]);
+        await platformHarness.setRoutePreviewsForPage(ctx.pageId, [
+            offlineView.toPagePreview(),
+        ]);
     }
 
     private async maybeAppendMapboxPhaseAfterExtract(
@@ -68,12 +66,11 @@ export class FetchDownloadFolderTask extends DownloadTask {
     ): Promise<void> {
         const jsonPath = platformHarness.paths.pageJson(ctx.pageId);
         const jsonText = await platformHarness.readTextFile(jsonPath);
-        const offlineView = OfflineRopewikiPageView.fromResult(JSON.parse(jsonText) as unknown);
-        const miniMap = offlineView.miniMap;
-        if (miniMap == null || miniMap.miniMapType !== MiniMapType.Page) {
+        const offlineView = PageView.fromOfflineResult(JSON.parse(jsonText) as unknown);
+        const bounds = offlineView.getMapboxPackBounds();
+        if (bounds == null) {
             return;
         }
-        const pageMiniMap = miniMap as OfflinePageMiniMap;
         const [
             { DownloadPhase },
             { FetchMapboxPackTask },
@@ -94,7 +91,7 @@ export class FetchDownloadFolderTask extends DownloadTask {
         ]);
         ctx.setDependency(
             DownloadDependencyKeys.FetchMapboxPack,
-            new FetchMapboxPackTaskDependency(pageMiniMap.bounds),
+            new FetchMapboxPackTaskDependency(bounds),
         );
     }
 

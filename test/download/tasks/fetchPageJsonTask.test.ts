@@ -53,7 +53,6 @@ function pageJson(): Record<string, unknown> {
         exitElevGain: null,
         months: [],
         latestRevisionDate: '2024-01-01T00:00:00.000Z',
-        mapDataId: MAP_DATA_ID,
         bannerImage: null,
         betaSections: [],
         miniMap: {
@@ -64,6 +63,7 @@ function pageJson(): Record<string, unknown> {
             pointLayerId: 'Points',
             onlineTilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
             bounds: { north: 1, south: 0, east: 1, west: 0 },
+            mapDataId: MAP_DATA_ID,
             tileCount: 0,
             tileTotalBytes: 0,
         },

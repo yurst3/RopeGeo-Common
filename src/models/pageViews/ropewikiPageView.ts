@@ -50,8 +50,6 @@ export abstract class RopewikiPageView {
     exitElevGain: number | null;
     months: string[];
     latestRevisionDate: Date;
-    /** Map data record id for vector tile fetches; null when no page map or only a region-style minimap. */
-    mapDataId: string | null;
     coordinates: { lat: number; lon: number } | null;
 
     protected constructor(
@@ -83,7 +81,6 @@ export abstract class RopewikiPageView {
         exitElevGain: number | null,
         months: string[],
         latestRevisionDate: Date,
-        mapDataId: string | null,
         coordinates: { lat: number; lon: number } | null,
     ) {
         this.id = id;
@@ -114,7 +111,6 @@ export abstract class RopewikiPageView {
         this.exitElevGain = exitElevGain;
         this.months = Array.isArray(months) ? months.slice() : [];
         this.latestRevisionDate = new Date(latestRevisionDate);
-        this.mapDataId = mapDataId;
         this.coordinates =
             coordinates != null
                 ? { lat: coordinates.lat, lon: coordinates.lon }
@@ -171,7 +167,6 @@ export abstract class RopewikiPageView {
         RopewikiPageView.assertNullableNumber(r, 'exitElevGain');
         RopewikiPageView.assertStringArray(r, 'months');
         RopewikiPageView.assertIso8601DateString(r, 'latestRevisionDate');
-        RopewikiPageView.assertNullableMapDataId(r, 'mapDataId');
         RopewikiPageView.assertNullableCoordinates(r, 'coordinates');
         if (r.fetchType !== expectedFetchType) {
             throw new Error(
@@ -215,15 +210,13 @@ export abstract class RopewikiPageView {
         }
     }
 
-    private static assertNullableMapDataId(obj: Record<string, unknown>, key: string): void {
-        const v = obj[key];
-        if (v === null || v === undefined) {
-            (obj as Record<string, unknown>)[key] = null;
-            return;
-        }
-        if (typeof v !== 'string' || v.length === 0) {
+    protected static rejectLegacyTopLevelMapDataId(
+        r: Record<string, unknown>,
+        context: string,
+    ): void {
+        if ('mapDataId' in r) {
             throw new Error(
-                `RopewikiPageView.${key} must be a non-empty string or null, got: ${typeof v === 'string' ? 'empty string' : typeof v}`,
+                `${context} must not include top-level mapDataId; set mapDataId on page minimaps instead`,
             );
         }
     }

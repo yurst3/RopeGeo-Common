@@ -1,7 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 import { MiniMapType } from '../../../src/models/minimap/abstract/miniMapType';
 import { OnlineRopewikiPageView } from '../../../src/models/pageViews/onlineRopewikiPageView';
-import { planDownloadPhases } from '../../../src/download/helpers/planDownloadPhases';
 import { DownloadDependencyKeys } from '../../../src/download/dependencies/downloadDependencyKeys';
 import { DeleteStoredPageTask } from '../../../src/download/tasks/deleteStoredPageTask';
 import { FetchPageJsonTask } from '../../../src/download/tasks/fetchPageJsonTask';
@@ -54,7 +53,6 @@ function onlineResult(miniMap: Record<string, unknown> | null = null): Record<st
         exitElevGain: null,
         months: [],
         latestRevisionDate: '2024-01-01T00:00:00.000Z',
-        mapDataId: null,
         bannerImage: {
             fetchType: 'online',
             order: 0,
@@ -102,6 +100,7 @@ function pageMiniMap(overrides: Record<string, unknown> = {}): Record<string, un
         pointLayerId: 'Points',
         onlineTilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
         bounds: { north: 1, south: 0, east: 1, west: 0 },
+        mapDataId: ROUTE_ID,
         tileCount: 0,
         tileTotalBytes: 0,
         ...overrides,
@@ -176,10 +175,7 @@ describe('OnlineRopewikiPageView download job planning', () => {
     });
 
     it('plans page minimap with mapbox pack but omits tile phases when tileCount is 0', () => {
-        const view = OnlineRopewikiPageView.fromResult({
-            ...onlineResult(pageMiniMap()),
-            mapDataId: ROUTE_ID,
-        });
+        const view = OnlineRopewikiPageView.fromResult(onlineResult(pageMiniMap()));
         const job = view.toDownloadJob(downloadConfig);
         expect(taskKinds(job)).toEqual([
             ['deleteStoredPage'],
@@ -190,10 +186,9 @@ describe('OnlineRopewikiPageView download job planning', () => {
     });
 
     it('plans tile list and tile file phases when tileCount is greater than 0', () => {
-        const view = OnlineRopewikiPageView.fromResult({
-            ...onlineResult(pageMiniMap({ tileCount: 5, tileTotalBytes: 5000 })),
-            mapDataId: ROUTE_ID,
-        });
+        const view = OnlineRopewikiPageView.fromResult(
+            onlineResult(pageMiniMap({ tileCount: 5, tileTotalBytes: 5000 })),
+        );
         const job = view.toDownloadJob(downloadConfig);
         expect(taskKinds(job)).toEqual([
             ['deleteStoredPage'],
@@ -239,17 +234,15 @@ describe('OnlineRopewikiPageView download job planning', () => {
     it('planDownloadPhases matches content phases from toDownloadJob', () => {
         const view = OnlineRopewikiPageView.fromResult({
             ...onlineResult(pageMiniMap({ tileCount: 3, tileTotalBytes: 3000 })),
-            mapDataId: ROUTE_ID,
         });
         const job = view.toDownloadJob(downloadConfig);
-        const planned = planDownloadPhases(view);
+        const planned = view.planDownloadPhases();
         expect(taskKinds(job).slice(1)).toEqual(planned.map((phase) => phase.tasks.map((task) => task.taskKind)));
     });
 
     it('plans bundle download when downloadFolder is set', () => {
         const view = OnlineRopewikiPageView.fromResult({
             ...onlineResult(pageMiniMap({ tileCount: 5, tileTotalBytes: 5000 })),
-            mapDataId: ROUTE_ID,
             downloadFolder: 'https://cdn.example.com/page-zips/e84e6ca6.zip',
         });
         const job = view.toDownloadJob(downloadConfig);

@@ -1,4 +1,5 @@
 import { RoutesParams } from '../../api/params/routesParams';
+import { OfflineRegionMiniMap } from './offlineRegionMiniMap';
 import { Bounds } from '../bounds';
 import { MiniMap } from '../abstract/miniMap';
 import { MiniMapType } from '../abstract/miniMapType';
@@ -25,6 +26,14 @@ export class OnlineRegionMiniMap extends RegionMiniMap implements OnlineMiniMap 
         this.routesParams = routesParams;
         this.routeCount = routeCount;
         this.totalBytes = totalBytes;
+    }
+
+    getBounds(): Bounds | null {
+        return this.bounds;
+    }
+
+    toOffline(downloadedGeojson: string): OfflineRegionMiniMap {
+        return new OfflineRegionMiniMap(downloadedGeojson, this.bounds, this.title);
     }
 
     static fromResult(result: unknown): OnlineRegionMiniMap {

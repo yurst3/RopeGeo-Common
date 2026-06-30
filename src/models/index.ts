@@ -118,6 +118,7 @@ export { OfflineCenteredRegionMiniMap } from './minimap/concrete/offlineCentered
 export { RopewikiPageView } from './api/endpoints/ropewikiPageView';
 export { RopewikiPageViewResult } from './api/results/ropewikiPageViewResult';
 export { PageViewType } from './pageViews/pageViewType';
+export { PageView } from './pageViews/pageView';
 export { RopewikiPageView as BaseRopewikiPageView } from './pageViews/ropewikiPageView';
 export { OnlineRopewikiPageView } from './pageViews/onlineRopewikiPageView';
 export { OfflineRopewikiPageView } from './pageViews/offlineRopewikiPageView';

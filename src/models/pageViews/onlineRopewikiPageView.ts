@@ -9,23 +9,47 @@ import { OfflineCenteredRegionMiniMap } from '../minimap/concrete/offlineCentere
 import { OfflinePageMiniMap } from '../minimap/concrete/offlinePageMiniMap';
 import { SavedPage } from '../mobile/savedPage';
 import { ImageVersion, ImageVersions } from '../mobile/imageVersions';
-import { OfflinePagePreview } from '../previews/offlinePagePreview';
 import { OnlinePagePreview } from '../previews/onlinePagePreview';
 import { PageDataSource } from '../pageDataSource';
 import { OfflineRopewikiPageView } from './offlineRopewikiPageView';
 import { OnlinePageView } from './onlinePageView';
+import { registerOnlinePageViewParser } from './pageView';
 import { registerRopewikiPageViewParser, RopewikiPageView } from './ropewikiPageView';
 import { RouteType } from '../routes/routeType';
 import { RopewikiVehicleType } from '../ropewikiVehicleType';
 import { PageViewType } from './pageViewType';
-import { buildDeleteStoredPagePhase } from '../../download/helpers/downloadPhaseTitles';
+import { buildDeleteStoredPagePhase, titleForPhase } from '../../download/helpers/downloadPhaseTitles';
 import { DownloadJob } from '../../download/downloadJob';
-import type { DownloadJobConfig, FetchImageFilesSlot } from '../../download/types';
+import { DownloadPhase } from '../../download/downloadPhase';
+import type {
+    DownloadJobConfig,
+    DownloadPlatformHarness,
+    DownloadTaskDependency,
+    FetchImageFilesSlot,
+} from '../../download/types';
 import { FetchImageFilesTaskDependency } from '../../download/dependencies/fetchImageFilesTaskDependency';
-import { planDownloadPhases, hasBundleDownloadFolder, bundleDownloadFolderDependency } from '../../download/helpers/planDownloadPhases';
 import { DownloadDependencyKeys } from '../../download/dependencies/downloadDependencyKeys';
-import { seedConsumerDependencies } from '../../download/helpers/seedConsumerDependencies';
-import type { DownloadPhase } from '../../download/downloadPhase';
+import { FetchDownloadFolderTask } from '../../download/tasks/fetchDownloadFolderTask';
+import { FetchDownloadFolderTaskDependency } from '../../download/dependencies/fetchDownloadFolderTaskDependency';
+import { FetchImageFilesTask } from '../../download/tasks/fetchImageFilesTask';
+import { FetchMapboxPackTask } from '../../download/tasks/fetchMapboxPackTask';
+import { FetchMapboxPackTaskDependency } from '../../download/dependencies/fetchMapboxPackTaskDependency';
+import { FetchRegionRouteListTask } from '../../download/tasks/fetchRegionRouteListTask';
+import { FetchRegionRouteListTaskDependency } from '../../download/dependencies/fetchRegionRouteListTaskDependency';
+import { FetchRopeGeoTileFilesTask } from '../../download/tasks/fetchRopeGeoTileFilesTask';
+import { FetchRopeGeoTileListTask } from '../../download/tasks/fetchRopeGeoTileListTask';
+import { FetchRopeGeoTileListTaskDependency } from '../../download/dependencies/fetchRopeGeoTileListTaskDependency';
+import { SaveOfflinePageTask } from '../../download/tasks/saveOfflinePageTask';
+import { SaveOfflinePageViewTaskDependency } from '../../download/dependencies/saveOfflinePageViewTaskDependency';
+import { TILE_LIST_PAGE_LIMIT } from '../../download/helpers/downloadConstants';
+import type { DownloadTask } from '../../download/tasks/abstractDownloadTask';
+import {
+    imageFileRelativePath,
+    joinPageRootUri,
+    offlineTilesTemplateRelative,
+    regionRoutesGeojsonRelativePath,
+} from '../../helpers/offlinePageBundlePaths';
+import type { OfflinePageView } from './offlinePageView';
 
 export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePageView {
     readonly fetchType = 'online' as const;
@@ -65,7 +89,6 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
         latestRevisionDate: Date,
         bannerImage: OnlineBetaSectionImage | null,
         betaSections: OnlineBetaSection[],
-        mapDataId: string | null,
         miniMap: OnlinePageMiniMap | OnlineCenteredRegionMiniMap | null,
         coordinates: { lat: number; lon: number } | null,
         downloadFolder: string | null = null,
@@ -99,7 +122,6 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
             exitElevGain,
             months,
             latestRevisionDate,
-            mapDataId,
             coordinates,
         );
         this.bannerImage = bannerImage;
@@ -108,53 +130,126 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
         this.downloadFolder = downloadFolder;
     }
 
-    getFetchImagesTaskDependency(): FetchImageFilesTaskDependency {
-        const slots: FetchImageFilesSlot[] = [];
-        const collect = (image: OnlineBetaSectionImage): void => {
-            const versions: FetchImageFilesSlot['versions'] = {
-                preview: image.bannerUrl,
-                banner: image.bannerUrl,
-                full: image.fullUrl,
-            };
-            const hasDownloadableVersion =
-                (versions.preview != null && versions.preview.length > 0) ||
-                (versions.banner != null && versions.banner.length > 0) ||
-                (versions.full != null && versions.full.length > 0);
-            if (hasDownloadableVersion) {
-                slots.push({
-                    imageId: image.id,
-                    versions,
-                });
-            }
-        };
-        if (this.bannerImage != null) {
-            collect(this.bannerImage);
+    planDownloadPhases(): DownloadPhase[] {
+        if (this.hasBundleDownloadFolder()) {
+            return this.planBundleDownloadPhases();
         }
-        for (const section of this.betaSections) {
-            for (const image of section.images) {
-                collect(image);
+        return this.planLegacyDownloadPhases();
+    }
+
+    getDependenciesForPhases(phases: DownloadPhase[]): Record<string, DownloadTaskDependency> {
+        const dependencies: Record<string, DownloadTaskDependency> = {};
+        const tasks = phases.flatMap((phase) => phase.tasks);
+        const miniMap = this.miniMap;
+
+        for (const task of tasks) {
+            if (task instanceof FetchDownloadFolderTask) {
+                if (this.hasBundleDownloadFolder()) {
+                    dependencies[DownloadDependencyKeys.FetchDownloadFolder] =
+                        new FetchDownloadFolderTaskDependency({
+                            downloadFolderUrl: this.downloadFolder!,
+                            parallelMapbox: this.needsParallelMapboxForBundle(),
+                        });
+                }
+                continue;
+            }
+
+            if (task instanceof FetchImageFilesTask) {
+                dependencies[DownloadDependencyKeys.FetchImageFiles] =
+                    this.buildFetchImagesTaskDependency();
+                continue;
+            }
+
+            if (task instanceof FetchMapboxPackTask) {
+                const bounds = miniMap?.getBounds() ?? null;
+                if (
+                    miniMap != null &&
+                    miniMap.fetchType === 'online' &&
+                    miniMap.miniMapType === MiniMapType.Page &&
+                    bounds != null
+                ) {
+                    dependencies[DownloadDependencyKeys.FetchMapboxPack] =
+                        new FetchMapboxPackTaskDependency(bounds);
+                }
+                continue;
+            }
+
+            if (task instanceof FetchRopeGeoTileListTask) {
+                if (
+                    miniMap != null &&
+                    miniMap.fetchType === 'online' &&
+                    miniMap.miniMapType === MiniMapType.Page
+                ) {
+                    const pageMiniMap = miniMap as OnlinePageMiniMap;
+                    if (pageMiniMap.mapDataId != null) {
+                        dependencies[DownloadDependencyKeys.FetchRopeGeoTileList] =
+                            new FetchRopeGeoTileListTaskDependency({
+                                mapDataId: pageMiniMap.mapDataId,
+                                tileCount: pageMiniMap.tileCount,
+                                tileTotalBytes: pageMiniMap.tileTotalBytes,
+                                listPageLimit: TILE_LIST_PAGE_LIMIT,
+                                pageMiniMapWire: JSON.parse(JSON.stringify(pageMiniMap)) as Record<
+                                    string,
+                                    unknown
+                                >,
+                            });
+                    }
+                }
+                continue;
+            }
+
+            if (task instanceof FetchRegionRouteListTask) {
+                if (
+                    miniMap != null &&
+                    miniMap.fetchType === 'online' &&
+                    miniMap.miniMapType === MiniMapType.CenteredRegion
+                ) {
+                    const centeredMiniMap = miniMap as OnlineCenteredRegionMiniMap;
+                    const regionId = centeredMiniMap.routesParams.region?.id ?? '';
+                    if (regionId.length > 0) {
+                        dependencies[DownloadDependencyKeys.FetchRegionRouteList] =
+                            new FetchRegionRouteListTaskDependency({
+                                routesParams: centeredMiniMap.routesParams,
+                                routeCount: centeredMiniMap.routeCount,
+                                totalBytes: centeredMiniMap.totalBytes,
+                                regionId,
+                                centeredRouteId: centeredMiniMap.centeredRouteId,
+                                miniMapTitle: centeredMiniMap.title,
+                            });
+                    }
+                }
+                continue;
+            }
+
+            if (task instanceof SaveOfflinePageTask) {
+                dependencies[DownloadDependencyKeys.SaveOfflinePageView] =
+                    SaveOfflinePageViewTaskDependency.fromView(this);
             }
         }
-        return new FetchImageFilesTaskDependency(slots);
+
+        return dependencies;
+    }
+
+    async toOfflineFromExtractedBundle(
+        pageRoot: string,
+        platformHarness: DownloadPlatformHarness,
+    ): Promise<OfflinePageView> {
+        const downloadedImageVersions = await this.resolveImageVersionsFromExtractedBundle(
+            pageRoot,
+            platformHarness,
+        );
+        const offlineMiniMap = this.resolveOfflineMiniMapFromExtractedBundle(pageRoot);
+        return this.toOffline(downloadedImageVersions, offlineMiniMap);
     }
 
     toDownloadJob(config: DownloadJobConfig): DownloadJob {
-        const contentPhases = OnlineRopewikiPageView.planDownloadPhases(this);
-        const allPhases = [buildDeleteStoredPagePhase(), ...contentPhases];
-        const dependencies = seedConsumerDependencies(
-            this,
-            allPhases.flatMap((phase) => phase.tasks),
-        );
-        if (hasBundleDownloadFolder(this)) {
-            dependencies[DownloadDependencyKeys.FetchDownloadFolder] =
-                bundleDownloadFolderDependency(this);
-        }
+        const allPhases = [buildDeleteStoredPagePhase(), ...this.planDownloadPhases()];
         return new DownloadJob({
             pageId: this.id,
             pageViewType: this.pageViewType,
             config,
             phases: allPhases,
-            taskDependencies: dependencies,
+            taskDependencies: this.getDependenciesForPhases(allPhases),
         });
     }
 
@@ -164,10 +259,6 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
                 value instanceof Date ? value.toISOString() : value,
             ),
         ) as Record<string, unknown>;
-    }
-
-    static planDownloadPhases(view: OnlineRopewikiPageView): DownloadPhase[] {
-        return planDownloadPhases(view);
     }
 
     toOffline(
@@ -239,7 +330,6 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
             this.latestRevisionDate,
             offlineBannerImage,
             offlineSections,
-            this.mapDataId,
             offlineMiniMap,
             this.coordinates,
         );
@@ -248,7 +338,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
     toPagePreview(): OnlinePagePreview {
         const mapData =
             this.miniMap != null && this.miniMap.miniMapType === MiniMapType.Page
-                ? this.mapDataId
+                ? (this.miniMap as OnlinePageMiniMap).mapDataId
                 : null;
         return new OnlinePagePreview(
             this.id,
@@ -277,6 +367,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
         }
         const r = result as Record<string, unknown>;
         RopewikiPageView.validateCommonFields(r, 'online', 'OnlineRopewikiPageView');
+        RopewikiPageView.rejectLegacyTopLevelMapDataId(r, 'OnlineRopewikiPageView');
         r.bannerImage =
             r.bannerImage == null
                 ? null
@@ -320,9 +411,202 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
         Object.setPrototypeOf(r, OnlineRopewikiPageView.prototype);
         return r as unknown as OnlineRopewikiPageView;
     }
+
+    private hasBundleDownloadFolder(): boolean {
+        return this.downloadFolder != null && this.downloadFolder.length > 0;
+    }
+
+    private needsParallelMapboxForBundle(): boolean {
+        const miniMap = this.miniMap;
+        return (
+            miniMap != null &&
+            miniMap.fetchType === 'online' &&
+            miniMap.miniMapType === MiniMapType.Page
+        );
+    }
+
+    private planBundleDownloadPhases(): DownloadPhase[] {
+        const tasks: DownloadTask[] = [new FetchDownloadFolderTask()];
+        if (this.needsParallelMapboxForBundle()) {
+            tasks.push(new FetchMapboxPackTask());
+        }
+        return [
+            new DownloadPhase({
+                title: titleForPhase(tasks),
+                tasks,
+            }),
+        ];
+    }
+
+    private planLegacyDownloadPhases(): DownloadPhase[] {
+        const phases: DownloadPhase[] = [];
+        const firstPhaseTasks: DownloadTask[] = [];
+
+        const imagesDependency = this.buildFetchImagesTaskDependency();
+        const hasImages = imagesDependency.slots.length > 0;
+        if (hasImages) {
+            firstPhaseTasks.push(new FetchImageFilesTask({ total: imagesDependency.slots.length }));
+        }
+
+        const miniMap = this.miniMap;
+        let hasTileFilesTask = false;
+        let hasRegionRoutesTask = false;
+
+        if (miniMap != null && miniMap.fetchType === 'online') {
+            if (miniMap.miniMapType === MiniMapType.Page) {
+                const pageMiniMap = miniMap as OnlinePageMiniMap;
+                firstPhaseTasks.push(new FetchMapboxPackTask());
+                if (pageMiniMap.tileCount > 0) {
+                    firstPhaseTasks.push(new FetchRopeGeoTileListTask(pageMiniMap.tileCount));
+                    hasTileFilesTask = true;
+                }
+            } else if (miniMap.miniMapType === MiniMapType.CenteredRegion) {
+                const centeredMiniMap = miniMap as OnlineCenteredRegionMiniMap;
+                if (centeredMiniMap.routeCount > 0) {
+                    firstPhaseTasks.push(new FetchRegionRouteListTask(centeredMiniMap.routeCount));
+                    hasRegionRoutesTask = true;
+                }
+            }
+        }
+
+        if (firstPhaseTasks.length > 0) {
+            phases.push(
+                new DownloadPhase({
+                    title: titleForPhase(firstPhaseTasks),
+                    tasks: firstPhaseTasks,
+                }),
+            );
+        }
+
+        if (hasTileFilesTask) {
+            const pageMiniMap = miniMap as OnlinePageMiniMap;
+            const tileFilesTask = new FetchRopeGeoTileFilesTask(pageMiniMap.tileCount);
+            phases.push(
+                new DownloadPhase({
+                    title: titleForPhase([tileFilesTask]),
+                    tasks: [tileFilesTask],
+                }),
+            );
+        }
+
+        const saveDependencyKeys: string[] = [DownloadDependencyKeys.SaveOfflinePageView];
+        if (hasImages) {
+            saveDependencyKeys.push(DownloadDependencyKeys.SaveOfflinePageImages);
+        }
+        if (hasTileFilesTask || hasRegionRoutesTask) {
+            saveDependencyKeys.push(DownloadDependencyKeys.SaveOfflinePageMiniMap);
+        }
+        const saveTask = new SaveOfflinePageTask(saveDependencyKeys);
+        phases.push(
+            new DownloadPhase({
+                title: titleForPhase([saveTask]),
+                tasks: [saveTask],
+            }),
+        );
+
+        return phases;
+    }
+
+    private buildFetchImagesTaskDependency(): FetchImageFilesTaskDependency {
+        const slots: FetchImageFilesSlot[] = [];
+        const collect = (image: OnlineBetaSectionImage): void => {
+            const versions: FetchImageFilesSlot['versions'] = {
+                preview: image.bannerUrl,
+                banner: image.bannerUrl,
+                full: image.fullUrl,
+            };
+            const hasDownloadableVersion =
+                (versions.preview != null && versions.preview.length > 0) ||
+                (versions.banner != null && versions.banner.length > 0) ||
+                (versions.full != null && versions.full.length > 0);
+            if (hasDownloadableVersion) {
+                slots.push({
+                    imageId: image.id,
+                    versions,
+                });
+            }
+        };
+        if (this.bannerImage != null) {
+            collect(this.bannerImage);
+        }
+        for (const section of this.betaSections) {
+            for (const image of section.images) {
+                collect(image);
+            }
+        }
+        return new FetchImageFilesTaskDependency(slots);
+    }
+
+    private async resolveImageVersionsFromExtractedBundle(
+        pageRoot: string,
+        platformHarness: DownloadPlatformHarness,
+    ): Promise<Record<string, ImageVersions>> {
+        const dependency = this.buildFetchImagesTaskDependency();
+        const downloadedImageVersions: Record<string, ImageVersions> = {};
+
+        for (const slot of dependency.slots) {
+            const resolveVersion = async (
+                version: ImageVersion.banner | ImageVersion.full,
+                url: string | null | undefined,
+            ): Promise<string | null> => {
+                if (url == null || url.length === 0) {
+                    return null;
+                }
+                const relativePath = imageFileRelativePath(slot.imageId, version, '.avif');
+                const absolutePath = joinPageRootUri(pageRoot, relativePath);
+                const info = await platformHarness.fileExists(absolutePath);
+                return info.exists ? absolutePath : null;
+            };
+
+            downloadedImageVersions[slot.imageId] = new ImageVersions({
+                banner: await resolveVersion(ImageVersion.banner, slot.versions.banner),
+                full: await resolveVersion(ImageVersion.full, slot.versions.full),
+            });
+        }
+
+        return downloadedImageVersions;
+    }
+
+    private resolveOfflineMiniMapFromExtractedBundle(
+        pageRoot: string,
+    ): OfflinePageMiniMap | OfflineCenteredRegionMiniMap | null {
+        const miniMap = this.miniMap;
+        if (miniMap == null || miniMap.fetchType !== 'online') {
+            return null;
+        }
+
+        if (miniMap.miniMapType === MiniMapType.Page) {
+            const pageMiniMap = miniMap as OnlinePageMiniMap;
+            if (pageMiniMap.mapDataId == null) {
+                throw new Error(
+                    'OnlineRopewikiPageView bundle extract requires mapDataId on page minimap',
+                );
+            }
+            const absoluteTemplate = joinPageRootUri(
+                pageRoot,
+                offlineTilesTemplateRelative(pageMiniMap.mapDataId),
+            );
+            return pageMiniMap.toOffline(absoluteTemplate);
+        }
+
+        if (miniMap.miniMapType === MiniMapType.CenteredRegion) {
+            const centeredMiniMap = miniMap as OnlineCenteredRegionMiniMap;
+            const regionId = centeredMiniMap.routesParams.region?.id ?? '';
+            if (regionId.length === 0) {
+                throw new Error(
+                    'OnlineRopewikiPageView bundle extract requires region id on centered minimap',
+                );
+            }
+            const absoluteGeojson = joinPageRootUri(
+                pageRoot,
+                regionRoutesGeojsonRelativePath(regionId),
+            );
+            return centeredMiniMap.toOffline(absoluteGeojson);
+        }
+
+        return null;
+    }
 }
 
-registerRopewikiPageViewParser('online', (result) =>
-    OnlineRopewikiPageView.fromResult(result),
-);
-
+registerRopewikiPageViewParser('online', (result) => OnlineRopewikiPageView.fromResult(result));
+registerOnlinePageViewParser(PageViewType.Ropewiki, (result) => OnlineRopewikiPageView.fromResult(result));

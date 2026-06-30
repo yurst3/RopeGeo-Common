@@ -9,7 +9,6 @@ import { FetchPageJsonTaskDependency } from '../../download/dependencies/fetchPa
 import { FetchDownloadFolderTaskDependency } from '../../download/dependencies/fetchDownloadFolderTaskDependency';
 import { FetchDownloadFolderTask } from '../../download/tasks/fetchDownloadFolderTask';
 import { FetchPageJsonTask } from '../../download/tasks/fetchPageJsonTask';
-import { hasBundleDownloadFolder } from '../../download/helpers/planDownloadPhases';
 import { PageDataSource } from '../pageDataSource';
 import { PageViewType } from '../pageViews/pageViewType';
 
@@ -75,7 +74,7 @@ export class OnlinePagePreview extends PagePreview {
         if (pageViewType == null) {
             throw new Error(`Unsupported page preview source "${String(this.source)}"`);
         }
-        if (hasBundleDownloadFolder(this)) {
+        if (this.downloadFolder != null && this.downloadFolder.length > 0) {
             const folderTask = new FetchDownloadFolderTask();
             const bundlePhase = new DownloadPhase({
                 title: titleForPhase([folderTask]),

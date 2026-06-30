@@ -64,7 +64,6 @@ function onlinePageJson(): Record<string, unknown> {
         exitElevGain: null,
         months: [],
         latestRevisionDate: '2024-01-01T00:00:00.000Z',
-        mapDataId: ROUTE_ID,
         bannerImage: {
             fetchType: 'online',
             order: 0,
@@ -85,6 +84,7 @@ function onlinePageJson(): Record<string, unknown> {
             pointLayerId: 'Points',
             onlineTilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
             bounds: { north: 1, south: 0, east: 1, west: 0 },
+            mapDataId: ROUTE_ID,
             tileCount: 2,
             tileTotalBytes: 2000,
         },

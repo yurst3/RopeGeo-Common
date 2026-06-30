@@ -1,13 +1,11 @@
-import { downloadHttpRequest } from '../helpers/downloadHttpRequest';
+import type { OnlinePageView } from '../../models/pageViews/onlinePageView';
 import '../../models/api/results/registerAllResultParsers';
 import { Result } from '../../models/api/results/result';
-import { OnlineRopewikiPageView } from '../../models/pageViews/onlineRopewikiPageView';
 import { DownloadDependencyKeys } from '../dependencies/downloadDependencyKeys';
 import { FetchPageJsonTaskDependency } from '../dependencies/fetchPageJsonTaskDependency';
 import type { DownloadJobContext, DownloadPlatformHarness, DownloadTaskStoredState, TaskTickResult } from '../types';
-import { planDownloadPhases } from '../helpers/planDownloadPhases';
-import { seedConsumerDependencies } from '../helpers/seedConsumerDependencies';
 import { DownloadTask } from './abstractDownloadTask';
+import { downloadHttpRequest } from '../helpers/downloadHttpRequest';
 
 function unwrapData(value: unknown): unknown {
     if (
@@ -51,13 +49,10 @@ export class FetchPageJsonTask extends DownloadTask {
         });
         const text = await response.text();
         const parsedResponse = Result.fromResponseBody(unwrapData(JSON.parse(text) as unknown));
-        const view = parsedResponse.result as OnlineRopewikiPageView;
-        const appendedPhases = planDownloadPhases(view);
+        const onlineView = parsedResponse.result as OnlinePageView;
+        const appendedPhases = onlineView.planDownloadPhases();
         ctx.appendPhases(appendedPhases);
-        const seeded = seedConsumerDependencies(
-            view,
-            appendedPhases.flatMap((phase) => phase.tasks),
-        );
+        const seeded = onlineView.getDependenciesForPhases(appendedPhases);
         for (const [key, dependency] of Object.entries(seeded)) {
             ctx.setDependency(key, dependency);
         }

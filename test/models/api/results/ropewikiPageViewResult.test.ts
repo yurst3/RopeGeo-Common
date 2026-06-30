@@ -42,7 +42,6 @@ function validResult(): Record<string, unknown> {
         exitElevGain: null,
         months: [],
         latestRevisionDate: '2024-01-01T00:00:00.000Z',
-        mapDataId: null,
         bannerImage: null,
         betaSections: [],
         miniMap: null,
@@ -60,6 +59,7 @@ function validTilesMiniMap() {
             'https://api.webscraper.ropegeo.com/mapdata/tiles/38f5c3fa-7248-41ed-815e-8b9e6aae5d61/{z}/{x}/{y}.pbf',
         bounds: { north: 39.5, south: 38.1, east: -108.2, west: -110.0 },
         title: 'Route One',
+        mapDataId: '38f5c3fa-7248-41ed-815e-8b9e6aae5d61',
     };
 }
 
@@ -124,8 +124,11 @@ describe('RopewikiPageViewResult', () => {
                 RopewikiPageViewResult.fromResult({ ...validResult(), url: undefined }),
             ).toThrow(/RopewikiPageView\.url must be a string/);
             expect(() =>
-                RopewikiPageViewResult.fromResult({ ...validResult(), mapDataId: '' }),
-            ).toThrow(/RopewikiPageView\.mapDataId/);
+                RopewikiPageViewResult.fromResult({
+                    ...validResult(),
+                    miniMap: { ...validTilesMiniMap(), mapDataId: '' },
+                }),
+            ).toThrow(/PageMiniMap\.mapDataId/);
         });
 
         it('parses miniMap when null', () => {
@@ -183,13 +186,12 @@ describe('RopewikiPageViewResult', () => {
         it('parses valid PageMiniMap', () => {
             const result = {
                 ...validResult(),
-                mapDataId: '38f5c3fa-7248-41ed-815e-8b9e6aae5d61',
                 miniMap: validTilesMiniMap(),
             };
             const parsed = RopewikiPageViewResult.fromResult(result);
             expect(parsed.result.miniMap).not.toBeNull();
-            expect(parsed.result.mapDataId).toBe('38f5c3fa-7248-41ed-815e-8b9e6aae5d61');
             const mm = parsed.result.miniMap as OnlinePageMiniMap;
+            expect(mm.mapDataId).toBe('38f5c3fa-7248-41ed-815e-8b9e6aae5d61');
             expect(mm.polyLineLayerId).toBe('PolyLines');
             expect(mm.pointLayerId).toBe('Points');
             expect(mm.onlineTilesTemplate).toContain('{z}');

@@ -22,6 +22,8 @@ export function registerPageMiniMapParser(
 export abstract class PageMiniMap extends MiniMap {
     abstract readonly fetchType: FetchType;
     readonly miniMapType = MiniMapType.Page;
+    /** MapData record id for vector tile fetches; null when not applicable. */
+    mapDataId: string | null;
     /** Vector tile source-layer id for line and polygon features. */
     polyLineLayerId: string;
     /** Vector tile source-layer id for point features. */
@@ -34,13 +36,19 @@ export abstract class PageMiniMap extends MiniMap {
         pointLayerId: string,
         bounds: Bounds,
         title: string,
+        mapDataId: string | null = null,
         legend?: Record<string, LegendItem>,
     ) {
         super(title);
+        this.mapDataId = mapDataId;
         this.polyLineLayerId = polyLineLayerId;
         this.pointLayerId = pointLayerId;
         this.bounds = bounds;
         this.legend = legend;
+    }
+
+    getBounds(): Bounds {
+        return this.bounds;
     }
 
     static fromResult(result: unknown): PageMiniMap {
@@ -96,6 +104,20 @@ export abstract class PageMiniMap extends MiniMap {
         r.bounds = Bounds.fromResult(r.bounds);
         if ('legend' in r && r.legend !== undefined) {
             r.legend = LegendItem.legendRecordFromResult(r.legend, `${context}.legend`);
+        }
+        PageMiniMap.assertNullableMapDataId(r, 'mapDataId');
+    }
+
+    protected static assertNullableMapDataId(obj: Record<string, unknown>, key: string): void {
+        const v = obj[key];
+        if (v === null || v === undefined) {
+            obj[key] = null;
+            return;
+        }
+        if (typeof v !== 'string' || v.length === 0) {
+            throw new Error(
+                `PageMiniMap.${key} must be a non-empty string or null, got: ${typeof v === 'string' ? 'empty string' : typeof v}`,
+            );
         }
     }
 

@@ -14,7 +14,6 @@ export type {
     PendingFileTransfer,
 } from './types';
 export { hydrateTaskDependencyFromStoredState } from './helpers/downloadDependencyRegistry';
-export { seedConsumerDependencies } from './helpers/seedConsumerDependencies';
 export { DownloadDependencyKeys } from './dependencies/downloadDependencyKeys';
 export { FetchPageJsonTaskDependency } from './dependencies/fetchPageJsonTaskDependency';
 export { FetchImageFilesTaskDependency } from './dependencies/fetchImageFilesTaskDependency';
@@ -56,5 +55,4 @@ export { FetchRopeGeoTileFilesTask } from './tasks/fetchRopeGeoTileFilesTask';
 export { FetchRegionRouteListTask } from './tasks/fetchRegionRouteListTask';
 export { FetchDownloadFolderTask } from './tasks/fetchDownloadFolderTask';
 export { SaveOfflinePageTask } from './tasks/saveOfflinePageTask';
-export { planDownloadPhases, planLegacyDownloadPhases, planBundleDownloadPhases, hasBundleDownloadFolder, bundleDownloadFolderDependency } from './helpers/planDownloadPhases';
 export { FetchDownloadFolderTaskDependency } from './dependencies/fetchDownloadFolderTaskDependency';

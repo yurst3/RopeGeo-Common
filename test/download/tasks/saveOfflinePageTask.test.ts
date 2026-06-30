@@ -45,7 +45,6 @@ function minimalOnlineViewWire(): Record<string, unknown> {
         exitElevGain: null,
         months: [],
         latestRevisionDate: '2024-01-01T00:00:00.000Z',
-        mapDataId: null,
         bannerImage: null,
         betaSections: [],
         miniMap: null,

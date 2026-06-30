@@ -17,12 +17,14 @@ import '../../../src/models/pageViews/registerPageViewParsers';
 import '../../../src/models/betaSections/registerBetaSectionParsers';
 import '../../../src/models/minimap/registerMiniMapParsers';
 
-const offlinePageJson = {
+const MAP_DATA_ID = 'map-data-1';
+
+const onlinePageJson = {
     id: PAGE_ID,
     routeType: 'Canyon',
     pageViewType: 'ropewiki',
-    fetchType: 'offline',
-    name: 'Offline Page',
+    fetchType: 'online',
+    name: 'Online Page',
     aka: [],
     url: 'https://ropewiki.com/page',
     quality: 4,
@@ -48,17 +50,19 @@ const offlinePageJson = {
     exitElevGain: null,
     months: [],
     latestRevisionDate: '2024-01-01T00:00:00.000Z',
-    mapDataId: PAGE_ID,
     bannerImage: null,
     betaSections: [],
     miniMap: {
-        fetchType: 'offline',
+        fetchType: 'online',
         miniMapType: MiniMapType.Page,
         polyLineLayerId: 'PolyLines',
         pointLayerId: 'Points',
-        offlineTilesTemplate: 'mapdata/tiles/x/{z}/{x}/{y}.pbf',
+        onlineTilesTemplate: 'https://cdn.example.com/tiles/{z}/{x}/{y}.pbf',
         bounds: { north: 1, south: 0, east: 1, west: 0 },
         title: 'Map',
+        mapDataId: MAP_DATA_ID,
+        tileCount: 1,
+        tileTotalBytes: 100,
     },
     coordinates: null,
 };
@@ -85,10 +89,10 @@ describe('FetchDownloadFolderTask', () => {
         jest.clearAllMocks();
     });
 
-    it('downloads, extracts, hydrates page JSON, and sets route previews', async () => {
+    it('downloads, extracts, converts online page JSON to offline, and sets route previews', async () => {
         const harness = createMockPlatformHarness();
-        const relativeJson = JSON.stringify(offlinePageJson);
-        jest.mocked(harness.readTextFile).mockResolvedValue(relativeJson);
+        const pageRoot = harness.paths.pageRoot(PAGE_ID);
+        jest.mocked(harness.readTextFile).mockResolvedValue(JSON.stringify(onlinePageJson));
         jest.mocked(harness.writeTextFile).mockImplementation(async (_path, content) => {
             jest.mocked(harness.readTextFile).mockResolvedValue(content);
         });
@@ -113,15 +117,24 @@ describe('FetchDownloadFolderTask', () => {
             }),
         );
         expect(harness.extractZipArchive).toHaveBeenCalled();
-        expect(harness.writeTextFile).toHaveBeenCalled();
+        expect(harness.writeTextFile).toHaveBeenCalledWith(
+            harness.paths.pageJson(PAGE_ID),
+            expect.stringContaining('"fetchType":"offline"'),
+        );
+        const writtenJson = JSON.parse(
+            jest.mocked(harness.writeTextFile).mock.calls[0]![1] as string,
+        ) as Record<string, unknown>;
+        const miniMap = writtenJson.miniMap as Record<string, string>;
+        expect(miniMap.offlineTilesTemplate).toBe(
+            `${pageRoot}mapdata/tiles/${MAP_DATA_ID}/{z}/{x}/{y}.pbf`,
+        );
         expect(harness.setRoutePreviewsForPage).toHaveBeenCalled();
         expect(task.completed).toBe(1);
     });
 
     it('appends Mapbox phase after extract when parallelMapbox is false and page minimap exists', async () => {
         const harness = createMockPlatformHarness();
-        const relativeJson = JSON.stringify(offlinePageJson);
-        jest.mocked(harness.readTextFile).mockResolvedValue(relativeJson);
+        jest.mocked(harness.readTextFile).mockResolvedValue(JSON.stringify(onlinePageJson));
         jest.mocked(harness.writeTextFile).mockImplementation(async (_path, content) => {
             jest.mocked(harness.readTextFile).mockResolvedValue(content);
         });

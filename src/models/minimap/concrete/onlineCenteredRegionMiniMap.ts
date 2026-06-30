@@ -30,6 +30,10 @@ export class OnlineCenteredRegionMiniMap extends CenteredRegionMiniMap implement
         return new OfflineCenteredRegionMiniMap(downloadedGeojson, this.centeredRouteId, this.title);
     }
 
+    getBounds(): null {
+        return null;
+    }
+
     static fromResult(result: unknown): OnlineCenteredRegionMiniMap {
         if (result == null || typeof result !== 'object') {
             throw new Error('OnlineCenteredRegionMiniMap result must be an object');

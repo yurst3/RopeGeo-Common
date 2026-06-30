@@ -1,4 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
+import { DownloadDependencyKeys } from '../../../src/download/dependencies/downloadDependencyKeys';
+import { FetchImageFilesTaskDependency } from '../../../src/download/dependencies/fetchImageFilesTaskDependency';
 import { RopewikiPageView } from '../../../src/models/pageViews/ropewikiPageView';
 import { OnlineRopewikiPageView } from '../../../src/models/pageViews/onlineRopewikiPageView';
 import { OfflineRopewikiPageView } from '../../../src/models/pageViews/offlineRopewikiPageView';
@@ -48,7 +50,6 @@ function onlineResult(miniMap: Record<string, unknown> | null = null): Record<st
         exitElevGain: null,
         months: [],
         latestRevisionDate: '2024-01-01T00:00:00.000Z',
-        mapDataId: null,
         bannerImage: {
             fetchType: 'online',
             order: 0,
@@ -111,11 +112,13 @@ describe('RopewikiPageView models', () => {
         expect(offline).toBeInstanceOf(OfflineRopewikiPageView);
     });
 
-    it('builds fetch image task dependency with downloadable slots', () => {
+    it('seeds fetch image dependency via getDependenciesForPhases', () => {
         const page = OnlineRopewikiPageView.fromResult(onlineResult());
-        const dep = page.getFetchImagesTaskDependency();
-        expect(dep.slots).toHaveLength(2);
-        expect(dep.slots.map((s) => s.imageId)).toEqual([IMAGE_ID_A, IMAGE_ID_B]);
+        const phases = page.planDownloadPhases();
+        const deps = page.getDependenciesForPhases(phases);
+        const imageDep = deps[DownloadDependencyKeys.FetchImageFiles] as FetchImageFilesTaskDependency;
+        expect(imageDep.slots).toHaveLength(2);
+        expect(imageDep.slots.map((s) => s.imageId)).toEqual([IMAGE_ID_A, IMAGE_ID_B]);
     });
 
     it('toOffline maps missing image ids to null offline paths (1:1 online/offline images)', () => {
@@ -132,8 +135,8 @@ describe('RopewikiPageView models', () => {
     });
 
     it('toOffline throws when minimap exists but downloaded minimap is omitted', () => {
-        const page = OnlineRopewikiPageView.fromResult({
-            ...onlineResult({
+        const page = OnlineRopewikiPageView.fromResult(
+            onlineResult({
                 miniMapType: MiniMapType.Page,
                 fetchType: 'online',
                 title: 'Map',
@@ -141,9 +144,9 @@ describe('RopewikiPageView models', () => {
                 pointLayerId: 'Points',
                 onlineTilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
                 bounds: { north: 1, south: 0, east: 1, west: 0 },
+                mapDataId: ROUTE_ID,
             }),
-            mapDataId: ROUTE_ID,
-        });
+        );
         expect(() =>
             page.toOffline({
                 [IMAGE_ID_A]: new ImageVersions({ banner: '/tmp/a-banner.avif', full: '/tmp/a-full.avif' }),
@@ -262,6 +265,15 @@ describe('RopewikiPageView models', () => {
         ).toThrow(/offline page\/centered minimap/);
     });
 
+    it('rejects legacy top-level mapDataId on wire JSON', () => {
+        expect(() =>
+            OnlineRopewikiPageView.fromResult({
+                ...onlineResult(),
+                mapDataId: ROUTE_ID,
+            }),
+        ).toThrow(/must not include top-level mapDataId/);
+    });
+
     it('base parser rejects mismatched fetchType argument', () => {
         expect(() => RopewikiPageView.fromResult(onlineResult(), 'offline')).toThrow(
             /fetchType must be "offline"/,
@@ -269,8 +281,8 @@ describe('RopewikiPageView models', () => {
     });
 
     it('toOffline accepts downloaded minimap when online minimap exists', () => {
-        const page = OnlineRopewikiPageView.fromResult({
-            ...onlineResult({
+        const page = OnlineRopewikiPageView.fromResult(
+            onlineResult({
                 miniMapType: MiniMapType.Page,
                 fetchType: 'online',
                 title: 'Map',
@@ -278,9 +290,9 @@ describe('RopewikiPageView models', () => {
                 pointLayerId: 'Points',
                 onlineTilesTemplate: 'https://x/{z}/{x}/{y}.pbf',
                 bounds: { north: 1, south: 0, east: 1, west: 0 },
+                mapDataId: ROUTE_ID,
             }),
-            mapDataId: ROUTE_ID,
-        });
+        );
         const offline = page.toOffline(
             {
                 [IMAGE_ID_A]: new ImageVersions({ banner: '/tmp/a-banner.avif', full: '/tmp/a-full.avif' }),
