@@ -48,7 +48,7 @@ function pagePreviewToPlain(p: OnlinePagePreview | OfflinePagePreview): Record<s
 
     const imageFields =
         p.fetchType === 'online'
-            ? { imageUrl: p.imageUrl }
+            ? { imageUrl: p.imageUrl, downloadFolder: p.downloadFolder }
             : { downloadedImagePath: p.downloadedImagePath };
 
     return {

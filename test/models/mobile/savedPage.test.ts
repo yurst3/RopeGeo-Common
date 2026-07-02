@@ -48,6 +48,23 @@ describe('SavedPage', () => {
         expect(again.downloadedPageViewPath).toBeNull();
     });
 
+    it('round-trips online preview with downloadFolder', () => {
+        const bundleUrl = 'https://api.webscraper.ropegeo.com/page-zips/page-1.zip';
+        const original = SavedPage.fromJsonString(
+            JSON.stringify({
+                preview: { ...onlinePreviewWire, downloadFolder: bundleUrl },
+                savedAt: 1700000000000,
+                downloadedPageViewPath: null,
+            }),
+        );
+        const again = SavedPage.fromJsonString(original.toString());
+        expect(again.preview.fetchType).toBe('online');
+        if (again.preview.fetchType !== 'online') {
+            throw new Error('expected online preview');
+        }
+        expect(again.preview.downloadFolder).toBe(bundleUrl);
+    });
+
     it('round-trips offline preview and downloadedPageViewPath', () => {
         const sp = SavedPage.fromJsonString(
             JSON.stringify({
