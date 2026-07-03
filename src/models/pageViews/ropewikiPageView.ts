@@ -8,8 +8,19 @@ import { RopewikiVehicleType } from '../ropewikiVehicleType';
 import { FetchType } from '../fetchType';
 import { RouteType } from '../routes/routeType';
 import { PageViewType } from './pageViewType';
+import { MinMax } from '../measurements/minMax';
+import {
+    FEET,
+    LengthMeasurement,
+    MILES,
+} from '../measurements/lengthMeasurement';
+import {
+    HOURS,
+    MINUTES,
+    TimeMeasurement,
+    TimeMeasurementUnit,
+} from '../measurements/timeMeasurement';
 
-type MinMax = { min: number; max: number };
 const ropewikiPageViewParsers = new Map<FetchType, (result: unknown) => RopewikiPageView>();
 
 export function registerRopewikiPageViewParser(
@@ -32,22 +43,22 @@ export abstract class RopewikiPageView {
     regions: { name: string; id: string }[];
     difficultyRating: DifficultyRating;
     permit: PermitStatus | null;
-    rappelCount: MinMax | number | null;
+    rappelCount: MinMax<number> | number | null;
     jumps: number | null;
     vehicle: RopewikiVehicleType | null;
-    rappelLongest: number | null;
-    shuttleTime: number | null;
-    overallLength: number | null;
-    descentLength: number | null;
-    exitLength: number | null;
-    approachLength: number | null;
-    overallTime: MinMax | number | null;
-    approachTime: MinMax | number | null;
-    descentTime: MinMax | number | null;
-    exitTime: MinMax | number | null;
-    approachElevGain: number | null;
-    descentElevGain: number | null;
-    exitElevGain: number | null;
+    rappelLongest: LengthMeasurement | null;
+    shuttleTime: TimeMeasurement | null;
+    overallLength: LengthMeasurement | null;
+    descentLength: LengthMeasurement | null;
+    exitLength: LengthMeasurement | null;
+    approachLength: LengthMeasurement | null;
+    overallTime: TimeMeasurement | MinMax<TimeMeasurement> | null;
+    approachTime: TimeMeasurement | MinMax<TimeMeasurement> | null;
+    descentTime: TimeMeasurement | MinMax<TimeMeasurement> | null;
+    exitTime: TimeMeasurement | MinMax<TimeMeasurement> | null;
+    approachElevGain: LengthMeasurement | null;
+    descentElevGain: LengthMeasurement | null;
+    exitElevGain: LengthMeasurement | null;
     months: string[];
     latestRevisionDate: Date;
     coordinates: { lat: number; lon: number } | null;
@@ -63,22 +74,22 @@ export abstract class RopewikiPageView {
         regions: { name: string; id: string }[],
         difficultyRating: DifficultyRating,
         permit: PermitStatus | null,
-        rappelCount: MinMax | number | null,
+        rappelCount: MinMax<number> | number | null,
         jumps: number | null,
         vehicle: RopewikiVehicleType | null,
-        rappelLongest: number | null,
-        shuttleTime: number | null,
-        overallLength: number | null,
-        descentLength: number | null,
-        exitLength: number | null,
-        approachLength: number | null,
-        overallTime: MinMax | number | null,
-        approachTime: MinMax | number | null,
-        descentTime: MinMax | number | null,
-        exitTime: MinMax | number | null,
-        approachElevGain: number | null,
-        descentElevGain: number | null,
-        exitElevGain: number | null,
+        rappelLongest: LengthMeasurement | null,
+        shuttleTime: TimeMeasurement | null,
+        overallLength: LengthMeasurement | null,
+        descentLength: LengthMeasurement | null,
+        exitLength: LengthMeasurement | null,
+        approachLength: LengthMeasurement | null,
+        overallTime: TimeMeasurement | MinMax<TimeMeasurement> | null,
+        approachTime: TimeMeasurement | MinMax<TimeMeasurement> | null,
+        descentTime: TimeMeasurement | MinMax<TimeMeasurement> | null,
+        exitTime: TimeMeasurement | MinMax<TimeMeasurement> | null,
+        approachElevGain: LengthMeasurement | null,
+        descentElevGain: LengthMeasurement | null,
+        exitElevGain: LengthMeasurement | null,
         months: string[],
         latestRevisionDate: Date,
         coordinates: { lat: number; lon: number } | null,
@@ -152,19 +163,6 @@ export abstract class RopewikiPageView {
         RopewikiPageView.assertRappelCount(r, 'rappelCount');
         RopewikiPageView.assertNullableNumber(r, 'jumps');
         RopewikiPageView.assertVehicle(r, 'vehicle');
-        RopewikiPageView.assertNullableNumber(r, 'rappelLongest');
-        RopewikiPageView.assertNullableNumber(r, 'shuttleTime');
-        RopewikiPageView.assertNullableNumber(r, 'overallLength');
-        RopewikiPageView.assertNullableNumber(r, 'descentLength');
-        RopewikiPageView.assertNullableNumber(r, 'exitLength');
-        RopewikiPageView.assertNullableNumber(r, 'approachLength');
-        RopewikiPageView.assertMinMaxOrNumber(r, 'overallTime');
-        RopewikiPageView.assertMinMaxOrNumber(r, 'approachTime');
-        RopewikiPageView.assertMinMaxOrNumber(r, 'descentTime');
-        RopewikiPageView.assertMinMaxOrNumber(r, 'exitTime');
-        RopewikiPageView.assertNullableNumber(r, 'approachElevGain');
-        RopewikiPageView.assertNullableNumber(r, 'descentElevGain');
-        RopewikiPageView.assertNullableNumber(r, 'exitElevGain');
         RopewikiPageView.assertStringArray(r, 'months');
         RopewikiPageView.assertIso8601DateString(r, 'latestRevisionDate');
         RopewikiPageView.assertNullableCoordinates(r, 'coordinates');
@@ -176,6 +174,76 @@ export abstract class RopewikiPageView {
         r.latestRevisionDate = new Date(r.latestRevisionDate as string);
         r.difficultyRating = DifficultyRating.fromResult(
             resolveDifficultyRatingFromRecord(r),
+        );
+        RopewikiPageView.hydrateMeasurementFields(r);
+    }
+
+    /**
+     * Converts the raw length/time fields on a wire record into {@link LengthMeasurement} /
+     * {@link TimeMeasurement} (and {@link MinMax}) instances in place. Accepts legacy bare numbers
+     * and `{ min, max }` ranges (tagged with each field's canonical source unit) as well as the
+     * serialized measurement object shapes, so parsing round-trips through {@link Measurement#toJSON}.
+     */
+    private static hydrateMeasurementFields(r: Record<string, unknown>): void {
+        r.rappelCount = RopewikiPageView.coerceRappelCount(r.rappelCount);
+        r.rappelLongest = LengthMeasurement.coerce(r.rappelLongest, FEET);
+        r.overallLength = LengthMeasurement.coerce(r.overallLength, MILES);
+        r.descentLength = LengthMeasurement.coerce(r.descentLength, MILES);
+        r.exitLength = LengthMeasurement.coerce(r.exitLength, MILES);
+        r.approachLength = LengthMeasurement.coerce(r.approachLength, MILES);
+        r.approachElevGain = LengthMeasurement.coerce(r.approachElevGain, FEET);
+        r.descentElevGain = LengthMeasurement.coerce(r.descentElevGain, FEET);
+        r.exitElevGain = LengthMeasurement.coerce(r.exitElevGain, FEET);
+        r.shuttleTime = TimeMeasurement.coerce(r.shuttleTime, MINUTES);
+        r.overallTime = RopewikiPageView.coerceTimeOrRange(r.overallTime, HOURS);
+        r.approachTime = RopewikiPageView.coerceTimeOrRange(r.approachTime, HOURS);
+        r.descentTime = RopewikiPageView.coerceTimeOrRange(r.descentTime, HOURS);
+        r.exitTime = RopewikiPageView.coerceTimeOrRange(r.exitTime, HOURS);
+    }
+
+    protected static coerceRappelCount(
+        value: unknown,
+    ): MinMax<number> | number | null {
+        if (value == null) return null;
+        if (value instanceof MinMax) return value as MinMax<number>;
+        if (typeof value === 'number') return value;
+        if (typeof value === 'object') {
+            const o = value as Record<string, unknown>;
+            if (typeof o.min === 'number' && typeof o.max === 'number') {
+                return new MinMax<number>(o.min, o.max);
+            }
+        }
+        throw new Error(
+            'RopewikiPageView.rappelCount must be a number, { min, max }, or null',
+        );
+    }
+
+    protected static coerceTimeOrRange(
+        value: unknown,
+        defaultUnit: TimeMeasurementUnit,
+    ): TimeMeasurement | MinMax<TimeMeasurement> | null {
+        if (value == null) return null;
+        if (value instanceof TimeMeasurement) return value;
+        if (value instanceof MinMax) return value as MinMax<TimeMeasurement>;
+        if (typeof value === 'number') {
+            return TimeMeasurement.coerce(value, defaultUnit);
+        }
+        if (typeof value === 'object') {
+            const o = value as Record<string, unknown>;
+            if ('min' in o && 'max' in o) {
+                const min = TimeMeasurement.coerce(o.min, defaultUnit);
+                const max = TimeMeasurement.coerce(o.max, defaultUnit);
+                if (min == null || max == null) {
+                    throw new Error(
+                        'RopewikiPageView time range min/max must not be null',
+                    );
+                }
+                return new MinMax<TimeMeasurement>(min, max);
+            }
+            return TimeMeasurement.fromResult(value);
+        }
+        throw new Error(
+            'RopewikiPageView time field must be a number, { min, max }, measurement object, or null',
         );
     }
 
@@ -401,13 +469,6 @@ export abstract class RopewikiPageView {
         throw new Error(
             `RopewikiPageView.${key} must be number or { min, max } or null, got: ${typeof v}`,
         );
-    }
-
-    protected static assertMinMaxOrNumber(
-        obj: Record<string, unknown>,
-        key: string,
-    ): void {
-        RopewikiPageView.assertRappelCount(obj, key);
     }
 
     protected static assertIso8601DateString(

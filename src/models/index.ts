@@ -124,6 +124,24 @@ export { OnlineRopewikiPageView } from './pageViews/onlineRopewikiPageView';
 export { OfflineRopewikiPageView } from './pageViews/offlineRopewikiPageView';
 export type { OnlinePageView } from './pageViews/onlinePageView';
 export type { OfflinePageView } from './pageViews/offlinePageView';
+export { formatMeasurementValue } from './measurements/measurementValue';
+export { Measurement, FREEDOM_MEASUREMENT_SYSTEM } from './measurements/measurement';
+export type { MeasurementUnit } from './measurements/measurement';
+export { MinMax } from './measurements/minMax';
+export { LengthMeasurement, MILES, FEET } from './measurements/lengthMeasurement';
+export type {
+    ImperialSystem,
+    MetricSystem,
+    FreedomSystem,
+    LengthMeasurementUnit,
+    LengthMeasurementSystem,
+} from './measurements/lengthMeasurement';
+export { TimeMeasurement, MINUTES, HOURS, DAYS } from './measurements/timeMeasurement';
+export type {
+    StandardSystem,
+    TimeMeasurementUnit,
+    TimeMeasurementSystem,
+} from './measurements/timeMeasurement';
 export { LinkPreview } from './linkPreview/linkPreview';
 export { LinkPreviewImage } from './linkPreview/linkPreviewImage';
 export { RopewikiPageLinkPreviewResult } from './api/results/ropewikiPageLinkPreviewResult';

@@ -13,6 +13,9 @@ import { RouteType } from '../routes/routeType';
 import { RopewikiVehicleType } from '../ropewikiVehicleType';
 import { PageViewType } from './pageViewType';
 import { hydrateOfflinePageWirePaths } from '../../helpers/hydrateOfflinePageWirePaths';
+import { MinMax } from '../measurements/minMax';
+import { LengthMeasurement } from '../measurements/lengthMeasurement';
+import { TimeMeasurement } from '../measurements/timeMeasurement';
 
 export class OfflineRopewikiPageView extends RopewikiPageView implements OfflinePageView {
     readonly fetchType = 'offline' as const;
@@ -31,22 +34,22 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
         regions: { name: string; id: string }[],
         difficultyRating: import('../difficulty/difficultyRating').DifficultyRating,
         permit: import('../permitStatus').PermitStatus | null,
-        rappelCount: { min: number; max: number } | number | null,
+        rappelCount: MinMax<number> | number | null,
         jumps: number | null,
         vehicle: RopewikiVehicleType | null,
-        rappelLongest: number | null,
-        shuttleTime: number | null,
-        overallLength: number | null,
-        descentLength: number | null,
-        exitLength: number | null,
-        approachLength: number | null,
-        overallTime: { min: number; max: number } | number | null,
-        approachTime: { min: number; max: number } | number | null,
-        descentTime: { min: number; max: number } | number | null,
-        exitTime: { min: number; max: number } | number | null,
-        approachElevGain: number | null,
-        descentElevGain: number | null,
-        exitElevGain: number | null,
+        rappelLongest: LengthMeasurement | null,
+        shuttleTime: TimeMeasurement | null,
+        overallLength: LengthMeasurement | null,
+        descentLength: LengthMeasurement | null,
+        exitLength: LengthMeasurement | null,
+        approachLength: LengthMeasurement | null,
+        overallTime: TimeMeasurement | MinMax<TimeMeasurement> | null,
+        approachTime: TimeMeasurement | MinMax<TimeMeasurement> | null,
+        descentTime: TimeMeasurement | MinMax<TimeMeasurement> | null,
+        exitTime: TimeMeasurement | MinMax<TimeMeasurement> | null,
+        approachElevGain: LengthMeasurement | null,
+        descentElevGain: LengthMeasurement | null,
+        exitElevGain: LengthMeasurement | null,
         months: string[],
         latestRevisionDate: Date,
         bannerImage: OfflineBetaSectionImage | null,

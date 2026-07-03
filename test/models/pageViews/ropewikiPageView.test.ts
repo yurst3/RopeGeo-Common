@@ -9,6 +9,9 @@ import { OfflinePageMiniMap } from '../../../src/models/minimap/concrete/offline
 import { Bounds } from '../../../src/models/minimap/bounds';
 import { MiniMapType } from '../../../src/models/minimap/abstract/miniMapType';
 import { OnlinePagePreview } from '../../../src/models/previews/onlinePagePreview';
+import { LengthMeasurement } from '../../../src/models/measurements/lengthMeasurement';
+import { TimeMeasurement } from '../../../src/models/measurements/timeMeasurement';
+import { MinMax } from '../../../src/models/measurements/minMax';
 import '../../../src/models/pageViews/registerPageViewParsers';
 import '../../../src/models/betaSections/registerBetaSectionParsers';
 import '../../../src/models/minimap/registerMiniMapParsers';
@@ -89,6 +92,43 @@ function onlineResult(miniMap: Record<string, unknown> | null = null): Record<st
 }
 
 describe('RopewikiPageView models', () => {
+    it('hydrates length/time fields from numbers, objects, and ranges, and round-trips', () => {
+        const wire = {
+            ...onlineResult(),
+            rappelCount: { min: 1, max: 2 },
+            rappelLongest: 200,
+            overallLength: 5.1,
+            approachElevGain: {
+                value: 800,
+                measurementType: 'length',
+                unit: { measurementSystem: 'Imperial', name: 'feet' },
+            },
+            shuttleTime: 45,
+            overallTime: { min: 3, max: 6 },
+        };
+        const page = OnlineRopewikiPageView.fromResult(wire);
+
+        expect(page.rappelCount).toBeInstanceOf(MinMax);
+        expect((page.rappelCount as MinMax<number>).toString()).toBe('1-2');
+        expect(page.rappelLongest).toBeInstanceOf(LengthMeasurement);
+        expect(page.rappelLongest?.toString()).toBe('200ft');
+        expect(page.overallLength?.toString()).toBe('5.1mi');
+        expect(page.approachElevGain).toBeInstanceOf(LengthMeasurement);
+        expect(page.approachElevGain?.toString()).toBe('800ft');
+        expect(page.shuttleTime).toBeInstanceOf(TimeMeasurement);
+        expect(page.shuttleTime?.toString()).toBe('45min');
+        expect(page.overallTime).toBeInstanceOf(MinMax);
+        expect(page.overallTime?.toString()).toBe('3-6h');
+
+        const again = OnlineRopewikiPageView.fromResult(page.toPlain());
+        expect(again.overallLength).toBeInstanceOf(LengthMeasurement);
+        expect(again.overallLength?.toString()).toBe('5.1mi');
+        expect(again.rappelLongest?.toString()).toBe('200ft');
+        expect(again.approachElevGain?.toString()).toBe('800ft');
+        expect(again.overallTime).toBeInstanceOf(MinMax);
+        expect(again.overallTime?.toString()).toBe('3-6h');
+    });
+
     it('dispatches base fromResult to online/offline parsers', () => {
         const online = RopewikiPageView.fromResult(onlineResult());
         expect(online).toBeInstanceOf(OnlineRopewikiPageView);
