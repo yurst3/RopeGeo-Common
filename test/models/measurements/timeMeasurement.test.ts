@@ -18,6 +18,32 @@ describe('TimeMeasurement', () => {
             expect(new TimeMeasurement(2, DAYS).toString()).toBe('2d');
         });
 
+        it('displays minutes as hours when value is at least 60', () => {
+            expect(new TimeMeasurement(90, MINUTES).toString()).toBe('1.5h');
+            expect(new TimeMeasurement(60, MINUTES).toString()).toBe('1h');
+        });
+
+        it('displays minutes as days when value is at least 60 * 24', () => {
+            expect(new TimeMeasurement(60 * 24 * 2, MINUTES).toString()).toBe('2d');
+        });
+
+        it('displays hours as minutes when value is less than 1', () => {
+            expect(new TimeMeasurement(0.033, HOURS).toString()).toBe('2min');
+            expect(new TimeMeasurement(0.5, HOURS).toString()).toBe('30min');
+        });
+
+        it('displays hours as days when value is at least 24', () => {
+            expect(new TimeMeasurement(48, HOURS).toString()).toBe('2d');
+        });
+
+        it('displays days as hours when value is less than 1', () => {
+            expect(new TimeMeasurement(0.5, DAYS).toString()).toBe('12h');
+        });
+
+        it('displays days as minutes when value is less than 1/24', () => {
+            expect(new TimeMeasurement(0.01, DAYS).toString()).toBe('14.4min');
+        });
+
         it('renders Freedom units with a leading space and full name', () => {
             const banners = new TimeMeasurement(2, {
                 measurementSystem: 'Freedom',

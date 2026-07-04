@@ -1,4 +1,5 @@
 import { FREEDOM_MEASUREMENT_SYSTEM, Measurement } from './measurement';
+import { formatMeasurementValue } from './measurementValue';
 import type { FreedomSystem } from './lengthMeasurement';
 
 export type StandardSystem = {
@@ -83,16 +84,23 @@ export class TimeMeasurement extends Measurement {
     }
 
     protected abbreviate(): string {
-        switch (this.unit.name) {
-            case 'minutes':
-                return 'min';
-            case 'hours':
-                return 'h';
-            case 'days':
-                return 'd';
-            default:
-                return this.unit.name;
+        return abbreviateStandardUnit(this.unit.name as StandardTimeName);
+    }
+
+    /**
+     * Renders the value in a human-friendly unit derived from the stored unit and magnitude
+     * (e.g. 90 minutes → `1.5h`) without changing {@link unit}.
+     */
+    toString(showUnitName = true): string {
+        if (this.unit.measurementSystem === FREEDOM_MEASUREMENT_SYSTEM) {
+            return super.toString(showUnitName);
         }
+        const { value, unit } = displayUnitAndValue(this.value, this.unit.name);
+        const formatted = formatMeasurementValue(value);
+        if (!showUnitName) {
+            return formatted;
+        }
+        return `${formatted}${abbreviateStandardUnit(unit)}`;
     }
 
     private toFreedom(unit: StandardSystem, unitName?: string): TimeMeasurement {
@@ -146,6 +154,50 @@ export class TimeMeasurement extends Measurement {
             return new TimeMeasurement(value, defaultUnit);
         }
         return TimeMeasurement.fromResult(value);
+    }
+}
+
+function abbreviateStandardUnit(name: StandardTimeName): string {
+    switch (name) {
+        case 'minutes':
+            return 'min';
+        case 'hours':
+            return 'h';
+        case 'days':
+            return 'd';
+    }
+}
+
+/** Picks a display unit and scaled value for {@link TimeMeasurement.toString}. */
+function displayUnitAndValue(
+    value: number,
+    baseUnit: StandardTimeName,
+): { value: number; unit: StandardTimeName } {
+    switch (baseUnit) {
+        case 'minutes':
+            if (value >= 60 * 24) {
+                return { value: value / (60 * 24), unit: 'days' };
+            }
+            if (value >= 60) {
+                return { value: value / 60, unit: 'hours' };
+            }
+            return { value, unit: 'minutes' };
+        case 'hours':
+            if (value >= 24) {
+                return { value: value / 24, unit: 'days' };
+            }
+            if (value < 1) {
+                return { value: value * 60, unit: 'minutes' };
+            }
+            return { value, unit: 'hours' };
+        case 'days':
+            if (value < 1 / 24) {
+                return { value: value * 24 * 60, unit: 'minutes' };
+            }
+            if (value < 1) {
+                return { value: value * 24, unit: 'hours' };
+            }
+            return { value, unit: 'days' };
     }
 }
 
