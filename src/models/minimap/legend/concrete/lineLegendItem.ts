@@ -1,6 +1,7 @@
 import { Bounds } from '../../bounds';
 import { LegendFeatureType } from '../abstract/legendFeatureType';
 import { LegendItem, registerLegendItemParser } from '../abstract/legendItem';
+import type { RelevantContext } from './relevantContext';
 
 export class LineLegendItem extends LegendItem {
     readonly featureType = LegendFeatureType.Line;
@@ -14,8 +15,9 @@ export class LineLegendItem extends LegendItem {
         bounds: Bounds,
         strokeColor?: string,
         strokeWidth?: string,
+        relevantContext: RelevantContext | null = null,
     ) {
-        super(id, name);
+        super(id, name, relevantContext);
         this.bounds = bounds;
         this.strokeColor = strokeColor;
         this.strokeWidth = strokeWidth;
@@ -39,6 +41,7 @@ export class LineLegendItem extends LegendItem {
         if (this.strokeWidth !== undefined) {
             base.strokeWidth = this.strokeWidth;
         }
+        LegendItem.appendRelevantContextToPlain(base, this.relevantContext);
         return base;
     }
 
@@ -69,7 +72,8 @@ export class LineLegendItem extends LegendItem {
             }
             strokeWidth = r.strokeWidth;
         }
-        return new LineLegendItem(id, name, bounds, strokeColor, strokeWidth);
+        const relevantContext = LegendItem.parseOptionalRelevantContext(r.relevantContext);
+        return new LineLegendItem(id, name, bounds, strokeColor, strokeWidth, relevantContext);
     }
 }
 

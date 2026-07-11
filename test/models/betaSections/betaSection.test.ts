@@ -1,5 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 import { BetaSection } from '../../../src/models/betaSections/betaSection';
+import { BetaSectionExcerpt } from '../../../src/models/betaSections/betaSectionExcerpt';
 import { BetaSectionImage } from '../../../src/models/betaSections/betaSectionImage';
 import { DownloadBytes } from '../../../src/models/betaSections/downloadBytes';
 import { OnlineBetaSection } from '../../../src/models/betaSections/onlineBetaSection';
@@ -75,6 +76,88 @@ describe('BetaSection', () => {
             const section = new OnlineBetaSection(0, '', '', d);
             expect(section.latestRevisionDate).toBeInstanceOf(Date);
             expect(section.latestRevisionDate.getTime()).toBe(d.getTime());
+        });
+    });
+
+    describe('toExcerpt', () => {
+        it('computes start and end when excerpt text is found in the middle', () => {
+            const section = new OnlineBetaSection(
+                1,
+                'Descent',
+                'Before <b>R1</b>: 25 feet - After',
+                new Date('2025-01-01T00:00:00Z'),
+            );
+            const excerptText = '<b>R1</b>: 25 feet -';
+            const excerpt = section.toExcerpt(excerptText, 0.98);
+            expect(excerpt).toBeInstanceOf(BetaSectionExcerpt);
+            expect(excerpt.text).toBe(excerptText);
+            expect(excerpt.start).toBe(7);
+            expect(excerpt.end).toBe(7 + excerptText.length);
+            expect(excerpt.confidence).toBe(0.98);
+        });
+
+        it('computes start 0 when excerpt is at the beginning of section text', () => {
+            const section = new OnlineBetaSection(
+                1,
+                'Exit',
+                'Exit hike details',
+                new Date('2025-01-01T00:00:00Z'),
+            );
+            const excerpt = section.toExcerpt('Exit hike', 0.9);
+            expect(excerpt.start).toBe(0);
+            expect(excerpt.end).toBe(9);
+        });
+
+        it('leaves start and end undefined when excerpt text is not found', () => {
+            const section = new OnlineBetaSection(
+                1,
+                'Descent',
+                'Some beta text',
+                new Date('2025-01-01T00:00:00Z'),
+            );
+            const excerpt = section.toExcerpt('missing excerpt', 0.8);
+            expect(excerpt.text).toBe('missing excerpt');
+            expect(excerpt.start).toBeUndefined();
+            expect(excerpt.end).toBeUndefined();
+        });
+
+        it('returns confidence-only excerpt for empty excerpt text', () => {
+            const section = new OnlineBetaSection(
+                1,
+                'Descent',
+                'Some beta text',
+                new Date('2025-01-01T00:00:00Z'),
+            );
+            const excerpt = section.toExcerpt('', 0.6);
+            expect(excerpt.text).toBeUndefined();
+            expect(excerpt.start).toBeUndefined();
+            expect(excerpt.end).toBeUndefined();
+            expect(excerpt.confidence).toBe(0.6);
+        });
+
+        it('works on OfflineBetaSection', () => {
+            const section = new OfflineBetaSection(
+                1,
+                'Descent',
+                'Offline <b>R1</b> text',
+                new Date('2025-01-01T00:00:00Z'),
+            );
+            const excerptText = '<b>R1</b>';
+            const excerpt = section.toExcerpt(excerptText, 0.75);
+            expect(excerpt.start).toBe(8);
+            expect(excerpt.end).toBe(8 + excerptText.length);
+        });
+
+        it('throws when confidence is invalid', () => {
+            const section = new OnlineBetaSection(
+                1,
+                'Descent',
+                'Some beta text',
+                new Date('2025-01-01T00:00:00Z'),
+            );
+            expect(() => section.toExcerpt('Some beta', 1.5)).toThrow(
+                /BetaSectionExcerpt\.confidence/,
+            );
         });
     });
 

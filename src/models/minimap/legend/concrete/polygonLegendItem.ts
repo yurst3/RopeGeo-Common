@@ -1,6 +1,7 @@
 import { Bounds } from '../../bounds';
 import { LegendFeatureType } from '../abstract/legendFeatureType';
 import { LegendItem, registerLegendItemParser } from '../abstract/legendItem';
+import type { RelevantContext } from './relevantContext';
 
 export class PolygonLegendItem extends LegendItem {
     readonly featureType = LegendFeatureType.Polygon;
@@ -14,8 +15,9 @@ export class PolygonLegendItem extends LegendItem {
         bounds: Bounds,
         borderColor?: string,
         fillColor?: string,
+        relevantContext: RelevantContext | null = null,
     ) {
-        super(id, name);
+        super(id, name, relevantContext);
         this.bounds = bounds;
         this.borderColor = borderColor;
         this.fillColor = fillColor;
@@ -39,6 +41,7 @@ export class PolygonLegendItem extends LegendItem {
         if (this.fillColor !== undefined) {
             base.fillColor = this.fillColor;
         }
+        LegendItem.appendRelevantContextToPlain(base, this.relevantContext);
         return base;
     }
 
@@ -69,7 +72,8 @@ export class PolygonLegendItem extends LegendItem {
             }
             fillColor = r.fillColor;
         }
-        return new PolygonLegendItem(id, name, bounds, borderColor, fillColor);
+        const relevantContext = LegendItem.parseOptionalRelevantContext(r.relevantContext);
+        return new PolygonLegendItem(id, name, bounds, borderColor, fillColor, relevantContext);
     }
 }
 

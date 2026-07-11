@@ -85,6 +85,43 @@ describe('LegendItem', () => {
         });
         expect(PointLegendItem.fromResult(item.toPlain())).toEqual(item);
     });
+
+    it('fromResult parses optional relevantContext on legend items', () => {
+        const item = LegendItem.fromResult({
+            featureType: LegendFeatureType.Point,
+            id: 'p1',
+            name: 'R1',
+            coordinates: { lat: 38.5, lon: -109.0 },
+            relevantContext: {
+                measurements: [],
+                betaSectionExcerpts: {
+                    'beta-descent': [{ text: '<b>R1</b>', confidence: 0.98 }],
+                },
+                images: {
+                    '': [{ id: 'img-1', confidence: 0.9 }],
+                },
+            },
+        });
+        expect(item.relevantContext).not.toBeNull();
+        expect(item.relevantContext!.betaSectionExcerpts['beta-descent']).toHaveLength(1);
+        const roundTripped = LegendItem.fromResult(item.toPlain());
+        expect(roundTripped.relevantContext).not.toBeNull();
+        expect(roundTripped.relevantContext!.images['']![0]!.id).toBe('img-1');
+    });
+
+    it('throws when relevantContext is invalid', () => {
+        expect(() =>
+            LegendItem.fromResult({
+                featureType: LegendFeatureType.Point,
+                id: 'p1',
+                name: 'R1',
+                coordinates: { lat: 38.5, lon: -109.0 },
+                relevantContext: {
+                    measurements: 'bad',
+                },
+            }),
+        ).toThrow('RelevantContext.measurements must be an array');
+    });
 });
 
 describe('Bounds integration on legend items', () => {

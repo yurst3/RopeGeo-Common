@@ -1,4 +1,5 @@
 import { FetchType } from '../fetchType';
+import { BetaSectionExcerpt } from './betaSectionExcerpt';
 import { BetaSectionImage } from './betaSectionImage';
 
 const betaSectionParsers = new Map<FetchType, (body: unknown) => BetaSection>();
@@ -27,6 +28,21 @@ export abstract class BetaSection {
         this.title = title;
         this.text = text;
         this.latestRevisionDate = new Date(latestRevisionDate);
+    }
+
+    /**
+     * Builds a {@link BetaSectionExcerpt} for a verbatim excerpt from this section's text.
+     * When the excerpt cannot be located, `start` and `end` are left undefined.
+     */
+    toExcerpt(excerptText: string, confidence: number): BetaSectionExcerpt {
+        if (excerptText.length === 0) {
+            return new BetaSectionExcerpt(undefined, undefined, undefined, confidence);
+        }
+        const start = this.text.indexOf(excerptText);
+        if (start === -1) {
+            return new BetaSectionExcerpt(excerptText, undefined, undefined, confidence);
+        }
+        return new BetaSectionExcerpt(excerptText, start, start + excerptText.length, confidence);
     }
 
     static fromResponseBody(body: unknown, fetchType?: FetchType): BetaSection {

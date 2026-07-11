@@ -1,4 +1,5 @@
 import { LEGEND_FEATURE_TYPES, LegendFeatureType } from './legendFeatureType';
+import { RelevantContext } from '../concrete/relevantContext';
 
 const legendItemParsers = new Map<LegendFeatureType, (result: unknown) => LegendItem>();
 
@@ -16,12 +17,18 @@ export abstract class LegendItem {
     abstract readonly featureType: LegendFeatureType;
     readonly id: string;
     readonly name: string;
+    readonly relevantContext: RelevantContext | null;
 
-    protected constructor(id: string, name: string) {
+    protected constructor(
+        id: string,
+        name: string,
+        relevantContext: RelevantContext | null = null,
+    ) {
         LegendItem.assertNonEmptyString(id, 'LegendItem.id');
         LegendItem.assertNonEmptyString(name, 'LegendItem.name');
         this.id = id;
         this.name = name;
+        this.relevantContext = relevantContext;
     }
 
     /** Serialized shape suitable for JSON / offline persistence. */
@@ -53,6 +60,22 @@ export abstract class LegendItem {
             throw new Error(`${context} must be a non-empty string`);
         }
         return value;
+    }
+
+    static parseOptionalRelevantContext(value: unknown): RelevantContext | null {
+        if (value === null || value === undefined) {
+            return null;
+        }
+        return RelevantContext.fromResult(value);
+    }
+
+    protected static appendRelevantContextToPlain(
+        base: Record<string, unknown>,
+        relevantContext: RelevantContext | null,
+    ): void {
+        if (relevantContext != null) {
+            base.relevantContext = relevantContext.toPlain();
+        }
     }
 
     /**

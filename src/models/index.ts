@@ -94,6 +94,7 @@ export { OnlineBetaSectionImage } from './betaSections/onlineBetaSectionImage';
 export { OfflineBetaSectionImage } from './betaSections/offlineBetaSectionImage';
 export { DownloadBytes } from './betaSections/downloadBytes';
 export { BetaSection } from './betaSections/betaSection';
+export { BetaSectionExcerpt } from './betaSections/betaSectionExcerpt';
 export { OnlineBetaSection } from './betaSections/onlineBetaSection';
 export { OfflineBetaSection } from './betaSections/offlineBetaSection';
 export { Bounds } from './minimap/bounds';
@@ -102,6 +103,9 @@ export { LegendItem, registerLegendItemParser } from './minimap/legend/abstract/
 export { PointLegendItem } from './minimap/legend/concrete/pointLegendItem';
 export { LineLegendItem } from './minimap/legend/concrete/lineLegendItem';
 export { PolygonLegendItem } from './minimap/legend/concrete/polygonLegendItem';
+export { RelevantContext } from './minimap/legend/concrete/relevantContext';
+export { MeasurementContext } from './minimap/legend/concrete/measurementContext';
+export { ImageContext } from './minimap/legend/concrete/imageContext';
 export { MiniMapType } from './minimap/abstract/miniMapType';
 export type { OnlineMiniMap } from './minimap/abstract/onlineMiniMap';
 export type { OfflineMiniMap } from './minimap/abstract/offlineMiniMap';

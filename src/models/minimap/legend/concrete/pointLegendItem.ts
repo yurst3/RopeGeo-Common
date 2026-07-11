@@ -1,5 +1,6 @@
 import { LegendFeatureType } from '../abstract/legendFeatureType';
 import { LegendItem, registerLegendItemParser } from '../abstract/legendItem';
+import type { RelevantContext } from './relevantContext';
 
 export class PointLegendItem extends LegendItem {
     readonly featureType = LegendFeatureType.Point;
@@ -11,8 +12,9 @@ export class PointLegendItem extends LegendItem {
         name: string,
         coordinates: { lat: number; lon: number },
         icon?: string,
+        relevantContext: RelevantContext | null = null,
     ) {
-        super(id, name);
+        super(id, name, relevantContext);
         this.coordinates = coordinates;
         this.icon = icon;
     }
@@ -27,6 +29,7 @@ export class PointLegendItem extends LegendItem {
         if (this.icon !== undefined) {
             base.icon = this.icon;
         }
+        LegendItem.appendRelevantContextToPlain(base, this.relevantContext);
         return base;
     }
 
@@ -56,7 +59,14 @@ export class PointLegendItem extends LegendItem {
             }
             icon = r.icon;
         }
-        return new PointLegendItem(id, name, { lat: c.lat as number, lon: c.lon as number }, icon);
+        const relevantContext = LegendItem.parseOptionalRelevantContext(r.relevantContext);
+        return new PointLegendItem(
+            id,
+            name,
+            { lat: c.lat as number, lon: c.lon as number },
+            icon,
+            relevantContext,
+        );
     }
 
     private static assertNumber(value: unknown, context: string): void {
