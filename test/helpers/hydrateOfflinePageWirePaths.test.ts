@@ -6,6 +6,7 @@ describe('hydrateOfflinePageWirePaths', () => {
         const node: Record<string, unknown> = {
             fetchType: 'offline',
             bannerImage: {
+                downloadedPreviewPath: 'images/a-preview.avif',
                 downloadedBannerPath: 'images/a-banner.avif',
                 downloadedFullPath: 'images/a-full.avif',
             },
@@ -16,6 +17,9 @@ describe('hydrateOfflinePageWirePaths', () => {
         };
         hydrateOfflinePageWirePaths('file:///root/', node);
         const banner = node.bannerImage as Record<string, string>;
+        expect(banner.downloadedPreviewPath).toBe(
+            'file:///root/images/a-preview.avif',
+        );
         expect(banner.downloadedBannerPath).toBe('file:///root/images/a-banner.avif');
         const miniMap = node.miniMap as Record<string, string>;
         expect(miniMap.offlineTilesTemplate).toBe(

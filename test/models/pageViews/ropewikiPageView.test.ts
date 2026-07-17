@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+import { describe, it, expect, jest } from '@jest/globals';
 import { DownloadDependencyKeys } from '../../../src/download/dependencies/downloadDependencyKeys';
 import { FetchImageFilesTaskDependency } from '../../../src/download/dependencies/fetchImageFilesTaskDependency';
 import { RopewikiPageView } from '../../../src/models/pageViews/ropewikiPageView';
@@ -20,6 +20,7 @@ import '../../../src/models/previews/registerPreviewParsers';
 const ROUTE_ID = '38f5c3fa-7248-41ed-815e-8b9e6aae5d61';
 const IMAGE_ID_A = '550e8400-e29b-41d4-a716-446655440000';
 const IMAGE_ID_B = '550e8400-e29b-41d4-a716-446655440001';
+const SECTION_ID = '550e8400-e29b-41d4-a716-446655440002';
 
 function onlineResult(miniMap: Record<string, unknown> | null = null): Record<string, unknown> {
     return {
@@ -57,6 +58,7 @@ function onlineResult(miniMap: Record<string, unknown> | null = null): Record<st
             fetchType: 'online',
             order: 0,
             id: IMAGE_ID_A,
+            previewUrl: 'https://example.com/preview.avif',
             bannerUrl: 'https://example.com/banner.avif',
             fullUrl: 'https://example.com/full.avif',
             linkUrl: 'https://example.com',
@@ -67,6 +69,7 @@ function onlineResult(miniMap: Record<string, unknown> | null = null): Record<st
         betaSections: [
             {
                 fetchType: 'online',
+                id: SECTION_ID,
                 order: 1,
                 title: 'Beta',
                 text: 'Some beta',
@@ -76,6 +79,7 @@ function onlineResult(miniMap: Record<string, unknown> | null = null): Record<st
                         fetchType: 'online',
                         order: 1,
                         id: IMAGE_ID_B,
+                        previewUrl: 'https://example.com/preview2.avif',
                         bannerUrl: 'https://example.com/banner2.avif',
                         fullUrl: 'https://example.com/full2.avif',
                         linkUrl: 'https://example.com',
@@ -159,13 +163,90 @@ describe('RopewikiPageView models', () => {
         const imageDep = deps[DownloadDependencyKeys.FetchImageFiles] as FetchImageFilesTaskDependency;
         expect(imageDep.slots).toHaveLength(2);
         expect(imageDep.slots.map((s) => s.imageId)).toEqual([IMAGE_ID_A, IMAGE_ID_B]);
+        expect(imageDep.slots[0]?.versions.preview).toBe(
+            'https://example.com/preview.avif',
+        );
+        expect(imageDep.slots[1]?.versions.preview).toBe(
+            'https://example.com/preview2.avif',
+        );
+    });
+
+    it('rejects duplicate beta-section ids when parsing page views', () => {
+        const wire = onlineResult();
+        const sections = wire.betaSections as Record<string, unknown>[];
+        wire.betaSections = [
+            sections[0],
+            { ...sections[0], order: 2, images: [] },
+        ];
+        expect(() => OnlineRopewikiPageView.fromResult(wire)).toThrow(
+            `Duplicate beta-section id in OnlineRopewikiPageView: ${SECTION_ID}`,
+        );
+    });
+
+    it('builds online and offline relevant-context lookups', () => {
+        const page = OnlineRopewikiPageView.fromResult(onlineResult());
+        const onlineLookup = page.toBetaSectionLookup();
+        expect(onlineLookup['']?.section).toBeNull();
+        expect(onlineLookup['']?.imagesById[IMAGE_ID_A]).toBe(page.bannerImage);
+        expect(onlineLookup[SECTION_ID]?.section).toBe(page.betaSections[0]);
+        expect(onlineLookup[SECTION_ID]?.imagesById[IMAGE_ID_B]).toBe(
+            page.betaSections[0]?.images[0],
+        );
+
+        const offline = page.toOffline({
+            [IMAGE_ID_A]: new ImageVersions({
+                preview: '/tmp/a-preview.avif',
+                banner: '/tmp/a-banner.avif',
+                full: '/tmp/a-full.avif',
+            }),
+            [IMAGE_ID_B]: new ImageVersions({
+                preview: '/tmp/b-preview.avif',
+                banner: '/tmp/b-banner.avif',
+                full: '/tmp/b-full.avif',
+            }),
+        });
+        const offlineLookup = offline.toBetaSectionLookup();
+        expect(offlineLookup[SECTION_ID]?.section).toBe(
+            offline.betaSections[0],
+        );
+        expect(
+            offlineLookup[SECTION_ID]?.imagesById[IMAGE_ID_B],
+        ).toBe(offline.betaSections[0]?.images[0]);
+    });
+
+    it('toOfflineFromExtractedBundle resolves preview, banner, and full files', async () => {
+        const page = OnlineRopewikiPageView.fromResult({
+            ...onlineResult(),
+            betaSections: [],
+        });
+        const fileExists = jest.fn(async (path: string) => ({
+            exists: path.includes('-preview.') || path.includes('-banner.'),
+        }));
+        const offline = (await page.toOfflineFromExtractedBundle(
+            'file:///pages/root/',
+            { fileExists } as never,
+        )) as OfflineRopewikiPageView;
+        expect(offline.bannerImage?.downloadedPreviewPath).toBe(
+            `file:///pages/root/images/${IMAGE_ID_A}-preview.avif`,
+        );
+        expect(offline.bannerImage?.downloadedBannerPath).toBe(
+            `file:///pages/root/images/${IMAGE_ID_A}-banner.avif`,
+        );
+        expect(offline.bannerImage?.downloadedFullPath).toBeNull();
     });
 
     it('toOffline maps missing image ids to null offline paths (1:1 online/offline images)', () => {
         const page = OnlineRopewikiPageView.fromResult(onlineResult());
         const offline = page.toOffline({
-            [IMAGE_ID_A]: new ImageVersions({ banner: '/tmp/a-banner.avif', full: '/tmp/a-full.avif' }),
+            [IMAGE_ID_A]: new ImageVersions({
+                preview: '/tmp/a-preview.avif',
+                banner: '/tmp/a-banner.avif',
+                full: '/tmp/a-full.avif',
+            }),
         });
+        expect(offline.bannerImage?.downloadedPreviewPath).toBe(
+            '/tmp/a-preview.avif',
+        );
         expect(offline.bannerImage?.downloadedBannerPath).toBe('/tmp/a-banner.avif');
         expect(offline.bannerImage?.downloadedFullPath).toBe('/tmp/a-full.avif');
         const sectionImage = offline.betaSections[0]?.images[0];
@@ -233,6 +314,7 @@ describe('RopewikiPageView models', () => {
                     fetchType: 'offline',
                     order: 0,
                     id: IMAGE_ID_A,
+                    downloadedPreviewPath: 'images/a-preview.avif',
                     downloadedBannerPath: 'images/a-banner.avif',
                     downloadedFullPath: 'images/a-full.avif',
                     linkUrl: 'https://example.com',
@@ -254,6 +336,9 @@ describe('RopewikiPageView models', () => {
         );
         expect(view.bannerImage?.downloadedBannerPath).toBe(
             'file:///root/images/a-banner.avif',
+        );
+        expect(view.bannerImage?.downloadedPreviewPath).toBe(
+            'file:///root/images/a-preview.avif',
         );
         expect(view.bannerImage?.downloadedFullPath).toBe('file:///root/images/a-full.avif');
         const pageMiniMap = view.miniMap as OfflinePageMiniMap;

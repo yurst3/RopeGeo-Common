@@ -1,3 +1,5 @@
+import { normalizeExcerptListHtml } from './normalizeExcerptHtml';
+
 export class BetaSectionExcerpt {
     readonly text?: string;
     readonly start?: number;
@@ -29,6 +31,11 @@ export class BetaSectionExcerpt {
             out.end = this.end;
         }
         return out;
+    }
+
+    /** Returns displayable excerpt HTML when the owning beta section is unavailable. */
+    toHtml(): string {
+        return normalizeExcerptListHtml(this.text ?? '');
     }
 
     static fromResult(result: unknown): BetaSectionExcerpt {

@@ -6,6 +6,7 @@ export class OnlineBetaSectionImage extends BetaSectionImage {
     readonly fetchType = 'online' as const;
     bannerUrl: string | null;
     fullUrl: string | null;
+    previewUrl: string | null;
     /** Byte sizes per rendition; null when not provided by API. */
     downloadBytes: DownloadBytes | null;
 
@@ -18,14 +19,20 @@ export class OnlineBetaSectionImage extends BetaSectionImage {
         caption: string | null,
         latestRevisionDate: Date,
         downloadBytes: DownloadBytes | null,
+        previewUrl: string | null = null,
     ) {
         super(order, id, linkUrl, caption, latestRevisionDate);
         this.bannerUrl = bannerUrl;
         this.fullUrl = fullUrl;
         this.downloadBytes = downloadBytes;
+        this.previewUrl = previewUrl;
     }
 
-    toOffline(downloadedBannerPath: string | null, downloadedFullPath: string | null): OfflineBetaSectionImage {
+    toOffline(
+        downloadedBannerPath: string | null,
+        downloadedFullPath: string | null,
+        downloadedPreviewPath: string | null = null,
+    ): OfflineBetaSectionImage {
         return new OfflineBetaSectionImage(
             this.order,
             this.id,
@@ -34,6 +41,7 @@ export class OnlineBetaSectionImage extends BetaSectionImage {
             this.linkUrl,
             this.caption,
             this.latestRevisionDate,
+            downloadedPreviewPath,
         );
     }
 
@@ -45,6 +53,8 @@ export class OnlineBetaSectionImage extends BetaSectionImage {
         BetaSectionImage.normalizeCommonFields(r, 'OnlineBetaSectionImage', 'online');
         BetaSectionImage.assertStringOrNull(r, 'bannerUrl');
         BetaSectionImage.assertStringOrNull(r, 'fullUrl');
+        if (r.previewUrl === undefined) r.previewUrl = null;
+        BetaSectionImage.assertStringOrNull(r, 'previewUrl');
         BetaSectionImage.assertDownloadBytesOrNull(r, 'downloadBytes');
         Object.setPrototypeOf(r, OnlineBetaSectionImage.prototype);
         return r as unknown as OnlineBetaSectionImage;

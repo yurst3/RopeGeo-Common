@@ -10,6 +10,7 @@ function getValidBody(): Record<string, unknown> {
         fetchType: 'online',
         order: 0,
         id: '550e8400-e29b-41d4-a716-446655440000',
+        previewUrl: 'https://example.com/preview.jpg',
         bannerUrl: 'https://example.com/banner.jpg',
         fullUrl: 'https://example.com/full.jpg',
         linkUrl: 'https://example.com/page',
@@ -32,9 +33,11 @@ describe('BetaSectionImage', () => {
                 'Caption text',
                 new Date('2024-01-15T12:00:00Z'),
                 db,
+                'https://example.com/preview.jpg',
             );
             expect(img.order).toBe(1);
             expect(img.id).toBe('img-id-1');
+            expect(img.previewUrl).toBe('https://example.com/preview.jpg');
             expect(img.bannerUrl).toBe('https://example.com/banner.jpg');
             expect(img.fullUrl).toBe('https://example.com/full.jpg');
             expect(img.linkUrl).toBe('https://example.com/link');
@@ -58,6 +61,7 @@ describe('BetaSectionImage', () => {
             expect(img.latestRevisionDate).toBeInstanceOf(Date);
             expect(img.latestRevisionDate.getTime()).toBe(d.getTime());
             expect(img.downloadBytes).toBeNull();
+            expect(img.previewUrl).toBeNull();
         });
     });
 
@@ -67,6 +71,7 @@ describe('BetaSectionImage', () => {
             expect(img).toBeInstanceOf(BetaSectionImage);
             expect(img.order).toBe(0);
             expect(img.id).toBe('550e8400-e29b-41d4-a716-446655440000');
+            expect(img.previewUrl).toBe('https://example.com/preview.jpg');
             expect(img.bannerUrl).toBe('https://example.com/banner.jpg');
             expect(img.fullUrl).toBe('https://example.com/full.jpg');
             expect(img.linkUrl).toBe('https://example.com/page');
@@ -78,14 +83,16 @@ describe('BetaSectionImage', () => {
             expect(img.downloadBytes?.full).toBe(300000);
         });
 
-        it('accepts null values for bannerUrl, fullUrl, caption, and downloadBytes', () => {
+        it('accepts null values for previewUrl, bannerUrl, fullUrl, caption, and downloadBytes', () => {
             const img = OnlineBetaSectionImage.fromResult({
                 ...getValidBody(),
+                previewUrl: null,
                 bannerUrl: null,
                 fullUrl: null,
                 caption: null,
                 downloadBytes: null,
             });
+            expect(img.previewUrl).toBeNull();
             expect(img.bannerUrl).toBeNull();
             expect(img.fullUrl).toBeNull();
             expect(img.caption).toBeNull();
@@ -132,6 +139,12 @@ describe('BetaSectionImage', () => {
             expect(() =>
                 BetaSectionImage.fromResult({ ...getValidBody(), bannerUrl: 123 }),
             ).toThrow('BetaSectionImage.bannerUrl must be a string or null');
+        });
+
+        it('throws when previewUrl is not a string or null', () => {
+            expect(() =>
+                BetaSectionImage.fromResult({ ...getValidBody(), previewUrl: 123 }),
+            ).toThrow('BetaSectionImage.previewUrl must be a string or null');
         });
 
         it('throws when fullUrl is not a string or null', () => {
@@ -186,6 +199,7 @@ describe('BetaSectionImage', () => {
                     fetchType: 'offline',
                     order: 0,
                     id: '550e8400-e29b-41d4-a716-446655440000',
+                    downloadedPreviewPath: '/tmp/preview.avif',
                     downloadedBannerPath: '/tmp/banner.avif',
                     downloadedFullPath: '/tmp/full.avif',
                     linkUrl: 'https://example.com/page',
@@ -195,6 +209,29 @@ describe('BetaSectionImage', () => {
                 'offline',
             );
             expect(img).toBeInstanceOf(OfflineBetaSectionImage);
+            expect((img as OfflineBetaSectionImage).downloadedPreviewPath).toBe(
+                '/tmp/preview.avif',
+            );
+        });
+
+        it('defaults missing legacy preview fields to null', () => {
+            const online = OnlineBetaSectionImage.fromResult({
+                ...getValidBody(),
+                previewUrl: undefined,
+            });
+            expect(online.previewUrl).toBeNull();
+
+            const offline = OfflineBetaSectionImage.fromResult({
+                fetchType: 'offline',
+                order: 0,
+                id: '550e8400-e29b-41d4-a716-446655440000',
+                downloadedBannerPath: null,
+                downloadedFullPath: null,
+                linkUrl: 'https://example.com/page',
+                caption: null,
+                latestRevisionDate: '2024-01-15T12:00:00Z',
+            });
+            expect(offline.downloadedPreviewPath).toBeNull();
         });
     });
 });

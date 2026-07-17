@@ -12,7 +12,6 @@ import { ImageVersion, ImageVersions } from '../mobile/imageVersions';
 import { OnlinePagePreview } from '../previews/onlinePagePreview';
 import { PageDataSource } from '../pageDataSource';
 import { OfflineRopewikiPageView } from './offlineRopewikiPageView';
-import { OnlinePageView } from './onlinePageView';
 import { registerOnlinePageViewParser } from './pageView';
 import { registerRopewikiPageViewParser, RopewikiPageView } from './ropewikiPageView';
 import { RouteType } from '../routes/routeType';
@@ -52,6 +51,11 @@ import {
     regionRoutesGeojsonRelativePath,
 } from '../../helpers/offlinePageBundlePaths';
 import type { OfflinePageView } from './offlinePageView';
+import {
+    type OnlineBetaSectionLookup,
+    OnlinePageView,
+} from './onlinePageView';
+import { keyBy, mapValues } from 'lodash';
 
 export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePageView {
     readonly fetchType = 'online' as const;
@@ -130,6 +134,27 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
         this.betaSections = betaSections;
         this.miniMap = miniMap;
         this.downloadFolder = downloadFolder;
+    }
+
+    toBetaSectionLookup(): OnlineBetaSectionLookup {
+        const identifiedSections = this.betaSections.filter(
+            (section): section is OnlineBetaSection & { id: string } =>
+                section.id != null,
+        );
+        const lookup: OnlineBetaSectionLookup = mapValues(
+            keyBy(identifiedSections, (section) => section.id),
+            (section) => ({
+                section,
+                imagesById: keyBy(section.images, (image) => image.id),
+            }),
+        );
+        if (this.bannerImage != null) {
+            lookup[''] = {
+                section: null,
+                imagesById: { [this.bannerImage.id]: this.bannerImage },
+            };
+        }
+        return lookup;
     }
 
     planDownloadPhases(): DownloadPhase[] {
@@ -279,6 +304,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
             image.toOffline(
                 getVersions(image.id)[ImageVersion.banner] ?? null,
                 getVersions(image.id)[ImageVersion.full] ?? null,
+                getVersions(image.id)[ImageVersion.preview] ?? null,
             );
 
         const offlineBannerImage = this.bannerImage == null ? null : toOfflineImage(this.bannerImage);
@@ -290,6 +316,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
                     section.text,
                     section.latestRevisionDate,
                     section.images.map((image) => toOfflineImage(image)),
+                    section.id,
                 ),
         );
 
@@ -380,6 +407,10 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
             );
         }
         r.betaSections = r.betaSections.map((item) => BetaSection.fromResponseBody(item, 'online'));
+        RopewikiPageView.assertUniqueBetaSectionIds(
+            r.betaSections as OnlineBetaSection[],
+            'OnlineRopewikiPageView',
+        );
 
         if (r.miniMap == null) {
             r.miniMap = null;
@@ -513,7 +544,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
         const slots: FetchImageFilesSlot[] = [];
         const collect = (image: OnlineBetaSectionImage): void => {
             const versions: FetchImageFilesSlot['versions'] = {
-                preview: image.bannerUrl,
+                preview: image.previewUrl,
                 banner: image.bannerUrl,
                 full: image.fullUrl,
             };
@@ -548,7 +579,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
 
         for (const slot of dependency.slots) {
             const resolveVersion = async (
-                version: ImageVersion.banner | ImageVersion.full,
+                version: ImageVersion.preview | ImageVersion.banner | ImageVersion.full,
                 url: string | null | undefined,
             ): Promise<string | null> => {
                 if (url == null || url.length === 0) {
@@ -561,6 +592,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
             };
 
             downloadedImageVersions[slot.imageId] = new ImageVersions({
+                preview: await resolveVersion(ImageVersion.preview, slot.versions.preview),
                 banner: await resolveVersion(ImageVersion.banner, slot.versions.banner),
                 full: await resolveVersion(ImageVersion.full, slot.versions.full),
             });

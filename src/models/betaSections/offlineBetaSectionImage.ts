@@ -4,6 +4,7 @@ export class OfflineBetaSectionImage extends BetaSectionImage {
     readonly fetchType = 'offline' as const;
     downloadedBannerPath: string | null;
     downloadedFullPath: string | null;
+    downloadedPreviewPath: string | null;
 
     constructor(
         order: number,
@@ -13,10 +14,12 @@ export class OfflineBetaSectionImage extends BetaSectionImage {
         linkUrl: string,
         caption: string | null,
         latestRevisionDate: Date,
+        downloadedPreviewPath: string | null = null,
     ) {
         super(order, id, linkUrl, caption, latestRevisionDate);
         this.downloadedBannerPath = downloadedBannerPath;
         this.downloadedFullPath = downloadedFullPath;
+        this.downloadedPreviewPath = downloadedPreviewPath;
     }
 
     static fromResult(result: unknown): OfflineBetaSectionImage {
@@ -27,6 +30,8 @@ export class OfflineBetaSectionImage extends BetaSectionImage {
         BetaSectionImage.normalizeCommonFields(r, 'OfflineBetaSectionImage', 'offline');
         BetaSectionImage.assertStringOrNull(r, 'downloadedBannerPath');
         BetaSectionImage.assertStringOrNull(r, 'downloadedFullPath');
+        if (r.downloadedPreviewPath === undefined) r.downloadedPreviewPath = null;
+        BetaSectionImage.assertStringOrNull(r, 'downloadedPreviewPath');
         if ('downloadBytes' in r && r.downloadBytes != null) {
             throw new Error('OfflineBetaSectionImage.downloadBytes is not supported');
         }

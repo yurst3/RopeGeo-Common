@@ -126,8 +126,16 @@ export { PageView } from './pageViews/pageView';
 export { RopewikiPageView as BaseRopewikiPageView } from './pageViews/ropewikiPageView';
 export { OnlineRopewikiPageView } from './pageViews/onlineRopewikiPageView';
 export { OfflineRopewikiPageView } from './pageViews/offlineRopewikiPageView';
-export type { OnlinePageView } from './pageViews/onlinePageView';
-export type { OfflinePageView } from './pageViews/offlinePageView';
+export type {
+    OnlinePageView,
+    OnlineBetaSectionLookup,
+    OnlineBetaSectionLookupEntry,
+} from './pageViews/onlinePageView';
+export type {
+    OfflinePageView,
+    OfflineBetaSectionLookup,
+    OfflineBetaSectionLookupEntry,
+} from './pageViews/offlinePageView';
 export { formatMeasurementValue } from './measurements/measurementValue';
 export { Measurement, FREEDOM_MEASUREMENT_SYSTEM } from './measurements/measurement';
 export type { MeasurementUnit } from './measurements/measurement';

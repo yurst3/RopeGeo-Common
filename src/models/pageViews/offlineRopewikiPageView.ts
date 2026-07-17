@@ -6,7 +6,10 @@ import { OfflineCenteredRegionMiniMap } from '../minimap/concrete/offlineCentere
 import { OfflinePageMiniMap } from '../minimap/concrete/offlinePageMiniMap';
 import { OfflinePagePreview } from '../previews/offlinePagePreview';
 import { PageDataSource } from '../pageDataSource';
-import { OfflinePageView } from './offlinePageView';
+import {
+    type OfflineBetaSectionLookup,
+    OfflinePageView,
+} from './offlinePageView';
 import { registerOfflinePageViewParser } from './pageView';
 import { registerRopewikiPageViewParser, RopewikiPageView } from './ropewikiPageView';
 import { RouteType } from '../routes/routeType';
@@ -16,6 +19,7 @@ import { hydrateOfflinePageWirePaths } from '../../helpers/hydrateOfflinePageWir
 import { MinMax } from '../measurements/minMax';
 import { LengthMeasurement } from '../measurements/lengthMeasurement';
 import { TimeMeasurement } from '../measurements/timeMeasurement';
+import { keyBy, mapValues } from 'lodash';
 
 export class OfflineRopewikiPageView extends RopewikiPageView implements OfflinePageView {
     readonly fetchType = 'offline' as const;
@@ -93,6 +97,27 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
         this.miniMap = miniMap;
     }
 
+    toBetaSectionLookup(): OfflineBetaSectionLookup {
+        const identifiedSections = this.betaSections.filter(
+            (section): section is OfflineBetaSection & { id: string } =>
+                section.id != null,
+        );
+        const lookup: OfflineBetaSectionLookup = mapValues(
+            keyBy(identifiedSections, (section) => section.id),
+            (section) => ({
+                section,
+                imagesById: keyBy(section.images, (image) => image.id),
+            }),
+        );
+        if (this.bannerImage != null) {
+            lookup[''] = {
+                section: null,
+                imagesById: { [this.bannerImage.id]: this.bannerImage },
+            };
+        }
+        return lookup;
+    }
+
     toPagePreview(): OfflinePagePreview {
         const mapData =
             this.miniMap != null && this.miniMap.miniMapType === MiniMapType.Page
@@ -141,6 +166,10 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
             );
         }
         r.betaSections = r.betaSections.map((item) => BetaSection.fromResponseBody(item, 'offline'));
+        RopewikiPageView.assertUniqueBetaSectionIds(
+            r.betaSections as OfflineBetaSection[],
+            'OfflineRopewikiPageView',
+        );
 
         if (r.miniMap == null) {
             r.miniMap = null;

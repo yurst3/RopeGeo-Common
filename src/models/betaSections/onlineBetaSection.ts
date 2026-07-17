@@ -12,12 +12,18 @@ export class OnlineBetaSection extends BetaSection {
         text: string,
         latestRevisionDate: Date,
         images?: OnlineBetaSectionImage[],
+        id: string | null = null,
     ) {
-        super(order, title, text, latestRevisionDate);
+        super(order, title, text, latestRevisionDate, id);
         this.images = Array.isArray(images) ? images : [];
     }
 
-    toOffline(downloadedImages: Record<string, { banner: string | null; full: string | null }>): OfflineBetaSection {
+    toOffline(
+        downloadedImages: Record<
+            string,
+            { preview?: string | null; banner: string | null; full: string | null }
+        >,
+    ): OfflineBetaSection {
         return new OfflineBetaSection(
             this.order,
             this.title,
@@ -27,8 +33,10 @@ export class OnlineBetaSection extends BetaSection {
                 image.toOffline(
                     downloadedImages[image.id]?.banner ?? null,
                     downloadedImages[image.id]?.full ?? null,
+                    downloadedImages[image.id]?.preview ?? null,
                 ),
             ),
+            this.id,
         );
     }
 

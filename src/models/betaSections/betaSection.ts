@@ -1,6 +1,15 @@
 import { FetchType } from '../fetchType';
 import { BetaSectionExcerpt } from './betaSectionExcerpt';
 import { BetaSectionImage } from './betaSectionImage';
+import {
+    fadeText,
+    isSafeTextBoundary,
+    listContext,
+    nextSentenceEnd,
+    previousSentenceStart,
+    visibleCharacters,
+} from './formatExcerptHtml';
+import { normalizeExcerptListHtml } from './normalizeExcerptHtml';
 
 const betaSectionParsers = new Map<FetchType, (body: unknown) => BetaSection>();
 
@@ -17,17 +26,21 @@ export abstract class BetaSection {
     title: string;
     text: string;
     latestRevisionDate: Date;
+    /** Stable database identity when supplied by the page-view API. */
+    id: string | null;
 
     protected constructor(
         order: number,
         title: string,
         text: string,
         latestRevisionDate: Date,
+        id: string | null = null,
     ) {
         this.order = order;
         this.title = title;
         this.text = text;
         this.latestRevisionDate = new Date(latestRevisionDate);
+        this.id = id;
     }
 
     /**
@@ -43,6 +56,50 @@ export abstract class BetaSection {
             return new BetaSectionExcerpt(excerptText, undefined, undefined, confidence);
         }
         return new BetaSectionExcerpt(excerptText, start, start + excerptText.length, confidence);
+    }
+
+    /**
+     * Renders an excerpt with nearby section context when its offsets still
+     * match this section, otherwise falls back to the excerpt alone.
+     */
+    toExcerptHtml(excerpt: BetaSectionExcerpt): string {
+        const validOffsets =
+            excerpt.text != null &&
+            Number.isInteger(excerpt.start) &&
+            Number.isInteger(excerpt.end) &&
+            (excerpt.start as number) >= 0 &&
+            (excerpt.end as number) > (excerpt.start as number) &&
+            (excerpt.end as number) <= this.text.length &&
+            this.text.slice(excerpt.start, excerpt.end) === excerpt.text &&
+            isSafeTextBoundary(this.text, excerpt.start as number) &&
+            isSafeTextBoundary(this.text, excerpt.end as number);
+        if (!validOffsets) return excerpt.toHtml();
+
+        const excerptStart = excerpt.start as number;
+        const excerptEnd = excerpt.end as number;
+        const characters = visibleCharacters(this.text);
+        const structuredContext = listContext(
+            this.text,
+            excerptStart,
+            excerptEnd,
+            characters,
+        );
+        const before =
+            structuredContext?.before ??
+            this.text.slice(
+                previousSentenceStart(this.text, excerptStart, characters),
+                excerptStart,
+            );
+        const after =
+            structuredContext?.after ??
+            this.text.slice(
+                excerptEnd,
+                nextSentenceEnd(this.text, excerptEnd, characters),
+            );
+
+        return normalizeExcerptListHtml(
+            `${fadeText(before, 'toward-end')}${excerpt.text}${fadeText(after, 'toward-start')}`,
+        );
     }
 
     static fromResponseBody(body: unknown, fetchType?: FetchType): BetaSection {
@@ -116,12 +173,29 @@ export abstract class BetaSection {
         BetaSection.assertString(obj, 'title');
         BetaSection.assertString(obj, 'text');
         BetaSection.assertIso8601DateString(obj, 'latestRevisionDate');
+        BetaSection.assertNullableNonEmptyString(obj, 'id');
         if (obj.fetchType !== expectedFetchType) {
             throw new Error(
                 `${context}.fetchType must be "${expectedFetchType}", got: ${JSON.stringify(obj.fetchType)}`,
             );
         }
         obj.latestRevisionDate = new Date(obj.latestRevisionDate as string);
+    }
+
+    private static assertNullableNonEmptyString(
+        obj: Record<string, unknown>,
+        key: string,
+    ): void {
+        const value = obj[key];
+        if (value === undefined || value === null) {
+            obj[key] = null;
+            return;
+        }
+        if (typeof value !== 'string' || value.trim().length === 0) {
+            throw new Error(
+                `BetaSection.${key} must be a non-empty string or null, got: ${JSON.stringify(value)}`,
+            );
+        }
     }
 
     protected static parseImagesArray(
@@ -133,6 +207,29 @@ export abstract class BetaSection {
         if (!Array.isArray(v)) {
             throw new Error(`BetaSection.${key} must be an array, got: ${typeof v}`);
         }
-        return v.map((item) => BetaSectionImage.fromResult(item, expectedFetchType));
+        const images = v.map((item) =>
+            BetaSectionImage.fromResult(item, expectedFetchType),
+        );
+        BetaSection.assertUniqueImageIds(images, obj.id);
+        return images;
+    }
+
+    protected static assertUniqueImageIds(
+        images: BetaSectionImage[],
+        sectionId: unknown,
+    ): void {
+        const seen = new Set<string>();
+        for (const image of images) {
+            if (seen.has(image.id)) {
+                const sectionLabel =
+                    typeof sectionId === 'string' && sectionId.length > 0
+                        ? sectionId
+                        : 'unknown';
+                throw new Error(
+                    `Duplicate image id ${image.id} in beta section ${sectionLabel}`,
+                );
+            }
+            seen.add(image.id);
+        }
     }
 }

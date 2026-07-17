@@ -7,6 +7,17 @@ import type { DownloadPhase } from '../../download/downloadPhase';
 import type { DownloadJob } from '../../download/downloadJob';
 import type { DownloadJobConfig, DownloadPlatformHarness, DownloadTaskDependency } from '../../download/types';
 import type { OnlineMiniMap } from '../minimap/abstract/onlineMiniMap';
+import type { OnlineBetaSection } from '../betaSections/onlineBetaSection';
+import type { OnlineBetaSectionImage } from '../betaSections/onlineBetaSectionImage';
+
+export type OnlineBetaSectionLookupEntry = {
+    /** Null for page-level images, which use the empty relevant-context key. */
+    section: OnlineBetaSection | null;
+    imagesById: Record<string, OnlineBetaSectionImage>;
+};
+
+/** Relevant-context lookup keyed by beta-section id (`""` for page-level images). */
+export type OnlineBetaSectionLookup = Record<string, OnlineBetaSectionLookupEntry>;
 
 export interface OnlinePageView {
     readonly fetchType: 'online';
@@ -15,6 +26,7 @@ export interface OnlinePageView {
     readonly pageViewType: PageViewType;
     readonly miniMap: OnlineMiniMap | null;
     readonly downloadFolder: string | null;
+    toBetaSectionLookup(): OnlineBetaSectionLookup;
     planDownloadPhases(): DownloadPhase[];
     getDependenciesForPhases(phases: DownloadPhase[]): Record<string, DownloadTaskDependency>;
     toOfflineFromExtractedBundle(

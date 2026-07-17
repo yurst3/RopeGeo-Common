@@ -289,6 +289,22 @@ export abstract class RopewikiPageView {
         }
     }
 
+    protected static assertUniqueBetaSectionIds(
+        sections: { id: string | null }[],
+        context: string,
+    ): void {
+        const seen = new Set<string>();
+        for (const section of sections) {
+            if (section.id == null) continue;
+            if (seen.has(section.id)) {
+                throw new Error(
+                    `Duplicate beta-section id in ${context}: ${section.id}`,
+                );
+            }
+            seen.add(section.id);
+        }
+    }
+
     protected static parseCoordinateComponent(value: unknown): number | null {
         if (typeof value === 'number' && Number.isFinite(value)) {
             return value;

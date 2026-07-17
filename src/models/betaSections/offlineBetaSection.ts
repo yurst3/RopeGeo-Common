@@ -11,8 +11,9 @@ export class OfflineBetaSection extends BetaSection {
         text: string,
         latestRevisionDate: Date,
         images?: OfflineBetaSectionImage[],
+        id: string | null = null,
     ) {
-        super(order, title, text, latestRevisionDate);
+        super(order, title, text, latestRevisionDate, id);
         this.images = Array.isArray(images) ? images : [];
     }
 

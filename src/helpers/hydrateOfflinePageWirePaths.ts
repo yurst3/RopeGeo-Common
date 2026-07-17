@@ -1,6 +1,7 @@
 import { joinPageRootUri } from './offlinePageBundlePaths';
 
 const PATH_LIKE_KEYS = new Set([
+    'downloadedPreviewPath',
     'downloadedBannerPath',
     'downloadedFullPath',
     'offlineTilesTemplate',

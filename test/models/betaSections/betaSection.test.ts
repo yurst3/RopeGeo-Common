@@ -13,6 +13,7 @@ function validImageBody(): Record<string, unknown> {
         fetchType: 'online',
         order: 0,
         id: '550e8400-e29b-41d4-a716-446655440001',
+        previewUrl: 'https://example.com/preview.jpg',
         bannerUrl: 'https://example.com/banner.jpg',
         fullUrl: 'https://example.com/full.jpg',
         linkUrl: 'https://example.com/page',
@@ -25,6 +26,7 @@ function validImageBody(): Record<string, unknown> {
 function getValidBody(): Record<string, unknown> {
     return {
         fetchType: 'online',
+        id: 'section-id',
         order: 0,
         title: 'Approach',
         text: 'Beta text here.',
@@ -54,6 +56,7 @@ describe('BetaSection', () => {
                 [img],
             );
             expect(section.order).toBe(1);
+            expect(section.id).toBeNull();
             expect(section.title).toBe('Descent');
             expect(section.text).toBe('Descent beta.');
             expect(section.images).toHaveLength(1);
@@ -161,15 +164,175 @@ describe('BetaSection', () => {
         });
     });
 
+    describe('excerpt HTML', () => {
+        const withoutFadeSpans = (html: string) =>
+            html
+                .replace(/<span style="opacity: [^"]+">/g, '')
+                .replace(/<\/span>/g, '');
+
+        it('normalizes excerpt-only list fragments', () => {
+            expect(
+                new BetaSectionExcerpt('<li>One</li>', undefined, undefined, 1).toHtml(),
+            ).toBe('<ul><li>One</li></ul>');
+            expect(
+                new BetaSectionExcerpt('<ol><li>One</li>', undefined, undefined, 1).toHtml(),
+            ).toBe('<ol><li>One</li></ol>');
+            expect(
+                new BetaSectionExcerpt('<li>One</li></ol>', undefined, undefined, 1).toHtml(),
+            ).toBe('<ul><li>One</li></ul>');
+            expect(
+                new BetaSectionExcerpt('<ul><li>One</li>', undefined, undefined, 1).toHtml(),
+            ).toBe('<ul><li>One</li></ul>');
+            expect(
+                new BetaSectionExcerpt('<li>One</li></ul>', undefined, undefined, 1).toHtml(),
+            ).toBe('<ul><li>One</li></ul>');
+            expect(
+                new BetaSectionExcerpt(
+                    '<ol><li>One</li></ol>',
+                    undefined,
+                    undefined,
+                    1,
+                ).toHtml(),
+            ).toBe('<ol><li>One</li></ol>');
+        });
+
+        it('returns normalized excerpt-only HTML for missing or stale offsets', () => {
+            const section = new OnlineBetaSection(
+                0,
+                'Beta',
+                'Different text.',
+                new Date('2025-01-01Z'),
+            );
+            expect(
+                section.toExcerptHtml(
+                    new BetaSectionExcerpt('<li>Missing</li>', 0, 5, 1),
+                ),
+            ).toBe('<ul><li>Missing</li></ul>');
+            expect(
+                section.toExcerptHtml(
+                    new BetaSectionExcerpt('<li>Missing</li>', undefined, undefined, 1),
+                ),
+            ).toBe('<ul><li>Missing</li></ul>');
+        });
+
+        it('falls back when offsets cut through tags or entities', () => {
+            const text = 'Before <b>R1</b> and &amp; after.';
+            const section = new OnlineBetaSection(
+                0,
+                'Beta',
+                text,
+                new Date('2025-01-01Z'),
+            );
+            expect(
+                section.toExcerptHtml(
+                    new BetaSectionExcerpt('b>R1</b', text.indexOf('b>R1</b'), text.indexOf('b>R1</b') + 7, 1),
+                ),
+            ).toBe('b>R1</b');
+            const entityStart = text.indexOf('&amp;') + 1;
+            const entityExcerpt = 'amp; after.';
+            expect(
+                section.toExcerptHtml(
+                    new BetaSectionExcerpt(
+                        entityExcerpt,
+                        entityStart,
+                        entityStart + entityExcerpt.length,
+                        1,
+                    ),
+                ),
+            ).toBe(entityExcerpt);
+        });
+
+        it('expands prose to sentence boundaries without cutting words', () => {
+            const text =
+                'First sentence. Target phrase continues here. Third sentence.';
+            const section = new OnlineBetaSection(
+                0,
+                'Beta',
+                text,
+                new Date('2025-01-01Z'),
+            );
+            const excerpt = section.toExcerpt('Target phrase', 1);
+            const html = section.toExcerptHtml(excerpt);
+            expect(withoutFadeSpans(html)).toBe(
+                'First sentence. Target phrase continues here. ',
+            );
+            expect(html).toContain('opacity: 0.30');
+            expect(html).toContain('opacity: 0.70');
+        });
+
+        it('does not treat common abbreviations or decimals as sentence boundaries', () => {
+            const text =
+                'Intro sentence. Use care, e.g. around 2.5 feet of loose rock. Target detail.';
+            const section = new OnlineBetaSection(
+                0,
+                'Beta',
+                text,
+                new Date('2025-01-01Z'),
+            );
+            const excerpt = section.toExcerpt('around 2.5 feet', 1);
+            expect(withoutFadeSpans(section.toExcerptHtml(excerpt))).toBe(
+                'Use care, e.g. around 2.5 feet of loose rock. ',
+            );
+        });
+
+        it('treats subheaders as transparent when finding list context', () => {
+            const text =
+                'This is an example sentence.\n<h3>List of cool things</h3>\n<ul><li>some list item</li><li>another list item</li><li>a third item</li></ul>';
+            const section = new OnlineBetaSection(
+                0,
+                'Beta',
+                text,
+                new Date('2025-01-01Z'),
+            );
+            const excerpt = section.toExcerpt('<li>some list item</li>', 1);
+            const html = withoutFadeSpans(section.toExcerptHtml(excerpt));
+            expect(html).toBe(
+                'This is an example sentence.\n<h3>List of cool things</h3>\n<ul><li>some list item</li><li>another list item</li></ul>',
+            );
+        });
+
+        it('includes one adjacent list item on each side', () => {
+            const text =
+                '<ol><li>one</li><li>two</li><li>three</li><li>four</li></ol>';
+            const section = new OnlineBetaSection(
+                0,
+                'Beta',
+                text,
+                new Date('2025-01-01Z'),
+            );
+            const excerpt = section.toExcerpt('<li>two</li><li>three</li>', 1);
+            expect(withoutFadeSpans(section.toExcerptHtml(excerpt))).toBe(
+                '<ol><li>one</li><li>two</li><li>three</li><li>four</li></ol>',
+            );
+        });
+
+        it('uses a following prose sentence at the end of a list', () => {
+            const text =
+                '<ul><li>one</li><li>two</li></ul> Following sentence. Later sentence.';
+            const section = new OnlineBetaSection(
+                0,
+                'Beta',
+                text,
+                new Date('2025-01-01Z'),
+            );
+            const excerpt = section.toExcerpt('<li>two</li>', 1);
+            expect(withoutFadeSpans(section.toExcerptHtml(excerpt))).toBe(
+                '<ul><li>one</li><li>two</li></ul> Following sentence. ',
+            );
+        });
+    });
+
     describe('fromResponseBody', () => {
         it('returns instance with validated and parsed fields', () => {
             const section = OnlineBetaSection.fromResponseBody(getValidBody());
             expect(section).toBeInstanceOf(BetaSection);
+            expect(section.id).toBe('section-id');
             expect(section.order).toBe(0);
             expect(section.title).toBe('Approach');
             expect(section.text).toBe('Beta text here.');
             expect(section.images).toHaveLength(1);
             expect(section.images[0]).toBeInstanceOf(BetaSectionImage);
+            expect(section.images[0].previewUrl).toBe('https://example.com/preview.jpg');
             expect(section.images[0].bannerUrl).toBe('https://example.com/banner.jpg');
             expect(section.images[0].fullUrl).toBe('https://example.com/full.jpg');
             expect(section.latestRevisionDate).toEqual(new Date('2024-01-15T12:00:00Z'));
@@ -200,6 +363,32 @@ describe('BetaSection', () => {
             expect(() =>
                 BetaSection.fromResponseBody({ ...getValidBody(), order: '0' }),
             ).toThrow('BetaSection.order must be a number');
+        });
+
+        it('accepts missing legacy ids as null and rejects invalid ids', () => {
+            const legacy = OnlineBetaSection.fromResponseBody({
+                ...getValidBody(),
+                id: undefined,
+            });
+            expect(legacy.id).toBeNull();
+            expect(() =>
+                OnlineBetaSection.fromResponseBody({
+                    ...getValidBody(),
+                    id: '   ',
+                }),
+            ).toThrow('BetaSection.id must be a non-empty string or null');
+        });
+
+        it('throws when images contain duplicate ids', () => {
+            const image = validImageBody();
+            expect(() =>
+                OnlineBetaSection.fromResponseBody({
+                    ...getValidBody(),
+                    images: [image, { ...image, order: 1 }],
+                }),
+            ).toThrow(
+                'Duplicate image id 550e8400-e29b-41d4-a716-446655440001 in beta section section-id',
+            );
         });
 
         it('throws when title is not a string', () => {
@@ -260,6 +449,7 @@ describe('BetaSection', () => {
                         fetchType: 'offline',
                         order: 0,
                         id: '550e8400-e29b-41d4-a716-446655440001',
+                        downloadedPreviewPath: '/tmp/preview.avif',
                         downloadedBannerPath: '/tmp/banner.avif',
                         downloadedFullPath: '/tmp/full.avif',
                         linkUrl: 'https://example.com/page',
