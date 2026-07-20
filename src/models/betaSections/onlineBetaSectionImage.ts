@@ -20,8 +20,9 @@ export class OnlineBetaSectionImage extends BetaSectionImage {
         latestRevisionDate: Date,
         downloadBytes: DownloadBytes | null,
         previewUrl: string | null = null,
+        authors: string[] | null = null,
     ) {
-        super(order, id, linkUrl, caption, latestRevisionDate);
+        super(order, id, linkUrl, caption, latestRevisionDate, authors);
         this.bannerUrl = bannerUrl;
         this.fullUrl = fullUrl;
         this.downloadBytes = downloadBytes;
@@ -42,6 +43,7 @@ export class OnlineBetaSectionImage extends BetaSectionImage {
             this.caption,
             this.latestRevisionDate,
             downloadedPreviewPath,
+            this.authors,
         );
     }
 

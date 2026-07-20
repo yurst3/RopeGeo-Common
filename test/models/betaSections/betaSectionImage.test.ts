@@ -44,6 +44,7 @@ describe('BetaSectionImage', () => {
             expect(img.caption).toBe('Caption text');
             expect(img.latestRevisionDate).toEqual(new Date('2024-01-15T12:00:00Z'));
             expect(img.downloadBytes).toBe(db);
+            expect(img.authors).toBeNull();
         });
 
         it('normalizes latestRevisionDate to Date', () => {
@@ -81,6 +82,7 @@ describe('BetaSectionImage', () => {
             expect(img.downloadBytes?.preview).toBe(100);
             expect(img.downloadBytes?.banner).toBe(2000);
             expect(img.downloadBytes?.full).toBe(300000);
+            expect(img.authors).toBeNull();
         });
 
         it('accepts null values for previewUrl, bannerUrl, fullUrl, caption, and downloadBytes', () => {
@@ -97,6 +99,41 @@ describe('BetaSectionImage', () => {
             expect(img.fullUrl).toBeNull();
             expect(img.caption).toBeNull();
             expect(img.downloadBytes).toBeNull();
+            expect(img.authors).toBeNull();
+        });
+
+        it('parses authors array when present', () => {
+            const img = OnlineBetaSectionImage.fromResult({
+                ...getValidBody(),
+                authors: ['Alice', 'Bob'],
+            });
+            expect(img.authors).toEqual(['Alice', 'Bob']);
+        });
+
+        it('throws when authors is not an array of strings', () => {
+            expect(() =>
+                OnlineBetaSectionImage.fromResult({ ...getValidBody(), authors: 'Alice' }),
+            ).toThrow(/BetaSectionImage\.authors must be an array/);
+            expect(() =>
+                OnlineBetaSectionImage.fromResult({ ...getValidBody(), authors: [1] }),
+            ).toThrow(/BetaSectionImage\.authors\[0\] must be a string/);
+        });
+
+        it('toOffline preserves authors', () => {
+            const img = new OnlineBetaSectionImage(
+                1,
+                'img-id-1',
+                'https://example.com/banner.jpg',
+                'https://example.com/full.jpg',
+                'https://example.com/link',
+                'Caption',
+                new Date('2024-01-15T12:00:00Z'),
+                null,
+                null,
+                ['Ryancomet'],
+            );
+            const offline = img.toOffline('/banner', '/full', '/preview');
+            expect(offline.authors).toEqual(['Ryancomet']);
         });
 
         it('throws when result is null', () => {

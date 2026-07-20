@@ -98,6 +98,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
         miniMap: OnlinePageMiniMap | OnlineCenteredRegionMiniMap | null,
         coordinates: { lat: number; lon: number } | null,
         downloadFolder: string | null = null,
+        authors: string[] | null = null,
     ) {
         super(
             id,
@@ -129,6 +130,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
             months,
             latestRevisionDate,
             coordinates,
+            authors,
         );
         this.bannerImage = bannerImage;
         this.betaSections = betaSections;
@@ -361,6 +363,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
             offlineSections,
             offlineMiniMap,
             this.coordinates,
+            this.authors,
         );
     }
 

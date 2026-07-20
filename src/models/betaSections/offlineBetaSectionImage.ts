@@ -15,8 +15,9 @@ export class OfflineBetaSectionImage extends BetaSectionImage {
         caption: string | null,
         latestRevisionDate: Date,
         downloadedPreviewPath: string | null = null,
+        authors: string[] | null = null,
     ) {
-        super(order, id, linkUrl, caption, latestRevisionDate);
+        super(order, id, linkUrl, caption, latestRevisionDate, authors);
         this.downloadedBannerPath = downloadedBannerPath;
         this.downloadedFullPath = downloadedFullPath;
         this.downloadedPreviewPath = downloadedPreviewPath;

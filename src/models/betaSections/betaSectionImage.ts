@@ -18,6 +18,8 @@ export abstract class BetaSectionImage {
     linkUrl: string;
     caption: string | null;
     latestRevisionDate: Date;
+    /** File contributors; null when not resolved. */
+    authors: string[] | null;
 
     protected constructor(
         order: number,
@@ -25,12 +27,14 @@ export abstract class BetaSectionImage {
         linkUrl: string,
         caption: string | null,
         latestRevisionDate: Date,
+        authors: string[] | null = null,
     ) {
         this.order = order;
         this.id = id;
         this.linkUrl = linkUrl;
         this.caption = caption;
         this.latestRevisionDate = new Date(latestRevisionDate);
+        this.authors = authors != null ? authors.slice() : null;
     }
 
     static fromResult(result: unknown, fetchType?: FetchType): BetaSectionImage {
@@ -98,6 +102,27 @@ export abstract class BetaSectionImage {
         }
     }
 
+    protected static assertNullableStringArray(
+        obj: Record<string, unknown>,
+        key: string,
+    ): void {
+        const v = obj[key];
+        if (v === undefined || v === null) {
+            obj[key] = null;
+            return;
+        }
+        if (!Array.isArray(v)) {
+            throw new Error(
+                `BetaSectionImage.${key} must be an array of strings or null, got: ${typeof v}`,
+            );
+        }
+        for (let i = 0; i < v.length; i++) {
+            if (typeof v[i] !== 'string') {
+                throw new Error(`BetaSectionImage.${key}[${i}] must be a string`);
+            }
+        }
+    }
+
     protected static assertDownloadBytesOrNull(
         obj: Record<string, unknown>,
         key: string,
@@ -138,6 +163,7 @@ export abstract class BetaSectionImage {
         BetaSectionImage.assertString(obj, 'linkUrl');
         BetaSectionImage.assertStringOrNull(obj, 'caption');
         BetaSectionImage.assertIso8601DateString(obj, 'latestRevisionDate');
+        BetaSectionImage.assertNullableStringArray(obj, 'authors');
         const rawFetchType = obj.fetchType;
         if (rawFetchType !== expectedFetchType) {
             throw new Error(

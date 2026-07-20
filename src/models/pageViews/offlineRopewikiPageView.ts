@@ -60,6 +60,7 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
         betaSections: OfflineBetaSection[],
         miniMap: OfflinePageMiniMap | OfflineCenteredRegionMiniMap | null,
         coordinates: { lat: number; lon: number } | null,
+        authors: string[] | null = null,
     ) {
         super(
             id,
@@ -91,6 +92,7 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
             months,
             latestRevisionDate,
             coordinates,
+            authors,
         );
         this.bannerImage = bannerImage;
         this.betaSections = betaSections;

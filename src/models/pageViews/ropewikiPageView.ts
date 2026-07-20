@@ -62,6 +62,8 @@ export abstract class RopewikiPageView {
     months: string[];
     latestRevisionDate: Date;
     coordinates: { lat: number; lon: number } | null;
+    /** Ropewiki page contributors; null when not resolved. */
+    authors: string[] | null;
 
     protected constructor(
         id: string,
@@ -93,6 +95,7 @@ export abstract class RopewikiPageView {
         months: string[],
         latestRevisionDate: Date,
         coordinates: { lat: number; lon: number } | null,
+        authors: string[] | null = null,
     ) {
         this.id = id;
         this.routeType = routeType;
@@ -126,6 +129,7 @@ export abstract class RopewikiPageView {
             coordinates != null
                 ? { lat: coordinates.lat, lon: coordinates.lon }
                 : null;
+        this.authors = authors != null ? authors.slice() : null;
     }
 
     static fromResult(result: unknown, fetchType?: FetchType): RopewikiPageView {
@@ -166,6 +170,7 @@ export abstract class RopewikiPageView {
         RopewikiPageView.assertStringArray(r, 'months');
         RopewikiPageView.assertIso8601DateString(r, 'latestRevisionDate');
         RopewikiPageView.assertNullableCoordinates(r, 'coordinates');
+        RopewikiPageView.assertNullableStringArray(r, 'authors');
         if (r.fetchType !== expectedFetchType) {
             throw new Error(
                 `${context}.fetchType must be "${expectedFetchType}", got: ${JSON.stringify(r.fetchType)}`,
@@ -369,6 +374,27 @@ export abstract class RopewikiPageView {
         const v = obj[key];
         if (!Array.isArray(v)) {
             throw new Error(`RopewikiPageView.${key} must be an array, got: ${typeof v}`);
+        }
+        for (let i = 0; i < v.length; i++) {
+            if (typeof v[i] !== 'string') {
+                throw new Error(`RopewikiPageView.${key}[${i}] must be a string`);
+            }
+        }
+    }
+
+    protected static assertNullableStringArray(
+        obj: Record<string, unknown>,
+        key: string,
+    ): void {
+        const v = obj[key];
+        if (v === undefined || v === null) {
+            obj[key] = null;
+            return;
+        }
+        if (!Array.isArray(v)) {
+            throw new Error(
+                `RopewikiPageView.${key} must be an array of strings or null, got: ${typeof v}`,
+            );
         }
         for (let i = 0; i < v.length; i++) {
             if (typeof v[i] !== 'string') {

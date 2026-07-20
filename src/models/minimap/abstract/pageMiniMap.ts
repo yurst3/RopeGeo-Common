@@ -30,6 +30,8 @@ export abstract class PageMiniMap extends MiniMap {
     pointLayerId: string;
     bounds: Bounds;
     legend?: Record<string, LegendItem>;
+    /** Map-file contributors; null when not resolved. */
+    authors: string[] | null;
 
     protected constructor(
         polyLineLayerId: string,
@@ -38,6 +40,7 @@ export abstract class PageMiniMap extends MiniMap {
         title: string,
         mapDataId: string | null = null,
         legend?: Record<string, LegendItem>,
+        authors: string[] | null = null,
     ) {
         super(title);
         this.mapDataId = mapDataId;
@@ -45,6 +48,7 @@ export abstract class PageMiniMap extends MiniMap {
         this.pointLayerId = pointLayerId;
         this.bounds = bounds;
         this.legend = legend;
+        this.authors = authors != null ? authors.slice() : null;
     }
 
     getBounds(): Bounds {
@@ -106,6 +110,7 @@ export abstract class PageMiniMap extends MiniMap {
             r.legend = LegendItem.legendRecordFromResult(r.legend, `${context}.legend`);
         }
         PageMiniMap.assertNullableMapDataId(r, 'mapDataId');
+        PageMiniMap.assertNullableStringArray(r, 'authors');
     }
 
     protected static assertNullableMapDataId(obj: Record<string, unknown>, key: string): void {
@@ -118,6 +123,27 @@ export abstract class PageMiniMap extends MiniMap {
             throw new Error(
                 `PageMiniMap.${key} must be a non-empty string or null, got: ${typeof v === 'string' ? 'empty string' : typeof v}`,
             );
+        }
+    }
+
+    protected static assertNullableStringArray(
+        obj: Record<string, unknown>,
+        key: string,
+    ): void {
+        const v = obj[key];
+        if (v === undefined || v === null) {
+            obj[key] = null;
+            return;
+        }
+        if (!Array.isArray(v)) {
+            throw new Error(
+                `PageMiniMap.${key} must be an array of strings or null, got: ${typeof v}`,
+            );
+        }
+        for (let i = 0; i < v.length; i++) {
+            if (typeof v[i] !== 'string') {
+                throw new Error(`PageMiniMap.${key}[${i}] must be a string`);
+            }
         }
     }
 

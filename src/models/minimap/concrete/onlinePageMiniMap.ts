@@ -21,8 +21,9 @@ export class OnlinePageMiniMap extends PageMiniMap implements OnlineMiniMap {
         tileTotalBytes: number,
         mapDataId: string | null = null,
         legend?: Record<string, LegendItem>,
+        authors: string[] | null = null,
     ) {
-        super(polyLineLayerId, pointLayerId, bounds, title, mapDataId, legend);
+        super(polyLineLayerId, pointLayerId, bounds, title, mapDataId, legend, authors);
         this.onlineTilesTemplate = onlineTilesTemplate;
         this.tileCount = tileCount;
         this.tileTotalBytes = tileTotalBytes;
@@ -37,6 +38,7 @@ export class OnlinePageMiniMap extends PageMiniMap implements OnlineMiniMap {
             this.title,
             this.mapDataId,
             this.legend,
+            this.authors,
         );
     }
 

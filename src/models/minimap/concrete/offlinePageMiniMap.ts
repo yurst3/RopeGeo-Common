@@ -15,8 +15,9 @@ export class OfflinePageMiniMap extends PageMiniMap implements OfflineMiniMap {
         title: string,
         mapDataId: string | null = null,
         legend?: Record<string, LegendItem>,
+        authors: string[] | null = null,
     ) {
-        super(polyLineLayerId, pointLayerId, bounds, title, mapDataId, legend);
+        super(polyLineLayerId, pointLayerId, bounds, title, mapDataId, legend, authors);
         this.offlineTilesTemplate = offlineTilesTemplate;
     }
 
@@ -35,6 +36,7 @@ export class OfflinePageMiniMap extends PageMiniMap implements OfflineMiniMap {
                 west: this.bounds.west,
             },
             title: this.title,
+            authors: this.authors,
         };
         if (this.legend !== undefined) {
             plain.legend = Object.fromEntries(

@@ -176,6 +176,36 @@ describe('PageMiniMap', () => {
         expect(m.pointLayerId).toBe('Points');
         expect(m.bounds.north).toBe(39.5);
         expect(m.title).toBe('T');
+        expect(m.authors).toBeNull();
+    });
+
+    it('parses authors when present', () => {
+        const m = PageMiniMap.fromResult({
+            miniMapType: MiniMapType.Page,
+            fetchType: 'online',
+            title: 'T',
+            polyLineLayerId: 'PolyLines',
+            pointLayerId: 'Points',
+            onlineTilesTemplate: 'https://api.example.com/tiles/u/{z}/{x}/{y}.pbf',
+            bounds: validBounds,
+            authors: ['Bjp', 'Lucach'],
+        });
+        expect(m.authors).toEqual(['Bjp', 'Lucach']);
+    });
+
+    it('throws when authors is invalid', () => {
+        expect(() =>
+            PageMiniMap.fromResult({
+                miniMapType: MiniMapType.Page,
+                fetchType: 'online',
+                title: 'T',
+                polyLineLayerId: 'PolyLines',
+                pointLayerId: 'Points',
+                onlineTilesTemplate: 'https://api.example.com/tiles/u/{z}/{x}/{y}.pbf',
+                bounds: validBounds,
+                authors: [1],
+            }),
+        ).toThrow(/PageMiniMap\.authors\[0\] must be a string/);
     });
 
     it('throws when title empty', () => {

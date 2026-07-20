@@ -96,6 +96,37 @@ function onlineResult(miniMap: Record<string, unknown> | null = null): Record<st
 }
 
 describe('RopewikiPageView models', () => {
+    it('defaults authors to null when omitted from wire payload', () => {
+        const view = OnlineRopewikiPageView.fromResult(onlineResult());
+        expect(view.authors).toBeNull();
+        expect(view.bannerImage?.authors).toBeNull();
+        expect(view.betaSections[0]?.images[0]?.authors).toBeNull();
+    });
+
+    it('parses authors on page, images, and page minimap', () => {
+        const wire = onlineResult({
+            miniMapType: MiniMapType.Page,
+            fetchType: 'online',
+            title: 'Map',
+            polyLineLayerId: 'PolyLines',
+            pointLayerId: 'Points',
+            onlineTilesTemplate: 'https://api.example.com/{z}/{x}/{y}.pbf',
+            bounds: { north: 1, south: 0, east: 1, west: 0 },
+            authors: ['MapAuthor'],
+        });
+        wire.authors = ['PageA', 'PageB'];
+        (wire.bannerImage as Record<string, unknown>).authors = ['BannerAuthor'];
+        const section = (wire.betaSections as Record<string, unknown>[])[0]!;
+        const image = (section.images as Record<string, unknown>[])[0]!;
+        image.authors = ['ImageAuthor'];
+
+        const view = OnlineRopewikiPageView.fromResult(wire);
+        expect(view.authors).toEqual(['PageA', 'PageB']);
+        expect(view.bannerImage?.authors).toEqual(['BannerAuthor']);
+        expect(view.betaSections[0]?.images[0]?.authors).toEqual(['ImageAuthor']);
+        expect((view.miniMap as { authors: string[] | null }).authors).toEqual(['MapAuthor']);
+    });
+
     it('hydrates length/time fields from numbers, objects, and ranges, and round-trips', () => {
         const wire = {
             ...onlineResult(),
