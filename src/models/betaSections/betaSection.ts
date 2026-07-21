@@ -8,17 +8,19 @@ import {
     previousSentenceStart,
     visibleCharacters,
 } from './formatExcerptHtml';
-import { normalizeExcerptListHtmlParts } from './normalizeExcerptHtml';
+import { normalizeExcerptListHtml } from './normalizeExcerptHtml';
 
 /**
  * An excerpt split into its verbatim `body` and the surrounding section
- * context. Consumers render `before` and `after` de-emphasized (e.g. faded)
- * relative to `body`; concatenating the three yields well-formed HTML.
+ * context. Each of `before`, `body`, and `after` is independently well-formed
+ * HTML, so consumers can render them as separate (e.g. stacked) blocks and
+ * de-emphasize the context relative to the body. `before`/`after` are omitted
+ * when there is no surrounding context (or it would be empty/whitespace).
  */
 export type ExcerptHtml = {
-    before: string;
+    before?: string;
     body: string;
-    after: string;
+    after?: string;
 };
 
 const betaSectionParsers = new Map<FetchType, (body: unknown) => BetaSection>();
@@ -83,7 +85,7 @@ export abstract class BetaSection {
             this.text.slice(excerpt.start, excerpt.end) === excerpt.text &&
             isSafeTextBoundary(this.text, excerpt.start as number) &&
             isSafeTextBoundary(this.text, excerpt.end as number);
-        if (!validOffsets) return { before: '', body: excerpt.toHtml(), after: '' };
+        if (!validOffsets) return { body: excerpt.toHtml() };
 
         const excerptStart = excerpt.start as number;
         const excerptEnd = excerpt.end as number;
@@ -94,24 +96,28 @@ export abstract class BetaSection {
             excerptEnd,
             characters,
         );
-        const before =
-            structuredContext?.before ??
-            this.text.slice(
-                previousSentenceStart(this.text, excerptStart, characters),
-                excerptStart,
-            );
-        const after =
-            structuredContext?.after ??
-            this.text.slice(
-                excerptEnd,
-                nextSentenceEnd(this.text, excerptEnd, characters),
-            );
-
-        return normalizeExcerptListHtmlParts({
-            before,
+        const parts = structuredContext ?? {
+            before: this.text
+                .slice(
+                    previousSentenceStart(this.text, excerptStart, characters),
+                    excerptStart,
+                )
+                .trim(),
             body: excerpt.text as string,
-            after,
-        });
+            after: this.text
+                .slice(excerptEnd, nextSentenceEnd(this.text, excerptEnd, characters))
+                .trim(),
+        };
+
+        // We have the source list here, so keep ordered lists ordered; their
+        // `start` ordinals are already aligned to the source by `listContext`.
+        const options = { preserveOrderedLists: true };
+        const result: ExcerptHtml = { body: normalizeExcerptListHtml(parts.body, options) };
+        const before = normalizeExcerptListHtml(parts.before, options);
+        if (before.trim().length > 0) result.before = before;
+        const after = normalizeExcerptListHtml(parts.after, options);
+        if (after.trim().length > 0) result.after = after;
+        return result;
     }
 
     static fromResponseBody(body: unknown, fetchType?: FetchType): BetaSection {

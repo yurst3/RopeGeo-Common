@@ -202,12 +202,12 @@ describe('BetaSection', () => {
                 section.toExcerptHtml(
                     new BetaSectionExcerpt('<li>Missing</li>', 0, 5, 1),
                 ),
-            ).toEqual({ before: '', body: '<ul><li>Missing</li></ul>', after: '' });
+            ).toEqual({ body: '<ul><li>Missing</li></ul>' });
             expect(
                 section.toExcerptHtml(
                     new BetaSectionExcerpt('<li>Missing</li>', undefined, undefined, 1),
                 ),
-            ).toEqual({ before: '', body: '<ul><li>Missing</li></ul>', after: '' });
+            ).toEqual({ body: '<ul><li>Missing</li></ul>' });
         });
 
         it('falls back when offsets cut through tags or entities', () => {
@@ -222,7 +222,7 @@ describe('BetaSection', () => {
                 section.toExcerptHtml(
                     new BetaSectionExcerpt('b>R1</b', text.indexOf('b>R1</b'), text.indexOf('b>R1</b') + 7, 1),
                 ),
-            ).toEqual({ before: '', body: 'b>R1</b', after: '' });
+            ).toEqual({ body: 'b>R1</b' });
             const entityStart = text.indexOf('&amp;') + 1;
             const entityExcerpt = 'amp; after.';
             expect(
@@ -234,7 +234,21 @@ describe('BetaSection', () => {
                         1,
                     ),
                 ),
-            ).toEqual({ before: '', body: entityExcerpt, after: '' });
+            ).toEqual({ body: entityExcerpt });
+        });
+
+        it('omits before/after when there is no surrounding context', () => {
+            const section = new OnlineBetaSection(
+                0,
+                'Beta',
+                'Target phrase continues here.',
+                new Date('2025-01-01Z'),
+            );
+            const excerpt = section.toExcerpt('Target phrase', 1);
+            expect(section.toExcerptHtml(excerpt)).toEqual({
+                body: 'Target phrase',
+                after: 'continues here.',
+            });
         });
 
         it('expands prose to sentence boundaries without cutting words', () => {
@@ -248,9 +262,9 @@ describe('BetaSection', () => {
             );
             const excerpt = section.toExcerpt('Target phrase', 1);
             expect(section.toExcerptHtml(excerpt)).toEqual({
-                before: 'First sentence. ',
+                before: 'First sentence.',
                 body: 'Target phrase',
-                after: ' continues here. ',
+                after: 'continues here.',
             });
         });
 
@@ -265,9 +279,9 @@ describe('BetaSection', () => {
             );
             const excerpt = section.toExcerpt('around 2.5 feet', 1);
             expect(section.toExcerptHtml(excerpt)).toEqual({
-                before: 'Use care, e.g. ',
+                before: 'Use care, e.g.',
                 body: 'around 2.5 feet',
-                after: ' of loose rock. ',
+                after: 'of loose rock.',
             });
         });
 
@@ -282,9 +296,9 @@ describe('BetaSection', () => {
             );
             const excerpt = section.toExcerpt('<li>some list item</li>', 1);
             expect(section.toExcerptHtml(excerpt)).toEqual({
-                before: 'This is an example sentence.\n<h3>List of cool things</h3>\n<ul>',
-                body: '<li>some list item</li>',
-                after: '<li>another list item</li></ul>',
+                before: 'This is an example sentence.\n<h3>List of cool things</h3>',
+                body: '<ul><li>some list item</li></ul>',
+                after: '<ul><li>another list item</li></ul>',
             });
         });
 
@@ -299,10 +313,41 @@ describe('BetaSection', () => {
             );
             const excerpt = section.toExcerpt('<li>two</li><li>three</li>', 1);
             expect(section.toExcerptHtml(excerpt)).toEqual({
-                before: '<ol><li>one</li>',
-                body: '<li>two</li><li>three</li>',
-                after: '<li>four</li></ol>',
+                before: '<ol><li>one</li></ol>',
+                body: '<ol start="2"><li>two</li><li>three</li></ol>',
+                after: '<ol start="4"><li>four</li></ol>',
             });
+        });
+
+        it('aligns ordered-list excerpt numbering with a non-default source start', () => {
+            const text =
+                '<ol start="5"><li>five</li><li>six</li><li>seven</li></ol>';
+            const section = new OnlineBetaSection(
+                0,
+                'Beta',
+                text,
+                new Date('2025-01-01Z'),
+            );
+            const excerpt = section.toExcerpt('<li>six</li>', 1);
+            expect(section.toExcerptHtml(excerpt)).toEqual({
+                before: '<ol start="5"><li>five</li></ol>',
+                body: '<ol start="6"><li>six</li></ol>',
+                after: '<ol start="7"><li>seven</li></ol>',
+            });
+        });
+
+        it('keeps ol→ul conversion for excerpt-only text without offsets', () => {
+            const section = new OnlineBetaSection(
+                0,
+                'Beta',
+                'Unrelated text.',
+                new Date('2025-01-01Z'),
+            );
+            expect(
+                section.toExcerptHtml(
+                    new BetaSectionExcerpt('<li>orphan</li></ol>', undefined, undefined, 1),
+                ),
+            ).toEqual({ body: '<ul><li>orphan</li></ul>' });
         });
 
         it('uses a following prose sentence at the end of a list', () => {
@@ -316,9 +361,9 @@ describe('BetaSection', () => {
             );
             const excerpt = section.toExcerpt('<li>two</li>', 1);
             expect(section.toExcerptHtml(excerpt)).toEqual({
-                before: '<ul><li>one</li>',
-                body: '<li>two</li>',
-                after: '</ul> Following sentence. ',
+                before: '<ul><li>one</li></ul>',
+                body: '<ul><li>two</li></ul>',
+                after: 'Following sentence.',
             });
         });
     });

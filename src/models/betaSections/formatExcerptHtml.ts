@@ -225,12 +225,46 @@ function findContainingList(
     );
 }
 
+/** `ul` or `ol`, parsed from a list's opening tag. */
+function listContainerTag(openTag: string): 'ul' | 'ol' {
+    return /^<\s*ol\b/i.test(openTag) ? 'ol' : 'ul';
+}
+
+/** The 1-based ordinal an ordered list's first item renders as (`start`, default 1). */
+function listStartIndex(openTag: string): number {
+    const match = openTag.match(/\bstart\s*=\s*["']?\s*(-?\d+)/i);
+    const parsed = match != null ? Number.parseInt(match[1], 10) : Number.NaN;
+    return Number.isFinite(parsed) ? parsed : 1;
+}
+
+/**
+ * Wraps list items in a standalone `<ul>`/`<ol>`. Ordered lists carry a `start`
+ * attribute (whenever the first item is not ordinal 1) so numbering lines up
+ * with the source list even when the excerpt parts are rendered as separate
+ * blocks.
+ */
+function wrapListItems(
+    tag: 'ul' | 'ol',
+    itemsHtml: string,
+    startOrdinal: number,
+): string {
+    const startAttr = tag === 'ol' && startOrdinal !== 1 ? ` start="${startOrdinal}"` : '';
+    return `<${tag}${startAttr}>${itemsHtml}</${tag}>`;
+}
+
+/**
+ * When an excerpt is a run of list items, returns the excerpt and its adjacent
+ * context split into three independently well-formed HTML fragments. Each
+ * fragment stands on its own: the surrounding list items (or the sentence
+ * before/after the list) become complete lists/prose so they can be rendered as
+ * separate stacked blocks.
+ */
 export function listContext(
     html: string,
     excerptStart: number,
     excerptEnd: number,
     characters: VisibleCharacter[],
-): { before: string; after: string } | null {
+): { before: string; body: string; after: string } | null {
     const excerpt = html.slice(excerptStart, excerptEnd).trim();
     if (!/^<li\b/i.test(excerpt) || !/<\/li\s*>$/i.test(excerpt)) {
         return null;
@@ -239,6 +273,10 @@ export function listContext(
     const range = findContainingList(html, excerptStart, excerptEnd);
     if (range == null) return null;
 
+    const openTag = html.slice(range.openStart, range.openEnd);
+    const tag = listContainerTag(openTag);
+    // Ordinal of the list's first item so ordered excerpts line up with the source.
+    const baseOrdinal = tag === 'ol' ? listStartIndex(openTag) : 1;
     const listBody = html.slice(range.openEnd, range.closeStart);
     const items = [...listBody.matchAll(/<li\b[^>]*>[\s\S]*?<\/li\s*>/gi)].map(
         (match) => ({
@@ -248,28 +286,38 @@ export function listContext(
     );
     const previous = items.filter(({ end }) => end <= excerptStart).at(-1);
     const next = items.find(({ start }) => start >= excerptEnd);
+    const firstBodyIndex = items.findIndex(({ start }) => start >= excerptStart);
+
+    const body = wrapListItems(
+        tag,
+        html.slice(excerptStart, excerptEnd),
+        baseOrdinal + firstBodyIndex,
+    );
 
     const before =
         previous != null
-            ? html.slice(range.openStart, range.openEnd) +
-              html.slice(previous.start, previous.end)
-            : html.slice(
-                  previousSentenceStart(
-                      html,
+            ? wrapListItems(
+                  tag,
+                  html.slice(previous.start, previous.end),
+                  baseOrdinal + items.indexOf(previous),
+              )
+            : html
+                  .slice(
+                      previousSentenceStart(html, range.openStart, characters),
                       range.openStart,
-                      characters,
-                  ),
-                  range.openEnd,
-              );
+                  )
+                  .trim();
 
     const after =
         next != null
-            ? html.slice(next.start, next.end) +
-              html.slice(range.closeStart, range.closeEnd)
-            : html.slice(
-                  range.closeStart,
-                  nextSentenceEnd(html, range.closeEnd, characters),
-              );
+            ? wrapListItems(
+                  tag,
+                  html.slice(next.start, next.end),
+                  baseOrdinal + items.indexOf(next),
+              )
+            : html
+                  .slice(range.closeEnd, nextSentenceEnd(html, range.closeEnd, characters))
+                  .trim();
 
-    return { before, after };
+    return { before, body, after };
 }
