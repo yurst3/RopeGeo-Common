@@ -93,7 +93,7 @@ export { BetaSectionImage } from './betaSections/betaSectionImage';
 export { OnlineBetaSectionImage } from './betaSections/onlineBetaSectionImage';
 export { OfflineBetaSectionImage } from './betaSections/offlineBetaSectionImage';
 export { DownloadBytes } from './betaSections/downloadBytes';
-export { BetaSection } from './betaSections/betaSection';
+export { BetaSection, type ExcerptHtml } from './betaSections/betaSection';
 export { BetaSectionExcerpt } from './betaSections/betaSectionExcerpt';
 export { OnlineBetaSection } from './betaSections/onlineBetaSection';
 export { OfflineBetaSection } from './betaSections/offlineBetaSection';

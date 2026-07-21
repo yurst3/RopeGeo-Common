@@ -165,11 +165,6 @@ describe('BetaSection', () => {
     });
 
     describe('excerpt HTML', () => {
-        const withoutFadeSpans = (html: string) =>
-            html
-                .replace(/<span style="opacity: [^"]+">/g, '')
-                .replace(/<\/span>/g, '');
-
         it('normalizes excerpt-only list fragments', () => {
             expect(
                 new BetaSectionExcerpt('<li>One</li>', undefined, undefined, 1).toHtml(),
@@ -207,12 +202,12 @@ describe('BetaSection', () => {
                 section.toExcerptHtml(
                     new BetaSectionExcerpt('<li>Missing</li>', 0, 5, 1),
                 ),
-            ).toBe('<ul><li>Missing</li></ul>');
+            ).toEqual({ before: '', body: '<ul><li>Missing</li></ul>', after: '' });
             expect(
                 section.toExcerptHtml(
                     new BetaSectionExcerpt('<li>Missing</li>', undefined, undefined, 1),
                 ),
-            ).toBe('<ul><li>Missing</li></ul>');
+            ).toEqual({ before: '', body: '<ul><li>Missing</li></ul>', after: '' });
         });
 
         it('falls back when offsets cut through tags or entities', () => {
@@ -227,7 +222,7 @@ describe('BetaSection', () => {
                 section.toExcerptHtml(
                     new BetaSectionExcerpt('b>R1</b', text.indexOf('b>R1</b'), text.indexOf('b>R1</b') + 7, 1),
                 ),
-            ).toBe('b>R1</b');
+            ).toEqual({ before: '', body: 'b>R1</b', after: '' });
             const entityStart = text.indexOf('&amp;') + 1;
             const entityExcerpt = 'amp; after.';
             expect(
@@ -239,7 +234,7 @@ describe('BetaSection', () => {
                         1,
                     ),
                 ),
-            ).toBe(entityExcerpt);
+            ).toEqual({ before: '', body: entityExcerpt, after: '' });
         });
 
         it('expands prose to sentence boundaries without cutting words', () => {
@@ -252,12 +247,11 @@ describe('BetaSection', () => {
                 new Date('2025-01-01Z'),
             );
             const excerpt = section.toExcerpt('Target phrase', 1);
-            const html = section.toExcerptHtml(excerpt);
-            expect(withoutFadeSpans(html)).toBe(
-                'First sentence. Target phrase continues here. ',
-            );
-            expect(html).toContain('opacity: 0.30');
-            expect(html).toContain('opacity: 0.70');
+            expect(section.toExcerptHtml(excerpt)).toEqual({
+                before: 'First sentence. ',
+                body: 'Target phrase',
+                after: ' continues here. ',
+            });
         });
 
         it('does not treat common abbreviations or decimals as sentence boundaries', () => {
@@ -270,9 +264,11 @@ describe('BetaSection', () => {
                 new Date('2025-01-01Z'),
             );
             const excerpt = section.toExcerpt('around 2.5 feet', 1);
-            expect(withoutFadeSpans(section.toExcerptHtml(excerpt))).toBe(
-                'Use care, e.g. around 2.5 feet of loose rock. ',
-            );
+            expect(section.toExcerptHtml(excerpt)).toEqual({
+                before: 'Use care, e.g. ',
+                body: 'around 2.5 feet',
+                after: ' of loose rock. ',
+            });
         });
 
         it('treats subheaders as transparent when finding list context', () => {
@@ -285,10 +281,11 @@ describe('BetaSection', () => {
                 new Date('2025-01-01Z'),
             );
             const excerpt = section.toExcerpt('<li>some list item</li>', 1);
-            const html = withoutFadeSpans(section.toExcerptHtml(excerpt));
-            expect(html).toBe(
-                'This is an example sentence.\n<h3>List of cool things</h3>\n<ul><li>some list item</li><li>another list item</li></ul>',
-            );
+            expect(section.toExcerptHtml(excerpt)).toEqual({
+                before: 'This is an example sentence.\n<h3>List of cool things</h3>\n<ul>',
+                body: '<li>some list item</li>',
+                after: '<li>another list item</li></ul>',
+            });
         });
 
         it('includes one adjacent list item on each side', () => {
@@ -301,9 +298,11 @@ describe('BetaSection', () => {
                 new Date('2025-01-01Z'),
             );
             const excerpt = section.toExcerpt('<li>two</li><li>three</li>', 1);
-            expect(withoutFadeSpans(section.toExcerptHtml(excerpt))).toBe(
-                '<ol><li>one</li><li>two</li><li>three</li><li>four</li></ol>',
-            );
+            expect(section.toExcerptHtml(excerpt)).toEqual({
+                before: '<ol><li>one</li>',
+                body: '<li>two</li><li>three</li>',
+                after: '<li>four</li></ol>',
+            });
         });
 
         it('uses a following prose sentence at the end of a list', () => {
@@ -316,9 +315,11 @@ describe('BetaSection', () => {
                 new Date('2025-01-01Z'),
             );
             const excerpt = section.toExcerpt('<li>two</li>', 1);
-            expect(withoutFadeSpans(section.toExcerptHtml(excerpt))).toBe(
-                '<ul><li>one</li><li>two</li></ul> Following sentence. ',
-            );
+            expect(section.toExcerptHtml(excerpt)).toEqual({
+                before: '<ul><li>one</li>',
+                body: '<li>two</li>',
+                after: '</ul> Following sentence. ',
+            });
         });
     });
 

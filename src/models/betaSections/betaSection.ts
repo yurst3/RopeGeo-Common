@@ -2,14 +2,24 @@ import { FetchType } from '../fetchType';
 import { BetaSectionExcerpt } from './betaSectionExcerpt';
 import { BetaSectionImage } from './betaSectionImage';
 import {
-    fadeText,
     isSafeTextBoundary,
     listContext,
     nextSentenceEnd,
     previousSentenceStart,
     visibleCharacters,
 } from './formatExcerptHtml';
-import { normalizeExcerptListHtml } from './normalizeExcerptHtml';
+import { normalizeExcerptListHtmlParts } from './normalizeExcerptHtml';
+
+/**
+ * An excerpt split into its verbatim `body` and the surrounding section
+ * context. Consumers render `before` and `after` de-emphasized (e.g. faded)
+ * relative to `body`; concatenating the three yields well-formed HTML.
+ */
+export type ExcerptHtml = {
+    before: string;
+    body: string;
+    after: string;
+};
 
 const betaSectionParsers = new Map<FetchType, (body: unknown) => BetaSection>();
 
@@ -62,7 +72,7 @@ export abstract class BetaSection {
      * Renders an excerpt with nearby section context when its offsets still
      * match this section, otherwise falls back to the excerpt alone.
      */
-    toExcerptHtml(excerpt: BetaSectionExcerpt): string {
+    toExcerptHtml(excerpt: BetaSectionExcerpt): ExcerptHtml {
         const validOffsets =
             excerpt.text != null &&
             Number.isInteger(excerpt.start) &&
@@ -73,7 +83,7 @@ export abstract class BetaSection {
             this.text.slice(excerpt.start, excerpt.end) === excerpt.text &&
             isSafeTextBoundary(this.text, excerpt.start as number) &&
             isSafeTextBoundary(this.text, excerpt.end as number);
-        if (!validOffsets) return excerpt.toHtml();
+        if (!validOffsets) return { before: '', body: excerpt.toHtml(), after: '' };
 
         const excerptStart = excerpt.start as number;
         const excerptEnd = excerpt.end as number;
@@ -97,9 +107,11 @@ export abstract class BetaSection {
                 nextSentenceEnd(this.text, excerptEnd, characters),
             );
 
-        return normalizeExcerptListHtml(
-            `${fadeText(before, 'toward-end')}${excerpt.text}${fadeText(after, 'toward-start')}`,
-        );
+        return normalizeExcerptListHtmlParts({
+            before,
+            body: excerpt.text as string,
+            after,
+        });
     }
 
     static fromResponseBody(body: unknown, fetchType?: FetchType): BetaSection {

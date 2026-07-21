@@ -273,38 +273,3 @@ export function listContext(
 
     return { before, after };
 }
-
-export function fadeText(
-    html: string,
-    direction: 'toward-end' | 'toward-start',
-): string {
-    const parts = html.split(/(<[^>]+>)/g);
-    const wordCount = parts.reduce(
-        (count, part) =>
-            part.startsWith('<')
-                ? count
-                : count + (part.match(/\S+/g)?.length ?? 0),
-        0,
-    );
-    if (wordCount === 0) return html;
-
-    let wordIndex = 0;
-    return parts
-        .map((part) => {
-            if (part.startsWith('<')) return part;
-            return part
-                .split(/(\s+)/)
-                .map((token) => {
-                    if (token.length === 0 || /^\s+$/.test(token)) return token;
-                    const progress =
-                        wordCount === 1 ? 1 : wordIndex / (wordCount - 1);
-                    const proximity =
-                        direction === 'toward-end' ? progress : 1 - progress;
-                    const opacity = (0.3 + proximity * 0.4).toFixed(2);
-                    wordIndex += 1;
-                    return `<span style="opacity: ${opacity}">${token}</span>`;
-                })
-                .join('');
-        })
-        .join('');
-}
