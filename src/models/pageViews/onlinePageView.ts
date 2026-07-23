@@ -10,14 +10,17 @@ import type { OnlineMiniMap } from '../minimap/abstract/onlineMiniMap';
 import type { OnlineBetaSection } from '../betaSections/onlineBetaSection';
 import type { OnlineBetaSectionImage } from '../betaSections/onlineBetaSectionImage';
 
-export type OnlineBetaSectionLookupEntry = {
-    /** Null for page-level images, which use the empty relevant-context key. */
-    section: OnlineBetaSection | null;
-    imagesById: Record<string, OnlineBetaSectionImage>;
+/** Relevant-context section lookup keyed by non-null beta-section id. */
+export type OnlineBetaSectionLookup = Record<string, OnlineBetaSection>;
+
+export type OnlineImageLookupEntry = {
+    image: OnlineBetaSectionImage;
+    /** Omitted for page-level banner images. */
+    betaSectionId?: string;
 };
 
-/** Relevant-context lookup keyed by beta-section id (`""` for page-level images). */
-export type OnlineBetaSectionLookup = Record<string, OnlineBetaSectionLookupEntry>;
+/** Image id → image (+ optional owning beta section). */
+export type OnlineImageLookup = Record<string, OnlineImageLookupEntry>;
 
 export interface OnlinePageView {
     readonly fetchType: 'online';
@@ -27,6 +30,7 @@ export interface OnlinePageView {
     readonly miniMap: OnlineMiniMap | null;
     readonly downloadFolder: string | null;
     toBetaSectionLookup(): OnlineBetaSectionLookup;
+    toImageLookup(): OnlineImageLookup;
     planDownloadPhases(): DownloadPhase[];
     getDependenciesForPhases(phases: DownloadPhase[]): Record<string, DownloadTaskDependency>;
     toOfflineFromExtractedBundle(
@@ -38,6 +42,5 @@ export interface OnlinePageView {
         downloadedMiniMap?: import('../minimap/concrete/offlinePageMiniMap').OfflinePageMiniMap | import('../minimap/concrete/offlineCenteredRegionMiniMap').OfflineCenteredRegionMiniMap | null,
     ): OfflinePageView;
     toPagePreview(): PagePreview;
-    toSavedPage(): SavedPage;
-    toDownloadJob(config: DownloadJobConfig): DownloadJob;
+    toSavedPage(downloadJob: DownloadJob, config: DownloadJobConfig): SavedPage;
 }

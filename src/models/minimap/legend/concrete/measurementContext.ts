@@ -1,25 +1,29 @@
 import { LengthMeasurement } from '../../../measurements/lengthMeasurement';
 import { Measurement } from '../../../measurements/measurement';
 import { TimeMeasurement } from '../../../measurements/timeMeasurement';
+import {
+    assertRelevanceStrength,
+    type RelevanceStrength,
+} from '../../../relevanceStrength';
 
 export class MeasurementContext {
     readonly label: string;
     readonly measurement: Measurement;
-    readonly confidence: number;
+    readonly relevanceStrength: RelevanceStrength;
 
-    constructor(label: string, measurement: Measurement, confidence: number) {
+    constructor(label: string, measurement: Measurement, relevanceStrength: RelevanceStrength) {
         MeasurementContext.assertNonEmptyString(label, 'MeasurementContext.label');
-        MeasurementContext.assertConfidence(confidence);
+        assertRelevanceStrength(relevanceStrength, 'MeasurementContext.relevanceStrength');
         this.label = label;
         this.measurement = measurement;
-        this.confidence = confidence;
+        this.relevanceStrength = relevanceStrength;
     }
 
     toPlain(): Record<string, unknown> {
         return {
             label: this.label,
             measurement: this.measurement.toJSON(),
-            confidence: this.confidence,
+            relevanceStrength: this.relevanceStrength,
         };
     }
 
@@ -29,9 +33,12 @@ export class MeasurementContext {
         }
         const r = result as Record<string, unknown>;
         const label = MeasurementContext.assertNonEmptyString(r.label, 'MeasurementContext.label');
-        MeasurementContext.assertConfidence(r.confidence);
+        const relevanceStrength = assertRelevanceStrength(
+            r.relevanceStrength,
+            'MeasurementContext.relevanceStrength',
+        );
         const measurement = MeasurementContext.parseMeasurement(r.measurement);
-        return new MeasurementContext(label, measurement, r.confidence as number);
+        return new MeasurementContext(label, measurement, relevanceStrength);
     }
 
     private static parseMeasurement(value: unknown): Measurement {
@@ -55,13 +62,5 @@ export class MeasurementContext {
             throw new Error(`${context} must be a non-empty string`);
         }
         return value;
-    }
-
-    private static assertConfidence(value: unknown): void {
-        if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
-            throw new Error(
-                `MeasurementContext.confidence must be a number from 0 to 1, got: ${JSON.stringify(value)}`,
-            );
-        }
     }
 }

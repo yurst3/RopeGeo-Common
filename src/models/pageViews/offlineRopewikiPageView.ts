@@ -8,6 +8,7 @@ import { OfflinePagePreview } from '../previews/offlinePagePreview';
 import { PageDataSource } from '../pageDataSource';
 import {
     type OfflineBetaSectionLookup,
+    type OfflineImageLookup,
     OfflinePageView,
 } from './offlinePageView';
 import { registerOfflinePageViewParser } from './pageView';
@@ -19,7 +20,7 @@ import { hydrateOfflinePageWirePaths } from '../../helpers/hydrateOfflinePageWir
 import { MinMax } from '../measurements/minMax';
 import { LengthMeasurement } from '../measurements/lengthMeasurement';
 import { TimeMeasurement } from '../measurements/timeMeasurement';
-import { keyBy, mapValues } from 'lodash';
+import { keyBy } from 'lodash';
 
 export class OfflineRopewikiPageView extends RopewikiPageView implements OfflinePageView {
     readonly fetchType = 'offline' as const;
@@ -104,18 +105,19 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
             (section): section is OfflineBetaSection & { id: string } =>
                 section.id != null,
         );
-        const lookup: OfflineBetaSectionLookup = mapValues(
-            keyBy(identifiedSections, (section) => section.id),
-            (section) => ({
-                section,
-                imagesById: keyBy(section.images, (image) => image.id),
-            }),
-        );
+        return keyBy(identifiedSections, (section) => section.id);
+    }
+
+    toImageLookup(): OfflineImageLookup {
+        const lookup: OfflineImageLookup = {};
+        for (const section of this.betaSections) {
+            if (section.id == null) continue;
+            for (const image of section.images) {
+                lookup[image.id] = { image, betaSectionId: section.id };
+            }
+        }
         if (this.bannerImage != null) {
-            lookup[''] = {
-                section: null,
-                imagesById: { [this.bannerImage.id]: this.bannerImage },
-            };
+            lookup[this.bannerImage.id] = { image: this.bannerImage };
         }
         return lookup;
     }

@@ -214,15 +214,18 @@ describe('RopewikiPageView models', () => {
         );
     });
 
-    it('builds online and offline relevant-context lookups', () => {
+    it('builds online and offline section and image lookups', () => {
         const page = OnlineRopewikiPageView.fromResult(onlineResult());
         const onlineLookup = page.toBetaSectionLookup();
-        expect(onlineLookup['']?.section).toBeNull();
-        expect(onlineLookup['']?.imagesById[IMAGE_ID_A]).toBe(page.bannerImage);
-        expect(onlineLookup[SECTION_ID]?.section).toBe(page.betaSections[0]);
-        expect(onlineLookup[SECTION_ID]?.imagesById[IMAGE_ID_B]).toBe(
-            page.betaSections[0]?.images[0],
-        );
+        expect(onlineLookup['']).toBeUndefined();
+        expect(onlineLookup[SECTION_ID]).toBe(page.betaSections[0]);
+
+        const onlineImages = page.toImageLookup();
+        expect(onlineImages[IMAGE_ID_A]).toEqual({ image: page.bannerImage });
+        expect(onlineImages[IMAGE_ID_B]).toEqual({
+            image: page.betaSections[0]?.images[0],
+            betaSectionId: SECTION_ID,
+        });
 
         const offline = page.toOffline({
             [IMAGE_ID_A]: new ImageVersions({
@@ -237,12 +240,11 @@ describe('RopewikiPageView models', () => {
             }),
         });
         const offlineLookup = offline.toBetaSectionLookup();
-        expect(offlineLookup[SECTION_ID]?.section).toBe(
-            offline.betaSections[0],
-        );
-        expect(
-            offlineLookup[SECTION_ID]?.imagesById[IMAGE_ID_B],
-        ).toBe(offline.betaSections[0]?.images[0]);
+        expect(offlineLookup[SECTION_ID]).toBe(offline.betaSections[0]);
+        expect(offline.toImageLookup()[IMAGE_ID_B]).toEqual({
+            image: offline.betaSections[0]?.images[0],
+            betaSectionId: SECTION_ID,
+        });
     });
 
     it('toOfflineFromExtractedBundle resolves preview, banner, and full files', async () => {

@@ -91,12 +91,12 @@ describe('BetaSection', () => {
                 new Date('2025-01-01T00:00:00Z'),
             );
             const excerptText = '<b>R1</b>: 25 feet -';
-            const excerpt = section.toExcerpt(excerptText, 0.98);
+            const excerpt = section.toExcerpt(excerptText, 'Definitely Relevant', 'R1');
             expect(excerpt).toBeInstanceOf(BetaSectionExcerpt);
             expect(excerpt.text).toBe(excerptText);
             expect(excerpt.start).toBe(7);
             expect(excerpt.end).toBe(7 + excerptText.length);
-            expect(excerpt.confidence).toBe(0.98);
+            expect(excerpt.relevanceStrength).toBe('Definitely Relevant');
         });
 
         it('computes start 0 when excerpt is at the beginning of section text', () => {
@@ -106,7 +106,7 @@ describe('BetaSection', () => {
                 'Exit hike details',
                 new Date('2025-01-01T00:00:00Z'),
             );
-            const excerpt = section.toExcerpt('Exit hike', 0.9);
+            const excerpt = section.toExcerpt('Exit hike', 'Somewhat Relevant', 'R1');
             expect(excerpt.start).toBe(0);
             expect(excerpt.end).toBe(9);
         });
@@ -118,24 +118,25 @@ describe('BetaSection', () => {
                 'Some beta text',
                 new Date('2025-01-01T00:00:00Z'),
             );
-            const excerpt = section.toExcerpt('missing excerpt', 0.8);
+            const excerpt = section.toExcerpt('missing excerpt', 'Somewhat Relevant', 'R1');
             expect(excerpt.text).toBe('missing excerpt');
             expect(excerpt.start).toBeUndefined();
             expect(excerpt.end).toBeUndefined();
         });
 
-        it('returns confidence-only excerpt for empty excerpt text', () => {
+        it('returns title-style excerpt for empty excerpt text', () => {
             const section = new OnlineBetaSection(
                 1,
                 'Descent',
                 'Some beta text',
                 new Date('2025-01-01T00:00:00Z'),
             );
-            const excerpt = section.toExcerpt('', 0.6);
+            const excerpt = section.toExcerpt('', 'Maybe Relevant', 'R1');
             expect(excerpt.text).toBeUndefined();
             expect(excerpt.start).toBeUndefined();
             expect(excerpt.end).toBeUndefined();
-            expect(excerpt.confidence).toBe(0.6);
+            expect(excerpt.relevanceStrength).toBe('Maybe Relevant');
+            expect(excerpt.relevantPhrase).toBe('R1');
         });
 
         it('works on OfflineBetaSection', () => {
@@ -146,20 +147,20 @@ describe('BetaSection', () => {
                 new Date('2025-01-01T00:00:00Z'),
             );
             const excerptText = '<b>R1</b>';
-            const excerpt = section.toExcerpt(excerptText, 0.75);
+            const excerpt = section.toExcerpt(excerptText, 'Somewhat Relevant', 'R1');
             expect(excerpt.start).toBe(8);
             expect(excerpt.end).toBe(8 + excerptText.length);
         });
 
-        it('throws when confidence is invalid', () => {
+        it('throws when relevanceStrength is invalid', () => {
             const section = new OnlineBetaSection(
                 1,
                 'Descent',
                 'Some beta text',
                 new Date('2025-01-01T00:00:00Z'),
             );
-            expect(() => section.toExcerpt('Some beta', 1.5)).toThrow(
-                /BetaSectionExcerpt\.confidence/,
+            expect(() => section.toExcerpt('Some beta', 'Nope' as any, 'R1')).toThrow(
+                /BetaSectionExcerpt\.relevanceStrength/,
             );
         });
     });
@@ -167,26 +168,27 @@ describe('BetaSection', () => {
     describe('excerpt HTML', () => {
         it('normalizes excerpt-only list fragments', () => {
             expect(
-                new BetaSectionExcerpt('<li>One</li>', undefined, undefined, 1).toHtml(),
+                new BetaSectionExcerpt('<li>One</li>', undefined, undefined, 'Definitely Relevant', 'R1').toHtml(),
             ).toBe('<ul><li>One</li></ul>');
             expect(
-                new BetaSectionExcerpt('<ol><li>One</li>', undefined, undefined, 1).toHtml(),
+                new BetaSectionExcerpt('<ol><li>One</li>', undefined, undefined, 'Definitely Relevant', 'R1').toHtml(),
             ).toBe('<ol><li>One</li></ol>');
             expect(
-                new BetaSectionExcerpt('<li>One</li></ol>', undefined, undefined, 1).toHtml(),
+                new BetaSectionExcerpt('<li>One</li></ol>', undefined, undefined, 'Definitely Relevant', 'R1').toHtml(),
             ).toBe('<ul><li>One</li></ul>');
             expect(
-                new BetaSectionExcerpt('<ul><li>One</li>', undefined, undefined, 1).toHtml(),
+                new BetaSectionExcerpt('<ul><li>One</li>', undefined, undefined, 'Definitely Relevant', 'R1').toHtml(),
             ).toBe('<ul><li>One</li></ul>');
             expect(
-                new BetaSectionExcerpt('<li>One</li></ul>', undefined, undefined, 1).toHtml(),
+                new BetaSectionExcerpt('<li>One</li></ul>', undefined, undefined, 'Definitely Relevant', 'R1').toHtml(),
             ).toBe('<ul><li>One</li></ul>');
             expect(
                 new BetaSectionExcerpt(
                     '<ol><li>One</li></ol>',
                     undefined,
                     undefined,
-                    1,
+                    'Definitely Relevant',
+                    'R1',
                 ).toHtml(),
             ).toBe('<ol><li>One</li></ol>');
         });
@@ -200,12 +202,12 @@ describe('BetaSection', () => {
             );
             expect(
                 section.toExcerptHtml(
-                    new BetaSectionExcerpt('<li>Missing</li>', 0, 5, 1),
+                    new BetaSectionExcerpt('<li>Missing</li>', 0, 5, 'Definitely Relevant', 'R1'),
                 ),
             ).toEqual({ body: '<ul><li>Missing</li></ul>' });
             expect(
                 section.toExcerptHtml(
-                    new BetaSectionExcerpt('<li>Missing</li>', undefined, undefined, 1),
+                    new BetaSectionExcerpt('<li>Missing</li>', undefined, undefined, 'Definitely Relevant', 'R1'),
                 ),
             ).toEqual({ body: '<ul><li>Missing</li></ul>' });
         });
@@ -220,9 +222,9 @@ describe('BetaSection', () => {
             );
             expect(
                 section.toExcerptHtml(
-                    new BetaSectionExcerpt('b>R1</b', text.indexOf('b>R1</b'), text.indexOf('b>R1</b') + 7, 1),
+                    new BetaSectionExcerpt('b>R1</b', text.indexOf('b>R1</b'), text.indexOf('b>R1</b') + 7, 'Definitely Relevant', 'R1'),
                 ),
-            ).toEqual({ body: 'b>R1</b' });
+            ).toEqual({ body: 'b><b>R1</b></b' });
             const entityStart = text.indexOf('&amp;') + 1;
             const entityExcerpt = 'amp; after.';
             expect(
@@ -231,7 +233,8 @@ describe('BetaSection', () => {
                         entityExcerpt,
                         entityStart,
                         entityStart + entityExcerpt.length,
-                        1,
+                        'Definitely Relevant',
+                        'R1',
                     ),
                 ),
             ).toEqual({ body: entityExcerpt });
@@ -244,7 +247,7 @@ describe('BetaSection', () => {
                 'Target phrase continues here.',
                 new Date('2025-01-01Z'),
             );
-            const excerpt = section.toExcerpt('Target phrase', 1);
+            const excerpt = section.toExcerpt('Target phrase', 'Definitely Relevant', 'R1');
             expect(section.toExcerptHtml(excerpt)).toEqual({
                 body: 'Target phrase',
                 after: 'continues here.',
@@ -260,7 +263,7 @@ describe('BetaSection', () => {
                 text,
                 new Date('2025-01-01Z'),
             );
-            const excerpt = section.toExcerpt('Target phrase', 1);
+            const excerpt = section.toExcerpt('Target phrase', 'Definitely Relevant', 'R1');
             expect(section.toExcerptHtml(excerpt)).toEqual({
                 before: 'First sentence.',
                 body: 'Target phrase',
@@ -277,7 +280,7 @@ describe('BetaSection', () => {
                 text,
                 new Date('2025-01-01Z'),
             );
-            const excerpt = section.toExcerpt('around 2.5 feet', 1);
+            const excerpt = section.toExcerpt('around 2.5 feet', 'Definitely Relevant', 'R1');
             expect(section.toExcerptHtml(excerpt)).toEqual({
                 before: 'Use care, e.g.',
                 body: 'around 2.5 feet',
@@ -294,7 +297,7 @@ describe('BetaSection', () => {
                 text,
                 new Date('2025-01-01Z'),
             );
-            const excerpt = section.toExcerpt('<li>some list item</li>', 1);
+            const excerpt = section.toExcerpt('<li>some list item</li>', 'Definitely Relevant', 'R1');
             expect(section.toExcerptHtml(excerpt)).toEqual({
                 before: 'This is an example sentence.\n<h3>List of cool things</h3>',
                 body: '<ul><li>some list item</li></ul>',
@@ -311,7 +314,7 @@ describe('BetaSection', () => {
                 text,
                 new Date('2025-01-01Z'),
             );
-            const excerpt = section.toExcerpt('<li>two</li><li>three</li>', 1);
+            const excerpt = section.toExcerpt('<li>two</li><li>three</li>', 'Definitely Relevant', 'R1');
             expect(section.toExcerptHtml(excerpt)).toEqual({
                 before: '<ol><li>one</li></ol>',
                 body: '<ol start="2"><li>two</li><li>three</li></ol>',
@@ -328,7 +331,7 @@ describe('BetaSection', () => {
                 text,
                 new Date('2025-01-01Z'),
             );
-            const excerpt = section.toExcerpt('<li>six</li>', 1);
+            const excerpt = section.toExcerpt('<li>six</li>', 'Definitely Relevant', 'R1');
             expect(section.toExcerptHtml(excerpt)).toEqual({
                 before: '<ol start="5"><li>five</li></ol>',
                 body: '<ol start="6"><li>six</li></ol>',
@@ -345,7 +348,13 @@ describe('BetaSection', () => {
             );
             expect(
                 section.toExcerptHtml(
-                    new BetaSectionExcerpt('<li>orphan</li></ol>', undefined, undefined, 1),
+                    new BetaSectionExcerpt(
+                        '<li>orphan</li></ol>',
+                        undefined,
+                        undefined,
+                        'Definitely Relevant',
+                        'R1',
+                    ),
                 ),
             ).toEqual({ body: '<ul><li>orphan</li></ul>' });
         });
@@ -359,7 +368,7 @@ describe('BetaSection', () => {
                 text,
                 new Date('2025-01-01Z'),
             );
-            const excerpt = section.toExcerpt('<li>two</li>', 1);
+            const excerpt = section.toExcerpt('<li>two</li>', 'Definitely Relevant', 'R1');
             expect(section.toExcerptHtml(excerpt)).toEqual({
                 before: '<ul><li>one</li></ul>',
                 body: '<ul><li>two</li></ul>',

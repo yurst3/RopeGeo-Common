@@ -95,6 +95,13 @@ export { OfflineBetaSectionImage } from './betaSections/offlineBetaSectionImage'
 export { DownloadBytes } from './betaSections/downloadBytes';
 export { BetaSection, type ExcerptHtml } from './betaSections/betaSection';
 export { BetaSectionExcerpt } from './betaSections/betaSectionExcerpt';
+export { boldRelevantPhraseInHtml } from './betaSections/boldRelevantPhrase';
+export {
+    RELEVANCE_STRENGTHS,
+    assertRelevanceStrength,
+    isRelevanceStrength,
+    type RelevanceStrength,
+} from './relevanceStrength';
 export { OnlineBetaSection } from './betaSections/onlineBetaSection';
 export { OfflineBetaSection } from './betaSections/offlineBetaSection';
 export { Bounds } from './minimap/bounds';
@@ -129,12 +136,14 @@ export { OfflineRopewikiPageView } from './pageViews/offlineRopewikiPageView';
 export type {
     OnlinePageView,
     OnlineBetaSectionLookup,
-    OnlineBetaSectionLookupEntry,
+    OnlineImageLookup,
+    OnlineImageLookupEntry,
 } from './pageViews/onlinePageView';
 export type {
     OfflinePageView,
     OfflineBetaSectionLookup,
-    OfflineBetaSectionLookupEntry,
+    OfflineImageLookup,
+    OfflineImageLookupEntry,
 } from './pageViews/offlinePageView';
 export { formatMeasurementValue } from './measurements/measurementValue';
 export { Measurement, FREEDOM_MEASUREMENT_SYSTEM } from './measurements/measurement';

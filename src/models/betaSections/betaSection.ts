@@ -1,6 +1,8 @@
 import { FetchType } from '../fetchType';
+import type { RelevanceStrength } from '../relevanceStrength';
 import { BetaSectionExcerpt } from './betaSectionExcerpt';
 import { BetaSectionImage } from './betaSectionImage';
+import { boldRelevantPhraseInHtml } from './boldRelevantPhrase';
 import {
     isSafeTextBoundary,
     listContext,
@@ -59,15 +61,37 @@ export abstract class BetaSection {
      * Builds a {@link BetaSectionExcerpt} for a verbatim excerpt from this section's text.
      * When the excerpt cannot be located, `start` and `end` are left undefined.
      */
-    toExcerpt(excerptText: string, confidence: number): BetaSectionExcerpt {
+    toExcerpt(
+        excerptText: string,
+        relevanceStrength: RelevanceStrength,
+        relevantPhrase: string,
+    ): BetaSectionExcerpt {
         if (excerptText.length === 0) {
-            return new BetaSectionExcerpt(undefined, undefined, undefined, confidence);
+            return new BetaSectionExcerpt(
+                undefined,
+                undefined,
+                undefined,
+                relevanceStrength,
+                relevantPhrase,
+            );
         }
         const start = this.text.indexOf(excerptText);
         if (start === -1) {
-            return new BetaSectionExcerpt(excerptText, undefined, undefined, confidence);
+            return new BetaSectionExcerpt(
+                excerptText,
+                undefined,
+                undefined,
+                relevanceStrength,
+                relevantPhrase,
+            );
         }
-        return new BetaSectionExcerpt(excerptText, start, start + excerptText.length, confidence);
+        return new BetaSectionExcerpt(
+            excerptText,
+            start,
+            start + excerptText.length,
+            relevanceStrength,
+            relevantPhrase,
+        );
     }
 
     /**
@@ -112,7 +136,12 @@ export abstract class BetaSection {
         // We have the source list here, so keep ordered lists ordered; their
         // `start` ordinals are already aligned to the source by `listContext`.
         const options = { preserveOrderedLists: true };
-        const result: ExcerptHtml = { body: normalizeExcerptListHtml(parts.body, options) };
+        const result: ExcerptHtml = {
+            body: boldRelevantPhraseInHtml(
+                normalizeExcerptListHtml(parts.body, options),
+                excerpt.relevantPhrase,
+            ),
+        };
         const before = normalizeExcerptListHtml(parts.before, options);
         if (before.trim().length > 0) result.before = before;
         const after = normalizeExcerptListHtml(parts.after, options);

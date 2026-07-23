@@ -53,9 +53,10 @@ import {
 import type { OfflinePageView } from './offlinePageView';
 import {
     type OnlineBetaSectionLookup,
+    type OnlineImageLookup,
     OnlinePageView,
 } from './onlinePageView';
-import { keyBy, mapValues } from 'lodash';
+import { keyBy } from 'lodash';
 
 export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePageView {
     readonly fetchType = 'online' as const;
@@ -143,18 +144,19 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
             (section): section is OnlineBetaSection & { id: string } =>
                 section.id != null,
         );
-        const lookup: OnlineBetaSectionLookup = mapValues(
-            keyBy(identifiedSections, (section) => section.id),
-            (section) => ({
-                section,
-                imagesById: keyBy(section.images, (image) => image.id),
-            }),
-        );
+        return keyBy(identifiedSections, (section) => section.id);
+    }
+
+    toImageLookup(): OnlineImageLookup {
+        const lookup: OnlineImageLookup = {};
+        for (const section of this.betaSections) {
+            if (section.id == null) continue;
+            for (const image of section.images) {
+                lookup[image.id] = { image, betaSectionId: section.id };
+            }
+        }
         if (this.bannerImage != null) {
-            lookup[''] = {
-                section: null,
-                imagesById: { [this.bannerImage.id]: this.bannerImage },
-            };
+            lookup[this.bannerImage.id] = { image: this.bannerImage };
         }
         return lookup;
     }

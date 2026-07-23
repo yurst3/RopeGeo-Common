@@ -1,26 +1,46 @@
 import { normalizeExcerptListHtml } from './normalizeExcerptHtml';
+import { boldRelevantPhraseInHtml } from './boldRelevantPhrase';
+import {
+    assertRelevanceStrength,
+    type RelevanceStrength,
+} from '../relevanceStrength';
 
 export class BetaSectionExcerpt {
     readonly text?: string;
     readonly start?: number;
     readonly end?: number;
-    readonly confidence: number;
+    readonly relevanceStrength: RelevanceStrength;
+    /**
+     * Verbatim substring of the text block’s title and/or body that connects
+     * this excerpt to the map feature. Required even for title-only relevance
+     * (when `text` is omitted).
+     */
+    readonly relevantPhrase: string;
 
     constructor(
         text: string | undefined,
         start: number | undefined,
         end: number | undefined,
-        confidence: number,
+        relevanceStrength: RelevanceStrength,
+        relevantPhrase: string,
     ) {
-        BetaSectionExcerpt.assertConfidence(confidence);
+        assertRelevanceStrength(relevanceStrength, 'BetaSectionExcerpt.relevanceStrength');
+        BetaSectionExcerpt.assertNonEmptyString(
+            relevantPhrase,
+            'BetaSectionExcerpt.relevantPhrase',
+        );
         this.text = text;
         this.start = start;
         this.end = end;
-        this.confidence = confidence;
+        this.relevanceStrength = relevanceStrength;
+        this.relevantPhrase = relevantPhrase;
     }
 
     toPlain(): Record<string, unknown> {
-        const out: Record<string, unknown> = { confidence: this.confidence };
+        const out: Record<string, unknown> = {
+            relevanceStrength: this.relevanceStrength,
+            relevantPhrase: this.relevantPhrase,
+        };
         if (this.text !== undefined) {
             out.text = this.text;
         }
@@ -35,7 +55,10 @@ export class BetaSectionExcerpt {
 
     /** Returns displayable excerpt HTML when the owning beta section is unavailable. */
     toHtml(): string {
-        return normalizeExcerptListHtml(this.text ?? '');
+        return boldRelevantPhraseInHtml(
+            normalizeExcerptListHtml(this.text ?? ''),
+            this.relevantPhrase,
+        );
     }
 
     static fromResult(result: unknown): BetaSectionExcerpt {
@@ -43,7 +66,14 @@ export class BetaSectionExcerpt {
             throw new Error('BetaSectionExcerpt result must be an object');
         }
         const r = result as Record<string, unknown>;
-        BetaSectionExcerpt.assertConfidence(r.confidence);
+        const relevanceStrength = assertRelevanceStrength(
+            r.relevanceStrength,
+            'BetaSectionExcerpt.relevanceStrength',
+        );
+        const relevantPhrase = BetaSectionExcerpt.assertNonEmptyString(
+            r.relevantPhrase,
+            'BetaSectionExcerpt.relevantPhrase',
+        );
 
         let text: string | undefined;
         if (r.text !== undefined) {
@@ -67,15 +97,20 @@ export class BetaSectionExcerpt {
             end = r.end as number;
         }
 
-        return new BetaSectionExcerpt(text, start, end, r.confidence as number);
+        return new BetaSectionExcerpt(
+            text,
+            start,
+            end,
+            relevanceStrength,
+            relevantPhrase,
+        );
     }
 
-    private static assertConfidence(value: unknown): void {
-        if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
-            throw new Error(
-                `BetaSectionExcerpt.confidence must be a number from 0 to 1, got: ${JSON.stringify(value)}`,
-            );
+    private static assertNonEmptyString(value: unknown, context: string): string {
+        if (typeof value !== 'string' || value.trim().length === 0) {
+            throw new Error(`${context} must be a non-empty string`);
         }
+        return value;
     }
 
     private static assertNonNegativeInteger(value: unknown, context: string): void {

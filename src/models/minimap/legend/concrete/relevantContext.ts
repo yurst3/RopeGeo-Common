@@ -5,12 +5,13 @@ import { MeasurementContext } from './measurementContext';
 export class RelevantContext {
     readonly measurements: MeasurementContext[];
     readonly betaSectionExcerpts: Record<string, BetaSectionExcerpt[]>;
-    readonly images: Record<string, ImageContext[]>;
+    /** Flat list of relevant images; owning section is resolved via `toImageLookup()`. */
+    readonly images: ImageContext[];
 
     constructor(
         measurements: MeasurementContext[],
         betaSectionExcerpts: Record<string, BetaSectionExcerpt[]>,
-        images: Record<string, ImageContext[]>,
+        images: ImageContext[],
     ) {
         this.measurements = measurements;
         this.betaSectionExcerpts = betaSectionExcerpts;
@@ -23,15 +24,10 @@ export class RelevantContext {
             betaSectionExcerpts[key] = excerpts.map((excerpt) => excerpt.toPlain());
         }
 
-        const images: Record<string, unknown> = {};
-        for (const [key, imageContexts] of Object.entries(this.images)) {
-            images[key] = imageContexts.map((image) => image.toPlain());
-        }
-
         return {
             measurements: this.measurements.map((measurement) => measurement.toPlain()),
             betaSectionExcerpts,
-            images,
+            images: this.images.map((image) => image.toPlain()),
         };
     }
 
@@ -45,7 +41,7 @@ export class RelevantContext {
         const betaSectionExcerpts = RelevantContext.parseBetaSectionExcerptsRecord(
             r.betaSectionExcerpts,
         );
-        const images = RelevantContext.parseImagesRecord(r.images);
+        const images = RelevantContext.parseImagesArray(r.images);
 
         return new RelevantContext(measurements, betaSectionExcerpts, images);
     }
@@ -86,23 +82,13 @@ export class RelevantContext {
         return out;
     }
 
-    private static parseImagesRecord(value: unknown): Record<string, ImageContext[]> {
+    private static parseImagesArray(value: unknown): ImageContext[] {
         if (value === undefined || value === null) {
-            return {};
+            return [];
         }
-        if (typeof value !== 'object' || Array.isArray(value)) {
-            throw new Error(`RelevantContext.images must be an object, got: ${typeof value}`);
+        if (!Array.isArray(value)) {
+            throw new Error(`RelevantContext.images must be an array, got: ${typeof value}`);
         }
-        const raw = value as Record<string, unknown>;
-        const out: Record<string, ImageContext[]> = {};
-        for (const [key, imageContexts] of Object.entries(raw)) {
-            if (!Array.isArray(imageContexts)) {
-                throw new Error(
-                    `RelevantContext.images["${key}"] must be an array, got: ${typeof imageContexts}`,
-                );
-            }
-            out[key] = imageContexts.map((entry) => ImageContext.fromResult(entry));
-        }
-        return out;
+        return value.map((entry) => ImageContext.fromResult(entry));
     }
 }

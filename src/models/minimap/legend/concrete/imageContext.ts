@@ -1,18 +1,28 @@
+import {
+    assertRelevanceStrength,
+    type RelevanceStrength,
+} from '../../../relevanceStrength';
+
 export class ImageContext {
     readonly id: string;
-    readonly confidence: number;
+    readonly relevanceStrength: RelevanceStrength;
+    /** Verbatim substring of the image caption and/or file URL. */
+    readonly relevantPhrase: string;
 
-    constructor(id: string, confidence: number) {
+    constructor(id: string, relevanceStrength: RelevanceStrength, relevantPhrase: string) {
         ImageContext.assertNonEmptyString(id, 'ImageContext.id');
-        ImageContext.assertConfidence(confidence);
+        assertRelevanceStrength(relevanceStrength, 'ImageContext.relevanceStrength');
+        ImageContext.assertNonEmptyString(relevantPhrase, 'ImageContext.relevantPhrase');
         this.id = id;
-        this.confidence = confidence;
+        this.relevanceStrength = relevanceStrength;
+        this.relevantPhrase = relevantPhrase;
     }
 
     toPlain(): Record<string, unknown> {
         return {
             id: this.id,
-            confidence: this.confidence,
+            relevanceStrength: this.relevanceStrength,
+            relevantPhrase: this.relevantPhrase,
         };
     }
 
@@ -22,8 +32,15 @@ export class ImageContext {
         }
         const r = result as Record<string, unknown>;
         const id = ImageContext.assertNonEmptyString(r.id, 'ImageContext.id');
-        ImageContext.assertConfidence(r.confidence);
-        return new ImageContext(id, r.confidence as number);
+        const relevanceStrength = assertRelevanceStrength(
+            r.relevanceStrength,
+            'ImageContext.relevanceStrength',
+        );
+        const relevantPhrase = ImageContext.assertNonEmptyString(
+            r.relevantPhrase,
+            'ImageContext.relevantPhrase',
+        );
+        return new ImageContext(id, relevanceStrength, relevantPhrase);
     }
 
     private static assertNonEmptyString(value: unknown, context: string): string {
@@ -31,13 +48,5 @@ export class ImageContext {
             throw new Error(`${context} must be a non-empty string`);
         }
         return value;
-    }
-
-    private static assertConfidence(value: unknown): void {
-        if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
-            throw new Error(
-                `ImageContext.confidence must be a number from 0 to 1, got: ${JSON.stringify(value)}`,
-            );
-        }
     }
 }

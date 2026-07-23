@@ -95,18 +95,28 @@ describe('LegendItem', () => {
             relevantContext: {
                 measurements: [],
                 betaSectionExcerpts: {
-                    'beta-descent': [{ text: '<b>R1</b>', confidence: 0.98 }],
+                    'beta-descent': [
+                        {
+                            text: '<b>R1</b>',
+                            relevanceStrength: 'Definitely Relevant',
+                            relevantPhrase: 'R1',
+                        },
+                    ],
                 },
-                images: {
-                    '': [{ id: 'img-1', confidence: 0.9 }],
-                },
+                images: [
+                    {
+                        id: 'img-1',
+                        relevanceStrength: 'Somewhat Relevant',
+                        relevantPhrase: 'rappel',
+                    },
+                ],
             },
         });
         expect(item.relevantContext).not.toBeNull();
         expect(item.relevantContext!.betaSectionExcerpts['beta-descent']).toHaveLength(1);
         const roundTripped = LegendItem.fromResult(item.toPlain());
         expect(roundTripped.relevantContext).not.toBeNull();
-        expect(roundTripped.relevantContext!.images['']![0]!.id).toBe('img-1');
+        expect(roundTripped.relevantContext!.images[0]!.id).toBe('img-1');
     });
 
     it('throws when relevantContext is invalid', () => {
