@@ -193,7 +193,7 @@ describe('BetaSection', () => {
             ).toBe('<ol><li>One</li></ol>');
         });
 
-        it('bolds relevantPhrase in excerpt HTML when present and skips when omitted', () => {
+        it('wraps relevantPhrase in RelevantPhrase tags when present and skips when omitted', () => {
             expect(
                 new BetaSectionExcerpt(
                     'Find the first rappel here.',
@@ -202,7 +202,7 @@ describe('BetaSection', () => {
                     'Definitely Relevant',
                     'first rappel',
                 ).toHtml(),
-            ).toBe('Find the <b>first rappel</b> here.');
+            ).toBe('Find the <RelevantPhrase>first rappel</RelevantPhrase> here.');
             expect(
                 new BetaSectionExcerpt(
                     'Find the first rappel here.',
@@ -224,7 +224,7 @@ describe('BetaSection', () => {
                 'first rappel',
             );
             expect(section.toExcerptHtml(withPhrase)).toEqual({
-                body: 'Find the <b>first rappel</b> here.',
+                body: 'Find the <RelevantPhrase>first rappel</RelevantPhrase> here.',
             });
             const withoutPhrase = section.toExcerpt(
                 'Find the first rappel here.',
@@ -267,7 +267,7 @@ describe('BetaSection', () => {
                 section.toExcerptHtml(
                     new BetaSectionExcerpt('b>R1</b', text.indexOf('b>R1</b'), text.indexOf('b>R1</b') + 7, 'Definitely Relevant', 'R1'),
                 ),
-            ).toEqual({ body: 'b><b>R1</b></b' });
+            ).toEqual({ body: 'b><RelevantPhrase>R1</RelevantPhrase></b' });
             const entityStart = text.indexOf('&amp;') + 1;
             const entityExcerpt = 'amp; after.';
             expect(

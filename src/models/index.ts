@@ -95,7 +95,7 @@ export { OfflineBetaSectionImage } from './betaSections/offlineBetaSectionImage'
 export { DownloadBytes } from './betaSections/downloadBytes';
 export { BetaSection, type ExcerptHtml } from './betaSections/betaSection';
 export { BetaSectionExcerpt } from './betaSections/betaSectionExcerpt';
-export { boldRelevantPhraseInHtml } from './betaSections/boldRelevantPhrase';
+export { boldRelevantPhraseInHtml, RELEVANT_PHRASE_HTML_TAG } from './betaSections/boldRelevantPhrase';
 export {
     RELEVANCE_STRENGTHS,
     assertRelevanceStrength,

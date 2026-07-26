@@ -1,25 +1,35 @@
-import { boldRelevantPhraseInHtml } from '../../../src/models/betaSections/boldRelevantPhrase';
+import {
+    RELEVANT_PHRASE_HTML_TAG,
+    boldRelevantPhraseInHtml,
+} from '../../../src/models/betaSections/boldRelevantPhrase';
 
 describe('boldRelevantPhraseInHtml', () => {
-    it('wraps a plain contiguous phrase', () => {
+    it('wraps a plain contiguous phrase in RelevantPhrase', () => {
         expect(boldRelevantPhraseInHtml('The first rappel is bolted.', 'first rappel')).toBe(
-            'The <b>first rappel</b> is bolted.',
+            `The <${RELEVANT_PHRASE_HTML_TAG}>first rappel</${RELEVANT_PHRASE_HTML_TAG}> is bolted.`,
         );
     });
 
     it('wraps a phrase inside mixed HTML without splitting tags', () => {
         expect(
             boldRelevantPhraseInHtml('<p>Drop to the 1st rap.</p>', '1st rap'),
-        ).toBe('<p>Drop to the <b>1st rap</b>.</p>');
+        ).toBe(
+            `<p>Drop to the <${RELEVANT_PHRASE_HTML_TAG}>1st rap</${RELEVANT_PHRASE_HTML_TAG}>.</p>`,
+        );
     });
 
-    it('leaves already-bold phrases unchanged', () => {
+    it('wraps phrases that already sit inside wiki bold tags', () => {
         expect(boldRelevantPhraseInHtml('See <b>R2</b> below.', 'R2')).toBe(
-            'See <b>R2</b> below.',
+            `See <b><${RELEVANT_PHRASE_HTML_TAG}>R2</${RELEVANT_PHRASE_HTML_TAG}></b> below.`,
         );
         expect(boldRelevantPhraseInHtml('See <strong>R2</strong> below.', 'R2')).toBe(
-            'See <strong>R2</strong> below.',
+            `See <strong><${RELEVANT_PHRASE_HTML_TAG}>R2</${RELEVANT_PHRASE_HTML_TAG}></strong> below.`,
         );
+    });
+
+    it('leaves phrases already inside RelevantPhrase unchanged', () => {
+        const html = `See <${RELEVANT_PHRASE_HTML_TAG}>R2</${RELEVANT_PHRASE_HTML_TAG}> below.`;
+        expect(boldRelevantPhraseInHtml(html, 'R2')).toBe(html);
     });
 
     it('skips phrases that span tags', () => {
