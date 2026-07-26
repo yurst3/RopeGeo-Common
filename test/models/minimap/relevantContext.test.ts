@@ -1,21 +1,7 @@
-import { FEET, LengthMeasurement } from '../../../src/models/measurements/lengthMeasurement';
-import { MINUTES, TimeMeasurement } from '../../../src/models/measurements/timeMeasurement';
 import { BetaSectionExcerpt } from '../../../src/models/betaSections/betaSectionExcerpt';
 import { ImageContext } from '../../../src/models/minimap/legend/concrete/imageContext';
 import { MeasurementContext } from '../../../src/models/minimap/legend/concrete/measurementContext';
 import { RelevantContext } from '../../../src/models/minimap/legend/concrete/relevantContext';
-
-const validLengthMeasurement = {
-    measurementType: 'length',
-    value: 490,
-    unit: { measurementSystem: 'Imperial', name: 'feet' },
-};
-
-const validTimeMeasurement = {
-    measurementType: 'time',
-    value: 20,
-    unit: { measurementSystem: 'Standard', name: 'minutes' },
-};
 
 describe('BetaSectionExcerpt', () => {
     describe('fromResult', () => {
@@ -207,39 +193,35 @@ describe('ImageContext', () => {
 
 describe('MeasurementContext', () => {
     describe('fromResult', () => {
-        it('parses length measurements', () => {
+        it('parses key and relevanceStrength', () => {
             const ctx = MeasurementContext.fromResult({
-                label: 'exitElevGain',
-                measurement: validLengthMeasurement,
+                key: 'exitElevGain',
                 relevanceStrength: 'Definitely Relevant',
             });
-            expect(ctx.label).toBe('exitElevGain');
-            expect(ctx.measurement).toBeInstanceOf(LengthMeasurement);
-            expect((ctx.measurement as LengthMeasurement).value).toBe(490);
-            expect(ctx.measurement.unit).toEqual(FEET);
+            expect(ctx.key).toBe('exitElevGain');
             expect(ctx.relevanceStrength).toBe('Definitely Relevant');
         });
 
-        it('parses time measurements', () => {
+        it('accepts all measurement keys', () => {
             const ctx = MeasurementContext.fromResult({
-                label: 'shuttleTime',
-                measurement: validTimeMeasurement,
+                key: 'shuttleTime',
                 relevanceStrength: 'Somewhat Relevant',
             });
-            expect(ctx.measurement).toBeInstanceOf(TimeMeasurement);
-            expect(ctx.measurement.unit).toEqual(MINUTES);
+            expect(ctx.key).toBe('shuttleTime');
         });
 
         it('round-trips via toPlain', () => {
             const ctx = MeasurementContext.fromResult({
-                label: 'exitElevGain',
-                measurement: validLengthMeasurement,
+                key: 'exitElevGain',
                 relevanceStrength: 'Definitely Relevant',
             });
             const roundTripped = MeasurementContext.fromResult(ctx.toPlain());
-            expect(roundTripped.label).toBe(ctx.label);
+            expect(roundTripped.key).toBe(ctx.key);
             expect(roundTripped.relevanceStrength).toBe(ctx.relevanceStrength);
-            expect(roundTripped.measurement.value).toBe(ctx.measurement.value);
+            expect(roundTripped.toPlain()).toEqual({
+                key: 'exitElevGain',
+                relevanceStrength: 'Definitely Relevant',
+            });
         });
 
         it('throws when result is not an object', () => {
@@ -248,43 +230,26 @@ describe('MeasurementContext', () => {
             );
         });
 
-        it('throws when label is missing or empty', () => {
+        it('throws when key is missing or invalid', () => {
             expect(() =>
                 MeasurementContext.fromResult({
-                    measurement: validLengthMeasurement,
                     relevanceStrength: 'Maybe Relevant',
                 }),
-            ).toThrow('MeasurementContext.label must be a non-empty string');
+            ).toThrow(/MeasurementContext\.key/);
+            expect(() =>
+                MeasurementContext.fromResult({
+                    key: 'notARealStat',
+                    relevanceStrength: 'Maybe Relevant',
+                }),
+            ).toThrow(/MeasurementContext\.key/);
         });
 
         it('throws when relevanceStrength is invalid', () => {
             expect(() =>
                 MeasurementContext.fromResult({
-                    label: 'exitElevGain',
-                    measurement: validLengthMeasurement,
+                    key: 'exitElevGain',
                 }),
             ).toThrow(/MeasurementContext\.relevanceStrength/);
-        });
-
-        it('throws when measurement is missing or not an object', () => {
-            expect(() =>
-                MeasurementContext.fromResult({
-                    label: 'exitElevGain',
-                    relevanceStrength: 'Maybe Relevant',
-                }),
-            ).toThrow('MeasurementContext.measurement must be an object');
-        });
-
-        it('throws when measurementType is unknown', () => {
-            expect(() =>
-                MeasurementContext.fromResult({
-                    label: 'exitElevGain',
-                    measurement: { measurementType: 'mass', value: 1, unit: {} },
-                    relevanceStrength: 'Maybe Relevant',
-                }),
-            ).toThrow(
-                'MeasurementContext.measurement.measurementType must be "length" or "time"',
-            );
         });
     });
 });
@@ -295,8 +260,7 @@ describe('RelevantContext', () => {
             const context = RelevantContext.fromResult({
                 measurements: [
                     {
-                        label: 'exitElevGain',
-                        measurement: validLengthMeasurement,
+                        key: 'exitElevGain',
                         relevanceStrength: 'Definitely Relevant',
                     },
                 ],
@@ -324,7 +288,7 @@ describe('RelevantContext', () => {
             });
             const roundTripped = RelevantContext.fromResult(context.toPlain());
             expect(roundTripped.measurements).toHaveLength(1);
-            expect(roundTripped.measurements[0]!.label).toBe('exitElevGain');
+            expect(roundTripped.measurements[0]!.key).toBe('exitElevGain');
             expect(roundTripped.betaSectionExcerpts['beta-exit']).toHaveLength(1);
             expect(roundTripped.images).toHaveLength(2);
             expect(roundTripped.images[1]).toBeInstanceOf(ImageContext);

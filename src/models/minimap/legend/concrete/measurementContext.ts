@@ -1,28 +1,31 @@
-import { LengthMeasurement } from '../../../measurements/lengthMeasurement';
-import { Measurement } from '../../../measurements/measurement';
-import { TimeMeasurement } from '../../../measurements/timeMeasurement';
 import {
     assertRelevanceStrength,
     type RelevanceStrength,
 } from '../../../relevanceStrength';
+import {
+    assertMeasurementKey,
+    type MeasurementKey,
+} from '../../../measurementKey';
 
+/**
+ * Relevant page-stat reference for a map feature.
+ * The numeric value is resolved on the client via {@link MeasurementsLookup}
+ * keyed by {@link key}.
+ */
 export class MeasurementContext {
-    readonly label: string;
-    readonly measurement: Measurement;
+    readonly key: MeasurementKey;
     readonly relevanceStrength: RelevanceStrength;
 
-    constructor(label: string, measurement: Measurement, relevanceStrength: RelevanceStrength) {
-        MeasurementContext.assertNonEmptyString(label, 'MeasurementContext.label');
+    constructor(key: MeasurementKey, relevanceStrength: RelevanceStrength) {
+        assertMeasurementKey(key, 'MeasurementContext.key');
         assertRelevanceStrength(relevanceStrength, 'MeasurementContext.relevanceStrength');
-        this.label = label;
-        this.measurement = measurement;
+        this.key = key;
         this.relevanceStrength = relevanceStrength;
     }
 
     toPlain(): Record<string, unknown> {
         return {
-            label: this.label,
-            measurement: this.measurement.toJSON(),
+            key: this.key,
             relevanceStrength: this.relevanceStrength,
         };
     }
@@ -32,35 +35,11 @@ export class MeasurementContext {
             throw new Error('MeasurementContext result must be an object');
         }
         const r = result as Record<string, unknown>;
-        const label = MeasurementContext.assertNonEmptyString(r.label, 'MeasurementContext.label');
+        const key = assertMeasurementKey(r.key, 'MeasurementContext.key');
         const relevanceStrength = assertRelevanceStrength(
             r.relevanceStrength,
             'MeasurementContext.relevanceStrength',
         );
-        const measurement = MeasurementContext.parseMeasurement(r.measurement);
-        return new MeasurementContext(label, measurement, relevanceStrength);
-    }
-
-    private static parseMeasurement(value: unknown): Measurement {
-        if (value == null || typeof value !== 'object') {
-            throw new Error('MeasurementContext.measurement must be an object');
-        }
-        const r = value as Record<string, unknown>;
-        if (r.measurementType === 'length') {
-            return LengthMeasurement.fromResult(value);
-        }
-        if (r.measurementType === 'time') {
-            return TimeMeasurement.fromResult(value);
-        }
-        throw new Error(
-            `MeasurementContext.measurement.measurementType must be "length" or "time", got: ${JSON.stringify(r.measurementType)}`,
-        );
-    }
-
-    private static assertNonEmptyString(value: unknown, context: string): string {
-        if (typeof value !== 'string' || value.trim().length === 0) {
-            throw new Error(`${context} must be a non-empty string`);
-        }
-        return value;
+        return new MeasurementContext(key, relevanceStrength);
     }
 }

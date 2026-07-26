@@ -247,6 +247,43 @@ describe('RopewikiPageView models', () => {
         });
     });
 
+    it('builds measurements lookup from page stats including min/max time expansion', () => {
+        const wire = onlineResult();
+        wire.approachLength = 1.5;
+        wire.approachElevGain = 400;
+        wire.shuttleTime = 15;
+        wire.approachTime = { min: 1, max: 2 };
+        wire.descentTime = 3;
+        const page = OnlineRopewikiPageView.fromResult(wire);
+        const lookup = page.toMeasurementsLookup();
+
+        expect(lookup.approachLength).toBeInstanceOf(LengthMeasurement);
+        expect(lookup.approachLength!.value).toBe(1.5);
+        expect(lookup.approachElevGain!.value).toBe(400);
+        expect(lookup.shuttleTime).toBeInstanceOf(TimeMeasurement);
+        expect(lookup.shuttleTime!.value).toBe(15);
+        expect(lookup.minApproachTime!.value).toBe(1);
+        expect(lookup.maxApproachTime!.value).toBe(2);
+        expect(lookup.minDescentTime).toBe(lookup.maxDescentTime);
+        expect(lookup.minDescentTime!.value).toBe(3);
+        expect(lookup.descentLength).toBeUndefined();
+        expect(lookup.exitElevGain).toBeUndefined();
+
+        const offline = page.toOffline({
+            [IMAGE_ID_A]: new ImageVersions({
+                preview: '/tmp/a-preview.avif',
+                banner: '/tmp/a-banner.avif',
+                full: '/tmp/a-full.avif',
+            }),
+            [IMAGE_ID_B]: new ImageVersions({
+                preview: '/tmp/b-preview.avif',
+                banner: '/tmp/b-banner.avif',
+                full: '/tmp/b-full.avif',
+            }),
+        });
+        expect(offline.toMeasurementsLookup().approachLength!.value).toBe(1.5);
+    });
+
     it('toOfflineFromExtractedBundle resolves preview, banner, and full files', async () => {
         const page = OnlineRopewikiPageView.fromResult({
             ...onlineResult(),

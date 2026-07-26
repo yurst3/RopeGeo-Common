@@ -102,6 +102,13 @@ export {
     isRelevanceStrength,
     type RelevanceStrength,
 } from './relevanceStrength';
+export {
+    MEASUREMENT_KEYS,
+    assertMeasurementKey,
+    isMeasurementKey,
+    type MeasurementKey,
+    type MeasurementsLookup,
+} from './measurementKey';
 export { OnlineBetaSection } from './betaSections/onlineBetaSection';
 export { OfflineBetaSection } from './betaSections/offlineBetaSection';
 export { Bounds } from './minimap/bounds';

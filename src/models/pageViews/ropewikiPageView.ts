@@ -20,6 +20,7 @@ import {
     TimeMeasurement,
     TimeMeasurementUnit,
 } from '../measurements/timeMeasurement';
+import type { MeasurementKey, MeasurementsLookup } from '../measurementKey';
 
 const ropewikiPageViewParsers = new Map<FetchType, (result: unknown) => RopewikiPageView>();
 
@@ -130,6 +131,57 @@ export abstract class RopewikiPageView {
                 ? { lat: coordinates.lat, lon: coordinates.lon }
                 : null;
         this.authors = authors != null ? authors.slice() : null;
+    }
+
+    /**
+     * Builds a key → measurement map for relevant-context resolution.
+     * Time ranges expand to `min*` / `max*` keys; a single time value is stored under both.
+     * Only non-null page stats are included.
+     */
+    toMeasurementsLookup(): MeasurementsLookup {
+        const lookup: MeasurementsLookup = {};
+        const putLength = (key: MeasurementKey, value: LengthMeasurement | null): void => {
+            if (value != null) lookup[key] = value;
+        };
+        putLength('approachLength', this.approachLength);
+        putLength('descentLength', this.descentLength);
+        putLength('exitLength', this.exitLength);
+        putLength('approachElevGain', this.approachElevGain);
+        putLength('descentElevGain', this.descentElevGain);
+        putLength('exitElevGain', this.exitElevGain);
+        if (this.shuttleTime != null) {
+            lookup.shuttleTime = this.shuttleTime;
+        }
+        RopewikiPageView.putTimePair(
+            lookup,
+            'minApproachTime',
+            'maxApproachTime',
+            this.approachTime,
+        );
+        RopewikiPageView.putTimePair(
+            lookup,
+            'minDescentTime',
+            'maxDescentTime',
+            this.descentTime,
+        );
+        RopewikiPageView.putTimePair(lookup, 'minExitTime', 'maxExitTime', this.exitTime);
+        return lookup;
+    }
+
+    private static putTimePair(
+        lookup: MeasurementsLookup,
+        minKey: MeasurementKey,
+        maxKey: MeasurementKey,
+        value: TimeMeasurement | MinMax<TimeMeasurement> | null,
+    ): void {
+        if (value == null) return;
+        if (value instanceof MinMax) {
+            lookup[minKey] = value.min;
+            lookup[maxKey] = value.max;
+            return;
+        }
+        lookup[minKey] = value;
+        lookup[maxKey] = value;
     }
 
     static fromResult(result: unknown, fetchType?: FetchType): RopewikiPageView {

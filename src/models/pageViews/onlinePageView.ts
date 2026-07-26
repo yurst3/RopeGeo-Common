@@ -9,6 +9,7 @@ import type { DownloadJobConfig, DownloadPlatformHarness, DownloadTaskDependency
 import type { OnlineMiniMap } from '../minimap/abstract/onlineMiniMap';
 import type { OnlineBetaSection } from '../betaSections/onlineBetaSection';
 import type { OnlineBetaSectionImage } from '../betaSections/onlineBetaSectionImage';
+import type { MeasurementsLookup } from '../measurementKey';
 
 /** Relevant-context section lookup keyed by non-null beta-section id. */
 export type OnlineBetaSectionLookup = Record<string, OnlineBetaSection>;
@@ -31,6 +32,7 @@ export interface OnlinePageView {
     readonly downloadFolder: string | null;
     toBetaSectionLookup(): OnlineBetaSectionLookup;
     toImageLookup(): OnlineImageLookup;
+    toMeasurementsLookup(): MeasurementsLookup;
     planDownloadPhases(): DownloadPhase[];
     getDependenciesForPhases(phases: DownloadPhase[]): Record<string, DownloadTaskDependency>;
     toOfflineFromExtractedBundle(

@@ -5,6 +5,7 @@ import type { Bounds } from '../minimap/bounds';
 import { PageViewType } from './pageViewType';
 import type { OfflineBetaSection } from '../betaSections/offlineBetaSection';
 import type { OfflineBetaSectionImage } from '../betaSections/offlineBetaSectionImage';
+import type { MeasurementsLookup } from '../measurementKey';
 
 /** Relevant-context section lookup keyed by non-null beta-section id. */
 export type OfflineBetaSectionLookup = Record<string, OfflineBetaSection>;
@@ -25,6 +26,7 @@ export interface OfflinePageView {
     readonly pageViewType: PageViewType;
     toBetaSectionLookup(): OfflineBetaSectionLookup;
     toImageLookup(): OfflineImageLookup;
+    toMeasurementsLookup(): MeasurementsLookup;
     toPagePreview(): OfflinePagePreview;
     /** Bounds for Mapbox offline pack when this page uses a page minimap; otherwise null. */
     getMapboxPackBounds(): Bounds | null;
