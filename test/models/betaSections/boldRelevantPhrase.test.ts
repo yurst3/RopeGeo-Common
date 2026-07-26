@@ -35,5 +35,7 @@ describe('boldRelevantPhraseInHtml', () => {
     it('returns html unchanged for empty phrase or html', () => {
         expect(boldRelevantPhraseInHtml('', 'R1')).toBe('');
         expect(boldRelevantPhraseInHtml('<p>R1</p>', '')).toBe('<p>R1</p>');
+        expect(boldRelevantPhraseInHtml('<p>R1</p>', undefined)).toBe('<p>R1</p>');
+        expect(boldRelevantPhraseInHtml('<p>R1</p>', null)).toBe('<p>R1</p>');
     });
 });

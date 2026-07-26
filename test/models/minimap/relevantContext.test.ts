@@ -86,12 +86,18 @@ describe('BetaSectionExcerpt', () => {
             ).toThrow(/BetaSectionExcerpt\.relevanceStrength/);
         });
 
-        it('throws when relevantPhrase is missing or empty', () => {
-            expect(() =>
-                BetaSectionExcerpt.fromResult({
-                    relevanceStrength: 'Maybe Relevant',
-                }),
-            ).toThrow(/BetaSectionExcerpt\.relevantPhrase/);
+        it('allows relevantPhrase to be omitted', () => {
+            const excerpt = BetaSectionExcerpt.fromResult({
+                relevanceStrength: 'Maybe Relevant',
+            });
+            expect(excerpt.relevantPhrase).toBeUndefined();
+            expect(excerpt.toPlain()).toEqual({
+                relevanceStrength: 'Maybe Relevant',
+            });
+            expect(excerpt.toHtml()).toBe('');
+        });
+
+        it('throws when relevantPhrase is empty', () => {
             expect(() =>
                 BetaSectionExcerpt.fromResult({
                     relevanceStrength: 'Maybe Relevant',
@@ -172,7 +178,7 @@ describe('ImageContext', () => {
             ).toThrow('ImageContext.id must be a non-empty string');
         });
 
-        it('throws when relevanceStrength or relevantPhrase is invalid', () => {
+        it('throws when relevanceStrength is invalid or relevantPhrase is empty', () => {
             expect(() =>
                 ImageContext.fromResult({ id: 'img-1', relevantPhrase: 'x' }),
             ).toThrow(/ImageContext\.relevanceStrength/);
@@ -180,8 +186,21 @@ describe('ImageContext', () => {
                 ImageContext.fromResult({
                     id: 'img-1',
                     relevanceStrength: 'Definitely Relevant',
+                    relevantPhrase: '  ',
                 }),
             ).toThrow(/ImageContext\.relevantPhrase/);
+        });
+
+        it('allows relevantPhrase to be omitted', () => {
+            const image = ImageContext.fromResult({
+                id: 'img-1',
+                relevanceStrength: 'Definitely Relevant',
+            });
+            expect(image.relevantPhrase).toBeUndefined();
+            expect(image.toPlain()).toEqual({
+                id: 'img-1',
+                relevanceStrength: 'Definitely Relevant',
+            });
         });
     });
 });

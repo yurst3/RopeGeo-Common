@@ -6,24 +6,32 @@ import {
 export class ImageContext {
     readonly id: string;
     readonly relevanceStrength: RelevanceStrength;
-    /** Verbatim substring of the image caption and/or file URL. */
-    readonly relevantPhrase: string;
+    /**
+     * Verbatim substring of the image caption. When omitted, caption
+     * highlighting is skipped.
+     */
+    readonly relevantPhrase?: string;
 
-    constructor(id: string, relevanceStrength: RelevanceStrength, relevantPhrase: string) {
+    constructor(id: string, relevanceStrength: RelevanceStrength, relevantPhrase?: string) {
         ImageContext.assertNonEmptyString(id, 'ImageContext.id');
         assertRelevanceStrength(relevanceStrength, 'ImageContext.relevanceStrength');
-        ImageContext.assertNonEmptyString(relevantPhrase, 'ImageContext.relevantPhrase');
+        if (relevantPhrase !== undefined) {
+            ImageContext.assertNonEmptyString(relevantPhrase, 'ImageContext.relevantPhrase');
+        }
         this.id = id;
         this.relevanceStrength = relevanceStrength;
         this.relevantPhrase = relevantPhrase;
     }
 
     toPlain(): Record<string, unknown> {
-        return {
+        const out: Record<string, unknown> = {
             id: this.id,
             relevanceStrength: this.relevanceStrength,
-            relevantPhrase: this.relevantPhrase,
         };
+        if (this.relevantPhrase !== undefined) {
+            out.relevantPhrase = this.relevantPhrase;
+        }
+        return out;
     }
 
     static fromResult(result: unknown): ImageContext {
@@ -36,10 +44,13 @@ export class ImageContext {
             r.relevanceStrength,
             'ImageContext.relevanceStrength',
         );
-        const relevantPhrase = ImageContext.assertNonEmptyString(
-            r.relevantPhrase,
-            'ImageContext.relevantPhrase',
-        );
+        let relevantPhrase: string | undefined;
+        if (r.relevantPhrase !== undefined && r.relevantPhrase !== null) {
+            relevantPhrase = ImageContext.assertNonEmptyString(
+                r.relevantPhrase,
+                'ImageContext.relevantPhrase',
+            );
+        }
         return new ImageContext(id, relevanceStrength, relevantPhrase);
     }
 

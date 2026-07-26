@@ -64,7 +64,7 @@ export abstract class BetaSection {
     toExcerpt(
         excerptText: string,
         relevanceStrength: RelevanceStrength,
-        relevantPhrase: string,
+        relevantPhrase?: string,
     ): BetaSectionExcerpt {
         if (excerptText.length === 0) {
             return new BetaSectionExcerpt(

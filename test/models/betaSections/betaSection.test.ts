@@ -193,6 +193,49 @@ describe('BetaSection', () => {
             ).toBe('<ol><li>One</li></ol>');
         });
 
+        it('bolds relevantPhrase in excerpt HTML when present and skips when omitted', () => {
+            expect(
+                new BetaSectionExcerpt(
+                    'Find the first rappel here.',
+                    undefined,
+                    undefined,
+                    'Definitely Relevant',
+                    'first rappel',
+                ).toHtml(),
+            ).toBe('Find the <b>first rappel</b> here.');
+            expect(
+                new BetaSectionExcerpt(
+                    'Find the first rappel here.',
+                    undefined,
+                    undefined,
+                    'Definitely Relevant',
+                ).toHtml(),
+            ).toBe('Find the first rappel here.');
+
+            const section = new OnlineBetaSection(
+                0,
+                'Beta',
+                'Find the first rappel here.',
+                new Date('2025-01-01Z'),
+            );
+            const withPhrase = section.toExcerpt(
+                'Find the first rappel here.',
+                'Definitely Relevant',
+                'first rappel',
+            );
+            expect(section.toExcerptHtml(withPhrase)).toEqual({
+                body: 'Find the <b>first rappel</b> here.',
+            });
+            const withoutPhrase = section.toExcerpt(
+                'Find the first rappel here.',
+                'Definitely Relevant',
+            );
+            expect(withoutPhrase.relevantPhrase).toBeUndefined();
+            expect(section.toExcerptHtml(withoutPhrase)).toEqual({
+                body: 'Find the first rappel here.',
+            });
+        });
+
         it('returns normalized excerpt-only HTML for missing or stale offsets', () => {
             const section = new OnlineBetaSection(
                 0,

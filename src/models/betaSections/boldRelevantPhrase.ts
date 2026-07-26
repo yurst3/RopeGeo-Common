@@ -2,10 +2,14 @@
  * Wraps the first contiguous text-run occurrence of `phrase` in `<b>…</b>`
  * without splitting HTML tags. If the phrase already sits fully inside a
  * `<b>`/`<strong>` element, or spans multiple text runs (tags in between),
- * returns `html` unchanged.
+ * returns `html` unchanged. When `phrase` is undefined/null/empty, returns
+ * `html` unchanged (no highlighting).
  */
-export function boldRelevantPhraseInHtml(html: string, phrase: string): string {
-    if (html.length === 0 || phrase.length === 0) return html;
+export function boldRelevantPhraseInHtml(
+    html: string,
+    phrase: string | undefined | null,
+): string {
+    if (html.length === 0 || phrase == null || phrase.length === 0) return html;
 
     const tokens = tokenizeHtml(html);
     for (let i = 0; i < tokens.length; i++) {

@@ -12,23 +12,25 @@ export class BetaSectionExcerpt {
     readonly relevanceStrength: RelevanceStrength;
     /**
      * Verbatim substring of the text block’s title and/or body that connects
-     * this excerpt to the map feature. Required even for title-only relevance
-     * (when `text` is omitted).
+     * this excerpt to the map feature. When omitted, excerpt HTML is not
+     * phrase-highlighted.
      */
-    readonly relevantPhrase: string;
+    readonly relevantPhrase?: string;
 
     constructor(
         text: string | undefined,
         start: number | undefined,
         end: number | undefined,
         relevanceStrength: RelevanceStrength,
-        relevantPhrase: string,
+        relevantPhrase?: string,
     ) {
         assertRelevanceStrength(relevanceStrength, 'BetaSectionExcerpt.relevanceStrength');
-        BetaSectionExcerpt.assertNonEmptyString(
-            relevantPhrase,
-            'BetaSectionExcerpt.relevantPhrase',
-        );
+        if (relevantPhrase !== undefined) {
+            BetaSectionExcerpt.assertNonEmptyString(
+                relevantPhrase,
+                'BetaSectionExcerpt.relevantPhrase',
+            );
+        }
         this.text = text;
         this.start = start;
         this.end = end;
@@ -39,7 +41,6 @@ export class BetaSectionExcerpt {
     toPlain(): Record<string, unknown> {
         const out: Record<string, unknown> = {
             relevanceStrength: this.relevanceStrength,
-            relevantPhrase: this.relevantPhrase,
         };
         if (this.text !== undefined) {
             out.text = this.text;
@@ -50,15 +51,16 @@ export class BetaSectionExcerpt {
         if (this.end !== undefined) {
             out.end = this.end;
         }
+        if (this.relevantPhrase !== undefined) {
+            out.relevantPhrase = this.relevantPhrase;
+        }
         return out;
     }
 
     /** Returns displayable excerpt HTML when the owning beta section is unavailable. */
     toHtml(): string {
-        return boldRelevantPhraseInHtml(
-            normalizeExcerptListHtml(this.text ?? ''),
-            this.relevantPhrase,
-        );
+        const normalized = normalizeExcerptListHtml(this.text ?? '');
+        return boldRelevantPhraseInHtml(normalized, this.relevantPhrase);
     }
 
     static fromResult(result: unknown): BetaSectionExcerpt {
@@ -70,10 +72,14 @@ export class BetaSectionExcerpt {
             r.relevanceStrength,
             'BetaSectionExcerpt.relevanceStrength',
         );
-        const relevantPhrase = BetaSectionExcerpt.assertNonEmptyString(
-            r.relevantPhrase,
-            'BetaSectionExcerpt.relevantPhrase',
-        );
+
+        let relevantPhrase: string | undefined;
+        if (r.relevantPhrase !== undefined && r.relevantPhrase !== null) {
+            relevantPhrase = BetaSectionExcerpt.assertNonEmptyString(
+                r.relevantPhrase,
+                'BetaSectionExcerpt.relevantPhrase',
+            );
+        }
 
         let text: string | undefined;
         if (r.text !== undefined) {
