@@ -3,10 +3,19 @@
  * detailed messages, and optionally routes through a proxy in Lambda dev/prod.
  */
 
-const DEFAULT_HEADERS: Record<string, string> = {
+const getProcessName = (): string => {
+    const lambdaName = process.env.AWS_LAMBDA_FUNCTION_NAME;
+    if (typeof lambdaName === 'string' && lambdaName.length > 0) {
+        return lambdaName;
+    }
+    return 'local';
+};
+
+const getDefaultHeaders = (): Record<string, string> => ({
     Accept: 'application/json, text/html, application/xml, */*',
     'Accept-Language': 'en-US,en;q=0.9',
-};
+    'User-Agent': `RopeGeo/1.0 ${getProcessName()}`,
+});
 
 const isLambda = (): boolean => typeof process.env.AWS_LAMBDA_FUNCTION_NAME === 'string' && process.env.AWS_LAMBDA_FUNCTION_NAME.length > 0;
 
@@ -106,7 +115,7 @@ export async function httpRequest(
         }
 
         const requestOptions = {
-            headers: DEFAULT_HEADERS,
+            headers: getDefaultHeaders(),
             ...(dispatcher ? { dispatcher } : {}),
             signal: requestSignal,
             ...init,

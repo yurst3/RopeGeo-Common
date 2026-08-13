@@ -79,6 +79,23 @@ describe('httpRequest', () => {
     const headers = (init as RequestInit).headers as Record<string, string>;
     expect(headers['Accept']).toBe('application/json, text/html, application/xml, */*');
     expect(headers['Accept-Language']).toBe('en-US,en;q=0.9');
+    expect(headers['User-Agent']).toBe('RopeGeo/1.0 local');
+  });
+
+  it('includes AWS_LAMBDA_FUNCTION_NAME in User-Agent when set', async () => {
+    process.env.AWS_LAMBDA_FUNCTION_NAME = 'WebScraper-Prod-RopewikiScraper-AbCdEf';
+    mockGlobalFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      json: async () => ({}),
+    } as unknown as FetchResponse);
+
+    await httpRequest('https://example.com/');
+
+    const [, init] = mockGlobalFetch.mock.calls[0]!;
+    const headers = (init as RequestInit).headers as Record<string, string>;
+    expect(headers['User-Agent']).toBe('RopeGeo/1.0 WebScraper-Prod-RopewikiScraper-AbCdEf');
   });
 
   it('throws when response is not OK', async () => {
