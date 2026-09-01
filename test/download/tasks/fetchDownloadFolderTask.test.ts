@@ -164,10 +164,10 @@ describe('FetchDownloadFolderTask', () => {
 
         expect(task.completed).toBe(100);
         expect(notifyProgress).toHaveBeenCalled();
-        expect(progressAtNotify).toContain(35);
-        expect(progressAtNotify).toContain(70);
-        expect(progressAtNotify).toContain(85);
+        expect(progressAtNotify).toContain(48);
         expect(progressAtNotify).toContain(95);
+        expect(progressAtNotify).toContain(98);
+        expect(progressAtNotify).toContain(99);
     });
 
     it('appends Mapbox phase after extract when parallelMapbox is false and page minimap exists', async () => {
