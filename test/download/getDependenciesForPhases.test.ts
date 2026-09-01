@@ -92,6 +92,7 @@ describe('OnlineRopewikiPageView.getDependenciesForPhases', () => {
 
         expect(tasks.some((task) => task instanceof FetchImageFilesTask)).toBe(true);
         expect(tasks.some((task) => task instanceof FetchMapboxPackTask)).toBe(true);
+        expect(tasks.filter((task) => task instanceof FetchMapboxPackTask)).toHaveLength(2);
         expect(tasks.some((task) => task instanceof FetchRopeGeoTileListTask)).toBe(true);
         expect(tasks.some((task) => task instanceof SaveOfflinePageTask)).toBe(true);
         expect(deps[DownloadDependencyKeys.FetchImageFiles]).toBeDefined();

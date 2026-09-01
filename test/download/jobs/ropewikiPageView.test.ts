@@ -17,7 +17,10 @@ const IMAGE_ID_B = '550e8400-e29b-41d4-a716-446655440001';
 
 const downloadConfig: DownloadJobConfig = {
     savedAt: 1_700_000_000_000,
-    mapboxStyleUrl: 'mapbox://styles/example',
+    mapboxStyleUrls: {
+        standard: 'mapbox://styles/example/standard',
+        satellite: 'mapbox://styles/example/satellite',
+    },
     webScraperBaseUrl: 'https://api.example.com/',
 };
 
@@ -179,7 +182,7 @@ describe('OnlineRopewikiPageView download job planning', () => {
         const job = view.toDownloadJob(downloadConfig);
         expect(taskKinds(job)).toEqual([
             ['deleteStoredPage'],
-            ['fetchImageFiles', 'fetchMapboxPack'],
+            ['fetchImageFiles', 'fetchMapboxPack', 'fetchMapboxPack'],
             ['saveOfflinePage'],
         ]);
         expect(phaseTitles(job)[1]).toBe('Downloading Media');
@@ -192,7 +195,7 @@ describe('OnlineRopewikiPageView download job planning', () => {
         const job = view.toDownloadJob(downloadConfig);
         expect(taskKinds(job)).toEqual([
             ['deleteStoredPage'],
-            ['fetchImageFiles', 'fetchMapboxPack', 'fetchRopeGeoTileList'],
+            ['fetchImageFiles', 'fetchMapboxPack', 'fetchMapboxPack', 'fetchRopeGeoTileList'],
             ['fetchRopeGeoTileFiles'],
             ['saveOfflinePage'],
         ]);
@@ -248,7 +251,7 @@ describe('OnlineRopewikiPageView download job planning', () => {
         const job = view.toDownloadJob(downloadConfig);
         expect(taskKinds(job)).toEqual([
             ['deleteStoredPage'],
-            ['fetchDownloadFolder', 'fetchMapboxPack'],
+            ['fetchDownloadFolder', 'fetchMapboxPack', 'fetchMapboxPack'],
         ]);
         expect(job.taskDependencies[DownloadDependencyKeys.FetchDownloadFolder]).toBeDefined();
         expect(job.taskDependencies[DownloadDependencyKeys.FetchImageFiles]).toBeUndefined();

@@ -160,7 +160,11 @@ describe('FetchDownloadFolderTask', () => {
         await job.runTick(harness, new AbortController().signal);
 
         expect(job.phases).toHaveLength(2);
+        expect(job.phases[1]?.tasks).toHaveLength(2);
         expect(job.phases[1]?.tasks[0]).toBeInstanceOf(FetchMapboxPackTask);
+        expect(job.phases[1]?.tasks[1]).toBeInstanceOf(FetchMapboxPackTask);
+        expect((job.phases[1]?.tasks[0] as FetchMapboxPackTask).styleKey).toBe('standard');
+        expect((job.phases[1]?.tasks[1] as FetchMapboxPackTask).styleKey).toBe('satellite');
         expect(job.taskDependencies[DownloadDependencyKeys.FetchMapboxPack]).toBeDefined();
     });
 

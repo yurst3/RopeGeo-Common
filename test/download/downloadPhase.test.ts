@@ -7,7 +7,7 @@ import { createMockPlatformHarness } from './helpers/mockPlatformHarness';
 
 describe('DownloadPhase', () => {
     it('computes progressPercent from task completed/total sums', () => {
-        const mapboxTask = new FetchMapboxPackTask(50, 100, true);
+        const mapboxTask = new FetchMapboxPackTask('standard', 50, 100, true);
         const phase = new DownloadPhase({
             title: 'mapbox',
             tasks: [mapboxTask],
@@ -18,7 +18,7 @@ describe('DownloadPhase', () => {
     it('returns progressPercent 1 when total is 0', () => {
         const phase = new DownloadPhase({
             title: 'empty',
-            tasks: [new FetchMapboxPackTask(0, 0, false)],
+            tasks: [new FetchMapboxPackTask('standard', 0, 0, false)],
         });
         expect(phase.progressPercent).toBe(1);
     });
@@ -33,7 +33,14 @@ describe('DownloadPhase', () => {
         const ctx = {
             pageId: 'page-1',
             pageViewType: PageViewType.Ropewiki,
-            config: { savedAt: 1, mapboxStyleUrl: 'mapbox://x', webScraperBaseUrl: 'https://api/' },
+            config: {
+                savedAt: 1,
+                mapboxStyleUrls: {
+                    standard: 'mapbox://styles/x/standard',
+                    satellite: 'mapbox://styles/x/satellite',
+                },
+                webScraperBaseUrl: 'https://api/',
+            },
             taskDependencies: {},
             getDependency: () => {
                 throw new Error('not used');

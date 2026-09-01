@@ -12,7 +12,10 @@ export type {
     FetchImageFilesSlot,
     DownloadedImageVersions,
     PendingFileTransfer,
+    MapboxStyleKey,
+    MapboxStyleUrls,
 } from './types';
+export { MAPBOX_STYLE_KEYS } from './types';
 export { hydrateTaskDependencyFromStoredState } from './helpers/downloadDependencyRegistry';
 export { DownloadDependencyKeys } from './dependencies/downloadDependencyKeys';
 export { FetchPageJsonTaskDependency } from './dependencies/fetchPageJsonTaskDependency';
@@ -50,7 +53,7 @@ export { DeleteStoredPageTask } from './tasks/deleteStoredPageTask';
 export { FetchPageJsonTask } from './tasks/fetchPageJsonTask';
 export { FetchRopeGeoTileListTask } from './tasks/fetchRopeGeoTileListTask';
 export { FetchImageFilesTask } from './tasks/fetchImageFilesTask';
-export { FetchMapboxPackTask } from './tasks/fetchMapboxPackTask';
+export { FetchMapboxPackTask, createMapboxPackTasks } from './tasks/fetchMapboxPackTask';
 export { FetchRopeGeoTileFilesTask } from './tasks/fetchRopeGeoTileFilesTask';
 export { FetchRegionRouteListTask } from './tasks/fetchRegionRouteListTask';
 export { FetchDownloadFolderTask } from './tasks/fetchDownloadFolderTask';

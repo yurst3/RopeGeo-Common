@@ -159,7 +159,7 @@ describe('DownloadJob', () => {
                 pageId: PAGE_ID,
                 pageViewType: PageViewType.Ropewiki,
                 savedAt: downloadConfig.savedAt,
-                mapboxStyleUrl: downloadConfig.mapboxStyleUrl,
+                mapboxStyleUrls: downloadConfig.mapboxStyleUrls,
                 webScraperBaseUrl: downloadConfig.webScraperBaseUrl,
                 state: 'invalid-state',
                 currentPhaseIndex: 0,
@@ -167,5 +167,23 @@ describe('DownloadJob', () => {
                 taskDependencies: {},
             }),
         ).toThrow(InvalidDownloadJobStoredStateError);
+    });
+
+    it('fromStoredState migrates legacy mapboxStyleUrl to both style keys', () => {
+        const job = DownloadJob.fromStoredState({
+            pageId: PAGE_ID,
+            pageViewType: PageViewType.Ropewiki,
+            savedAt: downloadConfig.savedAt,
+            mapboxStyleUrl: 'mapbox://styles/example/legacy',
+            webScraperBaseUrl: downloadConfig.webScraperBaseUrl,
+            state: 'queued',
+            currentPhaseIndex: 0,
+            phases: [buildDeleteStoredPagePhase().toStoredState()],
+            taskDependencies: {},
+        });
+        expect(job.config.mapboxStyleUrls).toEqual({
+            standard: 'mapbox://styles/example/legacy',
+            satellite: 'mapbox://styles/example/legacy',
+        });
     });
 });

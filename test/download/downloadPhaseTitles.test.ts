@@ -40,15 +40,15 @@ describe('titleForPhase', () => {
         expect(titleForPhase([new FetchRegionRouteListTask(10)])).toBe('Downloading local routes');
     });
 
-    it('returns Downloading Mapbox Pack for mapbox task without images', () => {
-        expect(titleForPhase([new FetchMapboxPackTask()])).toBe('Downloading Mapbox Pack');
+    it('returns Downloading Mapbox Packs for mapbox task without images', () => {
+        expect(titleForPhase([new FetchMapboxPackTask('standard')])).toBe('Downloading Mapbox Packs');
     });
 
     it('prefers Downloading Media over Mapbox when both are in the phase', () => {
         expect(
             titleForPhase([
                 new FetchImageFilesTask({ total: 2 }),
-                new FetchMapboxPackTask(),
+                new FetchMapboxPackTask('standard'),
             ]),
         ).toBe('Downloading Media');
     });

@@ -9,7 +9,10 @@ export const IMAGE_ID_A = '550e8400-e29b-41d4-a716-446655440000';
 
 export const downloadConfig = {
     savedAt: 1_700_000_000_000,
-    mapboxStyleUrl: 'mapbox://styles/example',
+    mapboxStyleUrls: {
+        standard: 'mapbox://styles/example/standard',
+        satellite: 'mapbox://styles/example/satellite',
+    },
     webScraperBaseUrl: 'https://api.example.com/',
 };
 

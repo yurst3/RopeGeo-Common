@@ -3,6 +3,10 @@ import type { Bounds } from '../models/minimap/bounds';
 import type { OfflinePagePreview } from '../models/previews/offlinePagePreview';
 import type { PageViewType } from '../models/pageViews/pageViewType';
 import type { DownloadPhase } from './downloadPhase';
+import type { MapboxStyleKey, MapboxStyleUrls } from './mapboxStyleKey';
+
+export type { MapboxStyleKey, MapboxStyleUrls } from './mapboxStyleKey';
+export { MAPBOX_STYLE_KEYS } from './mapboxStyleKey';
 
 export interface DownloadTaskDependency {
     readonly dependencyKind: string;
@@ -28,7 +32,7 @@ export type DownloadJobUISnapshot = {
 
 export type DownloadJobConfig = {
     savedAt: number;
-    mapboxStyleUrl: string;
+    mapboxStyleUrls: MapboxStyleUrls;
     webScraperBaseUrl: string;
     onProgress?: (snapshot: DownloadJobUISnapshot) => void;
 };
@@ -47,7 +51,7 @@ export type DownloadJobStoredState = {
     pageId: string;
     pageViewType: PageViewType;
     savedAt: number;
-    mapboxStyleUrl: string;
+    mapboxStyleUrls: MapboxStyleUrls;
     webScraperBaseUrl: string;
     state: DownloadJobUIState;
     currentPhaseIndex: number;
@@ -86,11 +90,12 @@ export type DownloadPlatformHarness = {
     mapbox: {
         startPack(args: {
             pageId: string;
+            styleKey: MapboxStyleKey;
             styleUrl: string;
             bounds: Bounds;
         }): Promise<void>;
-        getPackProgress(pageId: string): Promise<number>;
-        deletePack(pageId: string): Promise<void>;
+        getPackProgress(pageId: string, styleKey: MapboxStyleKey): Promise<number>;
+        deletePack(pageId: string, styleKey: MapboxStyleKey): Promise<void>;
     };
     loadJobStore(): Promise<DownloadJobQueueStoredState | null>;
     saveJobStore(queueStoredState: DownloadJobQueueStoredState): Promise<void>;

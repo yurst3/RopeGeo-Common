@@ -1,5 +1,6 @@
 import type { PageViewType } from '../models/pageViews/pageViewType';
 import { hydrateTaskDependencyFromStoredState } from './helpers/downloadDependencyRegistry';
+import { MAPBOX_STYLE_KEYS, type MapboxStyleUrls } from './mapboxStyleKey';
 import type {
     DownloadJobConfig,
     DownloadJobContext,
@@ -13,6 +14,29 @@ import { DownloadPhase } from './downloadPhase';
 import { InvalidDownloadJobStoredStateError } from './errors';
 
 type JobChangeListener = () => void;
+
+function parseMapboxStyleUrls(
+    value: Record<string, unknown>,
+    pageId: string,
+): MapboxStyleUrls {
+    const urls = value.mapboxStyleUrls;
+    if (urls != null && typeof urls === 'object') {
+        const record = urls as Record<string, unknown>;
+        const standard = record.standard;
+        const satellite = record.satellite;
+        if (typeof standard === 'string' && typeof satellite === 'string') {
+            return { standard, satellite };
+        }
+    }
+    const legacy = value.mapboxStyleUrl;
+    if (typeof legacy === 'string') {
+        return { standard: legacy, satellite: legacy };
+    }
+    throw new InvalidDownloadJobStoredStateError(
+        `DownloadJob mapboxStyleUrls must include ${MAPBOX_STYLE_KEYS.join(' and ')} style URLs`,
+        pageId,
+    );
+}
 
 export class DownloadJob {
     readonly pageId: string;
@@ -138,7 +162,7 @@ export class DownloadJob {
             pageId: this.pageId,
             pageViewType: this.pageViewType,
             savedAt: this.config.savedAt,
-            mapboxStyleUrl: this.config.mapboxStyleUrl,
+            mapboxStyleUrls: this.config.mapboxStyleUrls,
             webScraperBaseUrl: this.config.webScraperBaseUrl,
             state: this.state,
             currentPhaseIndex: this.currentPhaseIndex,
@@ -179,7 +203,6 @@ export class DownloadJob {
         }
         if (
             typeof value.savedAt !== 'number' ||
-            typeof value.mapboxStyleUrl !== 'string' ||
             typeof value.webScraperBaseUrl !== 'string'
         ) {
             throw new InvalidDownloadJobStoredStateError(
@@ -187,6 +210,7 @@ export class DownloadJob {
                 pageId,
             );
         }
+        const mapboxStyleUrls = parseMapboxStyleUrls(value, pageId);
         const phases = value.phases.map((phase) => DownloadPhase.fromStoredState(phase));
         const currentPhaseIndexRaw = value.currentPhaseIndex;
         if (
@@ -229,7 +253,7 @@ export class DownloadJob {
             pageViewType: value.pageViewType as PageViewType,
             config: {
                 savedAt: value.savedAt as number,
-                mapboxStyleUrl: value.mapboxStyleUrl as string,
+                mapboxStyleUrls,
                 webScraperBaseUrl: value.webScraperBaseUrl as string,
             },
             phases,

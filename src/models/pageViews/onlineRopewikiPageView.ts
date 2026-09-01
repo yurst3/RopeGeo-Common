@@ -33,7 +33,7 @@ import { DownloadDependencyKeys } from '../../download/dependencies/downloadDepe
 import { FetchDownloadFolderTask } from '../../download/tasks/fetchDownloadFolderTask';
 import { FetchDownloadFolderTaskDependency } from '../../download/dependencies/fetchDownloadFolderTaskDependency';
 import { FetchImageFilesTask } from '../../download/tasks/fetchImageFilesTask';
-import { FetchMapboxPackTask } from '../../download/tasks/fetchMapboxPackTask';
+import { FetchMapboxPackTask, createMapboxPackTasks } from '../../download/tasks/fetchMapboxPackTask';
 import { FetchMapboxPackTaskDependency } from '../../download/dependencies/fetchMapboxPackTaskDependency';
 import { FetchRegionRouteListTask } from '../../download/tasks/fetchRegionRouteListTask';
 import { FetchRegionRouteListTaskDependency } from '../../download/dependencies/fetchRegionRouteListTaskDependency';
@@ -466,7 +466,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
     private planBundleDownloadPhases(): DownloadPhase[] {
         const tasks: DownloadTask[] = [new FetchDownloadFolderTask()];
         if (this.needsParallelMapboxForBundle()) {
-            tasks.push(new FetchMapboxPackTask());
+            tasks.push(...createMapboxPackTasks());
         }
         return [
             new DownloadPhase({
@@ -493,7 +493,7 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
         if (miniMap != null && miniMap.fetchType === 'online') {
             if (miniMap.miniMapType === MiniMapType.Page) {
                 const pageMiniMap = miniMap as OnlinePageMiniMap;
-                firstPhaseTasks.push(new FetchMapboxPackTask());
+                firstPhaseTasks.push(...createMapboxPackTasks());
                 if (pageMiniMap.tileCount > 0) {
                     firstPhaseTasks.push(new FetchRopeGeoTileListTask(pageMiniMap.tileCount));
                     hasTileFilesTask = true;

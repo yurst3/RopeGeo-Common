@@ -33,7 +33,7 @@ export function titleForPhase(tasks: DownloadTask[]): string {
         return 'Downloading local routes';
     }
     if (tasks.some((task) => task instanceof FetchMapboxPackTask)) {
-        return 'Downloading Mapbox Pack';
+        return 'Downloading Mapbox Packs';
     }
     return 'Downloading page';
 }

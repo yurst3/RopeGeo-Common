@@ -73,7 +73,7 @@ export class FetchDownloadFolderTask extends DownloadTask {
         }
         const [
             { DownloadPhase },
-            { FetchMapboxPackTask },
+            { createMapboxPackTasks },
             { FetchMapboxPackTaskDependency },
             { titleForPhase },
         ] = await Promise.all([
@@ -82,11 +82,11 @@ export class FetchDownloadFolderTask extends DownloadTask {
             import('../dependencies/fetchMapboxPackTaskDependency'),
             import('../helpers/downloadPhaseTitles'),
         ]);
-        const mapboxTask = new FetchMapboxPackTask();
+        const mapboxTasks = createMapboxPackTasks();
         ctx.appendPhases([
             new DownloadPhase({
-                title: titleForPhase([mapboxTask]),
-                tasks: [mapboxTask],
+                title: titleForPhase(mapboxTasks),
+                tasks: mapboxTasks,
             }),
         ]);
         ctx.setDependency(
