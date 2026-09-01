@@ -106,6 +106,7 @@ describe('FetchPageJsonTask', () => {
             appendPhases: (phases) => {
                 appendedPhases.push(...phases);
             },
+            notifyProgress: () => undefined,
         };
         const task = new FetchPageJsonTask();
         const result = await task.runTick(ctx, harness, new AbortController().signal);

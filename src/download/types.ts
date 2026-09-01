@@ -45,6 +45,8 @@ export type DownloadJobContext = {
     getDependency(key: string): DownloadTaskDependency;
     setDependency(key: string, dep: DownloadTaskDependency): void;
     appendPhases(phases: DownloadPhase[]): void;
+    /** Emits a UI progress update while a task is still running its current tick. */
+    notifyProgress(): void;
 };
 
 export type DownloadJobStoredState = {
@@ -70,6 +72,8 @@ export type DownloadPlatformHarness = {
         url: string;
         destPath: string;
         background: boolean;
+        /** Normalized download progress in [0, 1], when supported by the platform harness. */
+        onProgress?: (fraction: number) => void;
     }): Promise<void>;
     fileExists(path: string): Promise<{ exists: boolean; size?: number }>;
     readTextFile(path: string): Promise<string>;

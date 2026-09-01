@@ -18,6 +18,7 @@ function createContext(deps: DownloadJobContext['taskDependencies']): DownloadJo
             deps[key] = dep;
         },
         appendPhases: () => undefined,
+        notifyProgress: () => undefined,
     };
 }
 

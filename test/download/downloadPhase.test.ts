@@ -47,6 +47,7 @@ describe('DownloadPhase', () => {
             },
             setDependency: () => undefined,
             appendPhases: () => undefined,
+            notifyProgress: () => undefined,
         };
         const done = await phase.runTick(ctx, harness, new AbortController().signal);
         expect(done).toBe(true);

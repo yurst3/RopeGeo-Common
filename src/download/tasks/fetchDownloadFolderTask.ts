@@ -4,12 +4,18 @@ import { FetchDownloadFolderTaskDependency } from '../dependencies/fetchDownload
 import type { DownloadJobContext, DownloadPlatformHarness, DownloadTaskStoredState, TaskTickResult } from '../types';
 import { DownloadTask } from './abstractDownloadTask';
 
+/** Progress weights for bundle download sub-steps (sum to 100). */
+const BUNDLE_DOWNLOAD_END = 95;
+const BUNDLE_EXTRACT_END = 98;
+const BUNDLE_CONVERT_END = 99;
+const BUNDLE_DONE = 100;
+
 export class FetchDownloadFolderTask extends DownloadTask {
     readonly taskKind = 'fetchDownloadFolder';
     readonly dependencyKeys = [DownloadDependencyKeys.FetchDownloadFolder] as const;
     total: number;
 
-    constructor(completed = 0, total = 1) {
+    constructor(completed = 0, total = BUNDLE_DONE) {
         super(completed);
         this.total = total;
     }
@@ -48,16 +54,39 @@ export class FetchDownloadFolderTask extends DownloadTask {
             url: _dep.downloadFolderUrl,
             destPath: zipPath,
             background: true,
+            onProgress: (fraction) => {
+                const clamped = Math.max(0, Math.min(1, fraction));
+                const next = Math.round(clamped * BUNDLE_DOWNLOAD_END);
+                if (next === this.completed) {
+                    return;
+                }
+                this.completed = next;
+                ctx.notifyProgress();
+            },
         });
+        this.setCompletedAndNotify(ctx, BUNDLE_DOWNLOAD_END);
+
         await platformHarness.extractZipArchive({ zipPath, destRoot: pageRoot });
+        this.setCompletedAndNotify(ctx, BUNDLE_EXTRACT_END);
+
         const jsonPath = platformHarness.paths.pageJson(ctx.pageId);
         const rawJson = await platformHarness.readTextFile(jsonPath);
         const onlineView = PageView.fromResult(JSON.parse(rawJson) as unknown);
         const offlineView = await onlineView.toOfflineFromExtractedBundle(pageRoot, platformHarness);
+        this.setCompletedAndNotify(ctx, BUNDLE_CONVERT_END);
+
         await platformHarness.writeTextFile(jsonPath, JSON.stringify(offlineView));
         await platformHarness.setRoutePreviewsForPage(ctx.pageId, [
             offlineView.toPagePreview(),
         ]);
+    }
+
+    private setCompletedAndNotify(ctx: DownloadJobContext, completed: number): void {
+        if (this.completed === completed) {
+            return;
+        }
+        this.completed = completed;
+        ctx.notifyProgress();
     }
 
     private async maybeAppendMapboxPhaseAfterExtract(

@@ -20,12 +20,26 @@ export function createMockPlatformHarness(
     overrides: Partial<DownloadPlatformHarness> = {},
 ): DownloadPlatformHarness & {
     deletePageBundle: jest.Mock<(pageId: string) => Promise<void>>;
-    downloadFile: jest.Mock<(args: { url: string; destPath: string; background: boolean }) => Promise<void>>;
+    downloadFile: jest.Mock<
+        (args: {
+            url: string;
+            destPath: string;
+            background: boolean;
+            onProgress?: (fraction: number) => void;
+        }) => Promise<void>
+    >;
     saveJobStore: jest.Mock<(state: DownloadJobQueueStoredState) => Promise<void>>;
 } {
     const deletePageBundle = jest.fn<(pageId: string) => Promise<void>>().mockResolvedValue(undefined);
     const downloadFile = jest
-        .fn<(args: { url: string; destPath: string; background: boolean }) => Promise<void>>()
+        .fn<
+            (args: {
+                url: string;
+                destPath: string;
+                background: boolean;
+                onProgress?: (fraction: number) => void;
+            }) => Promise<void>
+        >()
         .mockResolvedValue(undefined);
     const saveJobStore = jest
         .fn<(state: DownloadJobQueueStoredState) => Promise<void>>()

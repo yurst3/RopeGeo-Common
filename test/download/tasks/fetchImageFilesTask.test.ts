@@ -24,6 +24,7 @@ function createContext(taskDependencies: DownloadJobContext['taskDependencies'])
             taskDependencies[key] = dep;
         },
         appendPhases: () => undefined,
+        notifyProgress: () => undefined,
     };
 }
 

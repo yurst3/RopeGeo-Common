@@ -69,6 +69,7 @@ describe('SaveOfflinePageTask', () => {
                 deps[key] = dep;
             },
             appendPhases: () => undefined,
+            notifyProgress: () => undefined,
         };
         const task = new SaveOfflinePageTask([DownloadDependencyKeys.SaveOfflinePageView]);
         const result = await task.runTick(ctx, harness, new AbortController().signal);

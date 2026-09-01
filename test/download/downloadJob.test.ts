@@ -48,6 +48,23 @@ class SlowTask extends DownloadTask {
     }
 }
 
+class NotifyProgressTask extends DownloadTask {
+    readonly taskKind = 'notifyProgress';
+    readonly dependencyKeys: readonly string[] = [];
+    total = 100;
+
+    async runTick(ctx: DownloadJobContext): Promise<TaskTickResult> {
+        this.completed = 50;
+        ctx.notifyProgress();
+        this.completed = 100;
+        return { done: true };
+    }
+
+    toStoredState(): DownloadTaskStoredState {
+        return { taskKind: this.taskKind, completed: this.completed, total: this.total };
+    }
+}
+
 function minimalJob(phases: DownloadPhase[] = [buildDeleteStoredPagePhase()]): DownloadJob {
     return new DownloadJob({
         pageId: PAGE_ID,
@@ -139,6 +156,23 @@ describe('DownloadJob', () => {
         const snapshot = onProgress.mock.calls[0]![0] as { pageId: string; state: string };
         expect(snapshot.pageId).toBe(PAGE_ID);
         expect(snapshot.state).toBe('success');
+    });
+
+    it('notifyProgress emits mid-tick UI snapshots', async () => {
+        const onProgress = jest.fn();
+        const job = new DownloadJob({
+            pageId: PAGE_ID,
+            pageViewType: PageViewType.Ropewiki,
+            config: { ...downloadConfig, onProgress },
+            phases: [
+                new DownloadPhase({ title: 'progress', tasks: [new NotifyProgressTask()] }),
+            ],
+        });
+        await job.runTick(harness, new AbortController().signal);
+        expect(onProgress.mock.calls.length).toBeGreaterThanOrEqual(2);
+        const midSnapshot = onProgress.mock.calls[0]![0] as { phaseProgress: number; state: string };
+        expect(midSnapshot.state).toBe('running');
+        expect(midSnapshot.phaseProgress).toBe(0.5);
     });
 
     it('round-trips through stored state', async () => {

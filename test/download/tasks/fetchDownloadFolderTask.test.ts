@@ -70,6 +70,7 @@ const onlinePageJson = {
 function createContext(
     deps: DownloadJobContext['taskDependencies'],
     appendPhases: DownloadJobContext['appendPhases'],
+    notifyProgress: DownloadJobContext['notifyProgress'] = jest.fn(),
 ): DownloadJobContext {
     return {
         pageId: PAGE_ID,
@@ -81,6 +82,7 @@ function createContext(
             deps[key] = dep;
         },
         appendPhases,
+        notifyProgress,
     };
 }
 
@@ -129,7 +131,43 @@ describe('FetchDownloadFolderTask', () => {
             `${pageRoot}mapdata/tiles/${MAP_DATA_ID}/{z}/{x}/{y}.pbf`,
         );
         expect(harness.setRoutePreviewsForPage).toHaveBeenCalled();
-        expect(task.completed).toBe(1);
+        expect(task.completed).toBe(100);
+    });
+
+    it('reports incremental progress during download and sub-steps', async () => {
+        const harness = createMockPlatformHarness();
+        jest.mocked(harness.readTextFile).mockResolvedValue(JSON.stringify(onlinePageJson));
+        jest.mocked(harness.writeTextFile).mockImplementation(async (_path, content) => {
+            jest.mocked(harness.readTextFile).mockResolvedValue(content);
+        });
+        jest.mocked(harness.downloadFile).mockImplementation(async ({ onProgress }) => {
+            onProgress?.(0.5);
+            onProgress?.(1);
+        });
+
+        const task = new FetchDownloadFolderTask();
+        const progressAtNotify: number[] = [];
+        const notifyProgress = jest.fn(() => {
+            progressAtNotify.push(task.completed);
+        });
+        const deps: DownloadJobContext['taskDependencies'] = {
+            [DownloadDependencyKeys.FetchDownloadFolder]: new FetchDownloadFolderTaskDependency({
+                downloadFolderUrl: 'https://cdn.example.com/page-zips/a.zip',
+                parallelMapbox: true,
+            }),
+        };
+        await task.runTick(
+            createContext(deps, () => undefined, notifyProgress),
+            harness,
+            new AbortController().signal,
+        );
+
+        expect(task.completed).toBe(100);
+        expect(notifyProgress).toHaveBeenCalled();
+        expect(progressAtNotify).toContain(35);
+        expect(progressAtNotify).toContain(70);
+        expect(progressAtNotify).toContain(85);
+        expect(progressAtNotify).toContain(95);
     });
 
     it('appends Mapbox phase after extract when parallelMapbox is false and page minimap exists', async () => {

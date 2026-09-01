@@ -75,6 +75,7 @@ describe('FetchRegionRouteListTask', () => {
                 deps[key] = dep;
             },
             appendPhases: () => undefined,
+            notifyProgress: () => undefined,
         };
         const task = new FetchRegionRouteListTask(0);
         const result = await task.runTick(ctx, harness, new AbortController().signal);
@@ -111,6 +112,7 @@ describe('FetchRegionRouteListTask', () => {
                 deps[key] = dep;
             },
             appendPhases: () => undefined,
+            notifyProgress: () => undefined,
         };
         const task = new FetchRegionRouteListTask(1);
         const result = await task.runTick(ctx, harness, new AbortController().signal);

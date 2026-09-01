@@ -87,6 +87,9 @@ export class DownloadJob {
             appendPhases: (phases: DownloadPhase[]): void => {
                 this.appendPhases(phases);
             },
+            notifyProgress: (): void => {
+                this.emitChange();
+            },
         };
     }
 

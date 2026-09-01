@@ -74,6 +74,7 @@ describe('FetchRopeGeoTileListTask', () => {
                 deps[key] = dep;
             },
             appendPhases: () => undefined,
+            notifyProgress: () => undefined,
         };
         const task = new FetchRopeGeoTileListTask(0);
         const result = await task.runTick(ctx, harness, new AbortController().signal);
@@ -110,6 +111,7 @@ describe('FetchRopeGeoTileListTask', () => {
                 deps[key] = dep;
             },
             appendPhases: () => undefined,
+            notifyProgress: () => undefined,
         };
         const task = new FetchRopeGeoTileListTask(2);
         const result = await task.runTick(ctx, harness, new AbortController().signal);
