@@ -7,6 +7,7 @@ export enum ResultType {
     RopewikiRegionView = 'ropewikiRegionView',
     RoutePreview = 'routePreview',
     RopewikiPageLinkPreview = 'ropewikiPageLinkPreview',
+    PagePreviews = 'pagePreviews',
 }
 
 const resultParsers = new Map<ResultType, (resultValue: unknown) => Result>();

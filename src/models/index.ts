@@ -208,6 +208,8 @@ export type { RopewikiRegionImageViewRow } from './api/endpoints/ropewikiRegionI
 export { RopewikiRegionImagesParams } from './api/params/ropewikiRegionImagesParams';
 export { RopewikiRegionImagesResult } from './api/results/ropewikiRegionImagesResult';
 export { RoutePreviewResult } from './api/results/routePreviewResult';
+export { PagePreviewsParams } from './api/params/pagePreviewsParams';
+export { PagePreviewsResult } from './api/results/pagePreviewsResult';
 export { ImageVersion, VERSION_FORMAT, ImageVersions } from './mobile/imageVersions';
 export {
     SavedPage,
