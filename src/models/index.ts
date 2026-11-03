@@ -6,6 +6,8 @@ import './betaSections/registerBetaSectionParsers';
 import './previews/registerPreviewParsers';
 import './minimap/registerMiniMapParsers';
 import './pageViews/registerPageViewParsers';
+import './tripReport/block/registerTripReportBlockParsers';
+import './mapFile/registerMapFileParsers';
 
 export { PageDataSource } from './pageDataSource';
 export {
@@ -219,3 +221,110 @@ export {
     type DownloadedRoutePreviewsStorageMap,
 } from './mobile/savedPage';
 export type { FetchType } from './fetchType';
+export { MapFile, registerMapFileFactory, type MapFileReader } from './mapFile/mapFile';
+export { MapFileParseError } from './mapFile/mapFileParseError';
+export type { MapFileContent } from './mapFile/mapFileContent';
+export { GeoJsonMapFile } from './mapFile/geoJsonMapFile';
+export { EnrichedGeoJsonMapFile } from './mapFile/enrichedGeoJsonMapFile';
+export { GPXMapFile } from './mapFile/gpxMapFile';
+export { KMLMapFile } from './mapFile/kmlMapFile';
+export { KMZMapFile } from './mapFile/kmzMapFile';
+export {
+    MAP_FILE_EXPORT_FORMATS,
+    MAP_FILE_EXTENSIONS,
+    MAP_FILE_IMPORT_FORMATS,
+    MAP_FILE_MIME_TYPES,
+    mapFileFormatFromFileName,
+    type MapFileExportFormat,
+    type MapFileImportFormat,
+} from './mapFile/util/formats';
+export {
+    LEGEND_ID_PROPERTY,
+    ROPEGEO_PROPERTY,
+    ROPEGEO_PROPERTY_PREFIX,
+    ROPEGEO_XML_NAMESPACE,
+    STYLE_PROPERTY,
+} from './mapFile/util/properties';
+export { getBoundsFromGeoJson, getBoundsFromGeometry } from './mapFile/util/bounds';
+export { enrichFeature } from './mapFile/util/enrichGeoJson/enrichFeature';
+export {
+    canonicalFeatureKey,
+    createLegendIdAssigner,
+    legendIdFor,
+    ROPEGEO_LEGEND_ID_NAMESPACE,
+    uuidV5,
+    type LegendIdAssigner,
+} from './mapFile/util/enrichGeoJson/legendId';
+export {
+    borderColorFromProps,
+    featureLabel,
+    fillColorFromProps,
+    markerIconFromProps,
+    readStringProp,
+    strokeColorFromProps,
+    strokeWidthFromProps,
+    withLegendId,
+} from './mapFile/util/enrichGeoJson/legendProperties';
+export { enrichLineString, enrichMultiLineString } from './mapFile/util/enrichGeoJson/line';
+export { enrichMultiPoint, enrichPoint } from './mapFile/util/enrichGeoJson/point';
+export { enrichMultiPolygon, enrichPolygon } from './mapFile/util/enrichGeoJson/polygon';
+export {
+    passThrough,
+    type EnrichContext,
+    type EnrichedFeature,
+} from './mapFile/util/enrichGeoJson/types';
+export { exportMapFile, type ExportMapFileOptions } from './mapFile/util/export/exportMapFile';
+export { toGpx } from './mapFile/util/export/toGpx';
+export { toKml } from './mapFile/util/export/toKml';
+export { xmlEscape } from './mapFile/util/export/xml';
+export {
+    DEFAULT_TRIP_REPORT_TITLE,
+    MAX_TRIP_REPORT_MAP_BLOCKS,
+    TRIP_REPORT_SCHEMA_VERSION,
+    TripReport,
+    type TripReportJson,
+    type TripReportPage,
+    type TripReportValidationError,
+} from './tripReport/tripReport';
+export {
+    registerTripReportBlockParser,
+    TripReportBlock,
+    type TripReportBlockJson,
+} from './tripReport/block/tripReportBlock';
+export { TRIP_REPORT_BLOCK_TYPES, TripReportBlockType } from './tripReport/block/tripReportBlockType';
+export {
+    TripReportMapBlock,
+    type ImportMapFileOptions,
+    type TripReportMapBlockJson,
+} from './tripReport/block/tripReportMapBlock';
+export { TripReportTextBlock, type TripReportTextBlockJson } from './tripReport/block/tripReportTextBlock';
+export { addDays, TripReportDates, type TripReportDatesJson } from './tripReport/tripReportDates';
+export { TripReportDraft, type TripReportDraftJson } from './tripReport/tripReportDraft';
+export {
+    DEFAULT_TRIP_REPORT_LINE_COLOR,
+    DEFAULT_TRIP_REPORT_LINE_STYLE,
+    DEFAULT_TRIP_REPORT_LINE_THICKNESS,
+    TRIP_REPORT_LINE_COLORS,
+    TRIP_REPORT_LINE_STYLES,
+    TRIP_REPORT_LINE_THICKNESSES,
+    TripReportLineSegment,
+    type FromMapFileLineOptions,
+    type TripReportLineColor,
+    type TripReportLineSegmentJson,
+    type TripReportLineStyle,
+    type TripReportLineThickness,
+    type TripReportWaypoint,
+} from './tripReport/tripReportLineSegment';
+export {
+    LINE_SEGMENT_COLOR_HEX,
+    LINE_SEGMENT_WIDTH_PX,
+    nearestLineColor,
+    nearestLineThickness,
+} from './tripReport/lineSegmentAppearance';
+export {
+    UserAvatar,
+    type UserAvatarBadgeIcon,
+    type UserAvatarBadgeRank,
+    type UserAvatarFields,
+    type UserAvatarJson,
+} from './tripReport/userAvatar';
