@@ -1,5 +1,6 @@
 import type { Feature, FeatureCollection, GeoJsonProperties, LineString, Point } from 'geojson';
 import { ROPEGEO_PROPERTY, STYLE_PROPERTY } from '../mapFile/util/properties';
+import { Bounds } from '../minimap/bounds';
 import {
     LINE_SEGMENT_COLOR_HEX,
     LINE_SEGMENT_WIDTH_PX,
@@ -45,6 +46,15 @@ function roundWaypoint([lng, lat]: TripReportWaypoint): TripReportWaypoint {
     return [roundCoordinate(lng), roundCoordinate(lat)];
 }
 
+/** Smallest box containing every waypoint, or null when there are none. */
+function boundsOfWaypoints(waypoints: readonly TripReportWaypoint[]): Bounds | null {
+    if (waypoints.length === 0) return null;
+    const [firstLng, firstLat] = waypoints[0]!;
+    const bounds = new Bounds(firstLat, firstLat, firstLng, firstLng);
+    for (const [lng, lat] of waypoints) bounds.update(lng, lat);
+    return bounds;
+}
+
 function parseOption<T extends string>(options: readonly T[], value: unknown, fallback: T): T {
     return options.includes(value as T) ? (value as T) : fallback;
 }
@@ -83,6 +93,12 @@ export class TripReportLineSegment {
     readonly color: TripReportLineColor;
     readonly style: TripReportLineStyle;
     readonly thickness: TripReportLineThickness;
+    /**
+     * Smallest box containing every waypoint, or null with no waypoints. Computed from
+     * {@link waypoints} when the segment is created; every waypoint change creates a new segment,
+     * so it always matches. Not part of the JSON.
+     */
+    readonly bounds: Bounds | null;
 
     constructor(
         id: string,
@@ -98,6 +114,7 @@ export class TripReportLineSegment {
         this.color = color;
         this.style = style;
         this.thickness = thickness;
+        this.bounds = boundsOfWaypoints(waypoints);
     }
 
     static createEmpty(
