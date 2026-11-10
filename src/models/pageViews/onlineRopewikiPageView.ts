@@ -100,6 +100,8 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
         coordinates: { lat: number; lon: number } | null,
         downloadFolder: string | null = null,
         authors: string[] | null = null,
+        parkingCoordinates: { lat: number; lon: number } | null = null,
+        shuttleCoordinates: { lat: number; lon: number } | null = null,
     ) {
         super(
             id,
@@ -132,6 +134,8 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
             latestRevisionDate,
             coordinates,
             authors,
+            parkingCoordinates,
+            shuttleCoordinates,
         );
         this.bannerImage = bannerImage;
         this.betaSections = betaSections;
@@ -366,6 +370,8 @@ export class OnlineRopewikiPageView extends RopewikiPageView implements OnlinePa
             offlineMiniMap,
             this.coordinates,
             this.authors,
+            this.parkingCoordinates,
+            this.shuttleCoordinates,
         );
     }
 

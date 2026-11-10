@@ -63,6 +63,10 @@ export abstract class RopewikiPageView {
     months: string[];
     latestRevisionDate: Date;
     coordinates: { lat: number; lon: number } | null;
+    /** Ropewiki parking point; null when the page has none. */
+    parkingCoordinates: { lat: number; lon: number } | null;
+    /** Ropewiki shuttle point; null when the page has none. */
+    shuttleCoordinates: { lat: number; lon: number } | null;
     /** Ropewiki page contributors; null when not resolved. */
     authors: string[] | null;
 
@@ -97,6 +101,8 @@ export abstract class RopewikiPageView {
         latestRevisionDate: Date,
         coordinates: { lat: number; lon: number } | null,
         authors: string[] | null = null,
+        parkingCoordinates: { lat: number; lon: number } | null = null,
+        shuttleCoordinates: { lat: number; lon: number } | null = null,
     ) {
         this.id = id;
         this.routeType = routeType;
@@ -129,6 +135,14 @@ export abstract class RopewikiPageView {
         this.coordinates =
             coordinates != null
                 ? { lat: coordinates.lat, lon: coordinates.lon }
+                : null;
+        this.parkingCoordinates =
+            parkingCoordinates != null
+                ? { lat: parkingCoordinates.lat, lon: parkingCoordinates.lon }
+                : null;
+        this.shuttleCoordinates =
+            shuttleCoordinates != null
+                ? { lat: shuttleCoordinates.lat, lon: shuttleCoordinates.lon }
                 : null;
         this.authors = authors != null ? authors.slice() : null;
     }
@@ -222,6 +236,8 @@ export abstract class RopewikiPageView {
         RopewikiPageView.assertStringArray(r, 'months');
         RopewikiPageView.assertIso8601DateString(r, 'latestRevisionDate');
         RopewikiPageView.assertNullableCoordinates(r, 'coordinates');
+        RopewikiPageView.assertNullableCoordinates(r, 'parkingCoordinates');
+        RopewikiPageView.assertNullableCoordinates(r, 'shuttleCoordinates');
         RopewikiPageView.assertNullableStringArray(r, 'authors');
         if (r.fetchType !== expectedFetchType) {
             throw new Error(

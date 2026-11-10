@@ -127,6 +127,39 @@ describe('RopewikiPageView models', () => {
         expect((view.miniMap as { authors: string[] | null }).authors).toEqual(['MapAuthor']);
     });
 
+    it('round-trips parking and shuttle coordinates through toPlain and toOffline', () => {
+        const parkingCoordinates = { lat: 38.55, lon: -109.55 };
+        const shuttleCoordinates = { lat: 38.56, lon: -109.56 };
+        const page = OnlineRopewikiPageView.fromResult({
+            ...onlineResult(),
+            parkingCoordinates,
+            shuttleCoordinates,
+        });
+        expect(page.parkingCoordinates).toEqual(parkingCoordinates);
+        expect(page.shuttleCoordinates).toEqual(shuttleCoordinates);
+
+        const again = OnlineRopewikiPageView.fromResult(page.toPlain());
+        expect(again.parkingCoordinates).toEqual(parkingCoordinates);
+        expect(again.shuttleCoordinates).toEqual(shuttleCoordinates);
+
+        const offline = page.toOffline({
+            [IMAGE_ID_A]: new ImageVersions({
+                preview: '/tmp/a-preview.avif',
+                banner: '/tmp/a-banner.avif',
+                full: '/tmp/a-full.avif',
+            }),
+            [IMAGE_ID_B]: new ImageVersions({
+                preview: '/tmp/b-preview.avif',
+                banner: '/tmp/b-banner.avif',
+                full: '/tmp/b-full.avif',
+            }),
+        });
+        expect(offline.parkingCoordinates).toEqual(parkingCoordinates);
+        expect(offline.shuttleCoordinates).toEqual(shuttleCoordinates);
+        expect(offline.parkingCoordinates).not.toBe(page.parkingCoordinates);
+        expect(offline.shuttleCoordinates).not.toBe(page.shuttleCoordinates);
+    });
+
     it('hydrates length/time fields from numbers, objects, and ranges, and round-trips', () => {
         const wire = {
             ...onlineResult(),

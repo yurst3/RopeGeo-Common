@@ -183,6 +183,52 @@ describe('RopewikiPageViewResult', () => {
             ).toThrow(/RopewikiPageView\.coordinates\.lat and \.lon must be finite/);
         });
 
+        describe.each(['parkingCoordinates', 'shuttleCoordinates'] as const)('%s', (key) => {
+            it('parses when null', () => {
+                const parsed = RopewikiPageViewResult.fromResult({
+                    ...validResult(),
+                    [key]: null,
+                });
+                expect(parsed.result[key]).toBeNull();
+            });
+
+            it('parses when omitted (normalized to null)', () => {
+                const parsed = RopewikiPageViewResult.fromResult(validResult());
+                expect(parsed.result[key]).toBeNull();
+            });
+
+            it('parses a valid numeric point', () => {
+                const parsed = RopewikiPageViewResult.fromResult({
+                    ...validResult(),
+                    [key]: { lat: 38.55, lon: -109.55 },
+                });
+                expect(parsed.result[key]).toEqual({ lat: 38.55, lon: -109.55 });
+            });
+
+            it('parses a point from numeric strings', () => {
+                const parsed = RopewikiPageViewResult.fromResult({
+                    ...validResult(),
+                    [key]: { lat: '38.55', lon: '-109.55' },
+                });
+                expect(parsed.result[key]).toEqual({ lat: 38.55, lon: -109.55 });
+            });
+
+            it('throws when the value is not an object or null', () => {
+                expect(() =>
+                    RopewikiPageViewResult.fromResult({ ...validResult(), [key]: 'nope' }),
+                ).toThrow(new RegExp(`RopewikiPageView\\.${key} must be \\{ lat, lon \\} or null`));
+            });
+
+            it('throws when lat/lon are not usable', () => {
+                expect(() =>
+                    RopewikiPageViewResult.fromResult({
+                        ...validResult(),
+                        [key]: { lat: NaN, lon: 0 },
+                    }),
+                ).toThrow(new RegExp(`RopewikiPageView\\.${key}\\.lat and \\.lon must be finite`));
+            });
+        });
+
         it('parses valid PageMiniMap', () => {
             const result = {
                 ...validResult(),

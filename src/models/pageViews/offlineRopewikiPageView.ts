@@ -62,6 +62,8 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
         miniMap: OfflinePageMiniMap | OfflineCenteredRegionMiniMap | null,
         coordinates: { lat: number; lon: number } | null,
         authors: string[] | null = null,
+        parkingCoordinates: { lat: number; lon: number } | null = null,
+        shuttleCoordinates: { lat: number; lon: number } | null = null,
     ) {
         super(
             id,
@@ -94,6 +96,8 @@ export class OfflineRopewikiPageView extends RopewikiPageView implements Offline
             latestRevisionDate,
             coordinates,
             authors,
+            parkingCoordinates,
+            shuttleCoordinates,
         );
         this.bannerImage = bannerImage;
         this.betaSections = betaSections;
