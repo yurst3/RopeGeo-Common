@@ -1,4 +1,4 @@
-import type { Feature, GeoJsonProperties } from 'geojson';
+import type { Feature, GeoJsonProperties, Point } from 'geojson';
 import { EnrichedGeoJsonMapFile } from '../../mapFile/enrichedGeoJsonMapFile';
 import { LEGEND_ID_PROPERTY, ROPEGEO_PROPERTY, STYLE_PROPERTY } from '../../mapFile/util/properties';
 import { LegendItem } from '../../minimap/legend/abstract/legendItem';
@@ -8,6 +8,11 @@ import {
     type TripReportLineSegmentJson,
     type TripReportWaypoint,
 } from '../tripReportLineSegment';
+import {
+    TripReportMarker,
+    type TripReportMarkerJson,
+    type TripReportMarkerStyle,
+} from '../tripReportMarker';
 import { createBlockId } from './createBlockId';
 import { registerTripReportBlockParser, TripReportBlock } from './tripReportBlock';
 import { TripReportBlockType } from './tripReportBlockType';
@@ -17,14 +22,19 @@ export type TripReportMapBlockJson = {
     id: string;
     segments: TripReportLineSegmentJson[];
     nextSegmentNumber?: number;
-    /** Imported point and polygon features, each tagged with its legend id. */
+    markers?: TripReportMarkerJson[];
+    nextMarkerNumber?: number;
+    /** Imported polygon features, each tagged with its legend id. */
     features?: Feature[];
     /** Plain legend items (`LegendItem.toPlain()`) for {@link features}, keyed by legend id. */
     legend?: Record<string, Record<string, unknown>>;
 };
 
 export type ImportMapFileOptions = {
-    /** Color for imported lines without a RopeGeo color or recognizable `stroke`. */
+    /**
+     * Color for imported lines and points without a RopeGeo color or a recognizable color
+     * property.
+     */
     newSegmentColor?: TripReportLineColor;
 };
 
@@ -33,13 +43,20 @@ type MapBlockFields = {
     nextSegmentNumber: number;
     features: Feature[];
     legend: Record<string, LegendItem>;
+    markers: TripReportMarker[];
+    nextMarkerNumber: number;
 };
 
 const SEGMENT_NAME_PATTERN = /^Segment (\d+)$/;
+const MARKER_NAME_PATTERN = /^Marker (\d+)$/;
 
 function stringProperty(props: GeoJsonProperties, key: string): string | null {
     const value = props?.[key];
     return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function explicitNameOf(feature: Feature): string | null {
+    return stringProperty(feature.properties, STYLE_PROPERTY.name) ?? stringProperty(feature.properties, 'title');
 }
 
 function legendIdOf(feature: Feature): string | null {
@@ -51,12 +68,21 @@ function withLegendItemId(item: LegendItem, id: string): LegendItem {
     return item.id === id ? item : LegendItem.fromResult({ ...item.toPlain(), id });
 }
 
+/** One past the highest "<Prefix> N" name, or past the count when that's higher. */
+function nextNumberAfter(names: string[], pattern: RegExp): number {
+    const highestNamed = names.reduce((highest, name) => {
+        const match = pattern.exec(name);
+        return match != null ? Math.max(highest, Number(match[1])) : highest;
+    }, 0);
+    return Math.max(highestNamed, names.length) + 1;
+}
+
 /**
- * A map section of a trip report. Its editable line segments are drawn on the map, and recording
- * always appends to the last (active) segment. Imported points and polygons are kept as features
- * with legend items; imported lines become segments.
+ * A map section of a trip report. Its editable line segments and markers are drawn on the map,
+ * and recording always appends to the last (active) segment. Imported lines become segments,
+ * imported points become markers, and imported polygons are kept as features with legend items.
  *
- * Everything on the block has a unique id: segment ids and imported feature legend ids never
+ * Everything on the block has a unique id: segment, marker, and imported feature ids never
  * repeat, which is how re-importing the same map file is deduplicated.
  */
 export class TripReportMapBlock extends TripReportBlock {
@@ -64,10 +90,13 @@ export class TripReportMapBlock extends TripReportBlock {
     readonly segments: TripReportLineSegment[];
     /** Number used for the next "Segment N" name. Only ever increases, so names stay unique. */
     readonly nextSegmentNumber: number;
-    /** Imported point and polygon features, each with a `legendId` property keyed into {@link legend}. */
+    /** Imported polygon features, each with a `legendId` property keyed into {@link legend}. */
     readonly features: Feature[];
     /** Legend items for {@link features}, keyed by legend id. */
     readonly legend: Record<string, LegendItem>;
+    readonly markers: TripReportMarker[];
+    /** Number used for the next "Marker N" name. Only ever increases, so names stay unique. */
+    readonly nextMarkerNumber: number;
 
     constructor(
         id: string,
@@ -75,12 +104,16 @@ export class TripReportMapBlock extends TripReportBlock {
         nextSegmentNumber = 1,
         features: Feature[] = [],
         legend: Record<string, LegendItem> = {},
+        markers: TripReportMarker[] = [],
+        nextMarkerNumber = 1,
     ) {
         super(id);
         this.segments = segments;
         this.nextSegmentNumber = nextSegmentNumber;
         this.features = features;
         this.legend = legend;
+        this.markers = markers;
+        this.nextMarkerNumber = nextMarkerNumber;
     }
 
     static createEmpty(): TripReportMapBlock {
@@ -94,6 +127,8 @@ export class TripReportMapBlock extends TripReportBlock {
             changes.nextSegmentNumber ?? this.nextSegmentNumber,
             changes.features ?? this.features,
             changes.legend ?? this.legend,
+            changes.markers ?? this.markers,
+            changes.nextMarkerNumber ?? this.nextMarkerNumber,
         );
     }
 
@@ -101,9 +136,13 @@ export class TripReportMapBlock extends TripReportBlock {
         return this.segments.length > 0 ? this.segments[this.segments.length - 1] : null;
     }
 
-    /** Whether a segment or imported feature already uses `id`. */
+    /** Whether a segment, marker, or imported feature already uses `id`. */
     hasId(id: string): boolean {
-        return id in this.legend || this.segments.some((segment) => segment.id === id);
+        return (
+            id in this.legend ||
+            this.segments.some((segment) => segment.id === id) ||
+            this.markers.some((marker) => marker.id === id)
+        );
     }
 
     withNewSegment(color?: TripReportLineColor): TripReportMapBlock {
@@ -140,7 +179,33 @@ export class TripReportMapBlock extends TripReportBlock {
         return this.copy({ segments: this.segments.filter((segment) => segment.id !== segmentId) });
     }
 
-    /** Removes an imported point or polygon and its legend item. */
+    /** Adds a "Marker N" at `position`. */
+    withNewMarker(
+        position: TripReportWaypoint,
+        color?: TripReportLineColor,
+        style?: TripReportMarkerStyle,
+    ): TripReportMapBlock {
+        const marker = TripReportMarker.create(`Marker ${this.nextMarkerNumber}`, position, color, style);
+        return this.copy({
+            markers: [...this.markers, marker],
+            nextMarkerNumber: this.nextMarkerNumber + 1,
+        });
+    }
+
+    withMarkerUpdated(
+        markerId: string,
+        update: (marker: TripReportMarker) => TripReportMarker,
+    ): TripReportMapBlock {
+        return this.copy({
+            markers: this.markers.map((marker) => (marker.id === markerId ? update(marker) : marker)),
+        });
+    }
+
+    withMarkerRemoved(markerId: string): TripReportMapBlock {
+        return this.copy({ markers: this.markers.filter((marker) => marker.id !== markerId) });
+    }
+
+    /** Removes an imported polygon and its legend item. */
     withFeatureRemoved(legendId: string): TripReportMapBlock {
         const legend = { ...this.legend };
         delete legend[legendId];
@@ -157,7 +222,8 @@ export class TripReportMapBlock extends TripReportBlock {
      *   within the file, are skipped.
      * - Lines become segments named after the line (or "Segment N" when unnamed), inserted before
      *   the active segment so a recording in progress keeps its segment.
-     * - Points and polygons are kept as features with their legend items.
+     * - Points become markers named after the point (or "Marker N" when unnamed).
+     * - Polygons are kept as features with their legend items.
      * - Features without a legend id (no geometry or unsupported geometry) are dropped.
      */
     withMapFileImported(
@@ -166,12 +232,15 @@ export class TripReportMapBlock extends TripReportBlock {
     ): TripReportMapBlock {
         const usedIds = new Set<string>([
             ...this.segments.map((segment) => segment.id),
+            ...this.markers.map((marker) => marker.id),
             ...Object.keys(this.legend),
         ]);
         const importedSegments: TripReportLineSegment[] = [];
+        const markers = [...this.markers];
         const features = [...this.features];
         const legend = { ...this.legend };
         let nextSegmentNumber = this.nextSegmentNumber;
+        let nextMarkerNumber = this.nextMarkerNumber;
 
         for (const feature of file.geoJson.features) {
             const legendId = legendIdOf(feature);
@@ -182,14 +251,18 @@ export class TripReportMapBlock extends TripReportBlock {
             usedIds.add(id);
 
             if (feature.geometry.type === 'LineString') {
-                const explicitName =
-                    stringProperty(feature.properties, STYLE_PROPERTY.name) ??
-                    stringProperty(feature.properties, 'title');
-                const name = explicitName ?? `Segment ${nextSegmentNumber++}`;
                 importedSegments.push(
                     TripReportLineSegment.fromMapFileLine(feature.geometry, feature.properties, {
                         id,
-                        name,
+                        name: explicitNameOf(feature) ?? `Segment ${nextSegmentNumber++}`,
+                        defaultColor: newSegmentColor,
+                    }),
+                );
+            } else if (feature.geometry.type === 'Point') {
+                markers.push(
+                    TripReportMarker.fromMapFilePoint(feature.geometry, feature.properties, {
+                        id,
+                        name: explicitNameOf(feature) ?? `Marker ${nextMarkerNumber++}`,
                         defaultColor: newSegmentColor,
                     }),
                 );
@@ -208,18 +281,19 @@ export class TripReportMapBlock extends TripReportBlock {
             active == null
                 ? importedSegments
                 : [...this.segments.slice(0, -1), ...importedSegments, active];
-        return this.copy({ segments, nextSegmentNumber, features, legend });
+        return this.copy({ segments, nextSegmentNumber, markers, nextMarkerNumber, features, legend });
     }
 
     /**
-     * Everything on this block (segments, then imported features) as one enriched map file, ready
-     * for {@link exportMapFile}. Every feature carries `ropegeo:id`, so importing the export back
-     * into this block adds nothing. Segments without waypoints are left out.
+     * Everything on this block (segments, markers, then imported features) as one enriched map
+     * file, ready for {@link exportMapFile}. Every feature carries `ropegeo:id`, so importing the
+     * export back into this block adds nothing. Segments without waypoints are left out.
      */
     toEnrichedGeoJsonMapFile(fileName: string): EnrichedGeoJsonMapFile {
         const segmentFeatures = this.segments
             .map((segment) => segment.toMapFileFeature())
             .filter((feature): feature is Feature => feature != null);
+        const markerFeatures = this.markers.map((marker) => marker.toMapFileFeature());
         const importedFeatures = this.features.map((feature): Feature => {
             const props = { ...(feature.properties ?? {}) };
             const id = props[LEGEND_ID_PROPERTY];
@@ -228,7 +302,7 @@ export class TripReportMapBlock extends TripReportBlock {
         });
         return new EnrichedGeoJsonMapFile(fileName, {
             type: 'FeatureCollection',
-            features: [...segmentFeatures, ...importedFeatures],
+            features: [...segmentFeatures, ...markerFeatures, ...importedFeatures],
         });
     }
 
@@ -238,7 +312,9 @@ export class TripReportMapBlock extends TripReportBlock {
             id: this.id,
             segments: this.segments.map((segment) => segment.toJSON()),
             nextSegmentNumber: this.nextSegmentNumber,
+            nextMarkerNumber: this.nextMarkerNumber,
         };
+        if (this.markers.length > 0) json.markers = this.markers.map((marker) => marker.toJSON());
         if (this.features.length > 0) {
             json.features = this.features;
             json.legend = Object.fromEntries(
@@ -249,9 +325,10 @@ export class TripReportMapBlock extends TripReportBlock {
     }
 
     /**
-     * Validates a stored map block. Without a saved counter, continues after the highest
-     * "Segment N" name (or the count). Imported features whose legend item is missing or no longer
-     * parses are dropped.
+     * Validates a stored map block. Without a saved counter, names continue after the highest
+     * "Segment N" / "Marker N" name (or the count). Imported features whose legend item is missing
+     * or no longer parses are dropped. Points imported before markers existed (stored as features)
+     * become markers.
      */
     static fromResult(result: unknown): TripReportMapBlock {
         const r = TripReportBlock.assertBlockType(result, TripReportBlockType.Map, 'TripReportMapBlock');
@@ -259,14 +336,16 @@ export class TripReportMapBlock extends TripReportBlock {
         const segments = TripReportMapBlock.parseOptionalArray(r.segments, 'TripReportMapBlock.segments').map(
             (segment) => TripReportLineSegment.fromJSON(segment as TripReportLineSegmentJson),
         );
-        const highestNamed = segments.reduce((highest, segment) => {
-            const match = SEGMENT_NAME_PATTERN.exec(segment.name);
-            return match != null ? Math.max(highest, Number(match[1])) : highest;
-        }, 0);
         const nextSegmentNumber =
             r.nextSegmentNumber === undefined
-                ? Math.max(highestNamed, segments.length) + 1
+                ? nextNumberAfter(
+                      segments.map((segment) => segment.name),
+                      SEGMENT_NAME_PATTERN,
+                  )
                 : TripReportMapBlock.assertPositiveInteger(r.nextSegmentNumber, 'TripReportMapBlock.nextSegmentNumber');
+        const markers = TripReportMapBlock.parseOptionalArray(r.markers, 'TripReportMapBlock.markers').map(
+            (marker) => TripReportMarker.fromJSON(marker as TripReportMarkerJson),
+        );
 
         const legend: Record<string, LegendItem> = {};
         for (const [legendId, plain] of Object.entries(
@@ -278,13 +357,34 @@ export class TripReportMapBlock extends TripReportBlock {
                 // Skip legend items that no longer parse; their features are dropped below.
             }
         }
-        const features = (
-            TripReportMapBlock.parseOptionalArray(r.features, 'TripReportMapBlock.features') as Feature[]
-        ).filter((feature) => {
+        const features: Feature[] = [];
+        for (const feature of TripReportMapBlock.parseOptionalArray(
+            r.features,
+            'TripReportMapBlock.features',
+        ) as Feature[]) {
             const legendId = feature != null && typeof feature === 'object' ? legendIdOf(feature) : null;
-            return legendId != null && legendId in legend;
-        });
-        return new TripReportMapBlock(id, segments, nextSegmentNumber, features, legend);
+            if (legendId == null || !(legendId in legend)) continue;
+            if (feature.geometry?.type === 'Point') {
+                markers.push(
+                    TripReportMarker.fromMapFilePoint(feature.geometry as Point, feature.properties, {
+                        id: legendId,
+                        name: legend[legendId]!.name,
+                    }),
+                );
+                delete legend[legendId];
+                continue;
+            }
+            features.push(feature);
+        }
+
+        const nextMarkerNumber =
+            r.nextMarkerNumber === undefined
+                ? nextNumberAfter(
+                      markers.map((marker) => marker.name),
+                      MARKER_NAME_PATTERN,
+                  )
+                : TripReportMapBlock.assertPositiveInteger(r.nextMarkerNumber, 'TripReportMapBlock.nextMarkerNumber');
+        return new TripReportMapBlock(id, segments, nextSegmentNumber, features, legend, markers, nextMarkerNumber);
     }
 
     private static parseOptionalArray(value: unknown, context: string): unknown[] {

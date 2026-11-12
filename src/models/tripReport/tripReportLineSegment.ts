@@ -2,10 +2,14 @@ import type { Feature, FeatureCollection, GeoJsonProperties, LineString, Point }
 import { ROPEGEO_PROPERTY, STYLE_PROPERTY } from '../mapFile/util/properties';
 import { Bounds } from '../minimap/bounds';
 import {
-    LINE_SEGMENT_COLOR_HEX,
+    importedTripReportColors,
     LINE_SEGMENT_WIDTH_PX,
-    nearestLineColor,
     nearestLineThickness,
+    parseTripReportColor,
+    toTripReportHexColor,
+    tripReportColorHex,
+    type TripReportColor,
+    type TripReportHexColor,
 } from './lineSegmentAppearance';
 
 /** A recorded or hand-placed point on a line segment: [longitude, latitude]. */
@@ -42,7 +46,8 @@ function roundCoordinate(value: number): number {
     return Math.round(value * factor) / factor;
 }
 
-function roundWaypoint([lng, lat]: TripReportWaypoint): TripReportWaypoint {
+/** Rounds to the stored precision. */
+export function roundWaypoint([lng, lat]: TripReportWaypoint): TripReportWaypoint {
     return [roundCoordinate(lng), roundCoordinate(lat)];
 }
 
@@ -69,7 +74,7 @@ function createSegmentId(): string {
 export type FromMapFileLineOptions = {
     id: string;
     name: string;
-    /** Color when the line has no RopeGeo color and no recognizable `stroke`. */
+    /** Color when the line has no RopeGeo color and no hex `stroke`. */
     defaultColor?: TripReportLineColor;
 };
 
@@ -77,7 +82,8 @@ export type TripReportLineSegmentJson = {
     id: string;
     name: string;
     waypoints: [number, number][];
-    color?: TripReportLineColor;
+    color?: TripReportColor;
+    originalColor?: TripReportHexColor;
     style?: TripReportLineStyle;
     thickness?: TripReportLineThickness;
 };
@@ -90,7 +96,10 @@ export class TripReportLineSegment {
     readonly id: string;
     readonly name: string;
     readonly waypoints: TripReportWaypoint[];
-    readonly color: TripReportLineColor;
+    /** The color drawn on the map. */
+    readonly color: TripReportColor;
+    /** The color the line had in the map file it was imported from, or null if it had none. */
+    readonly originalColor: TripReportHexColor | null;
     readonly style: TripReportLineStyle;
     readonly thickness: TripReportLineThickness;
     /**
@@ -104,14 +113,16 @@ export class TripReportLineSegment {
         id: string,
         name: string,
         waypoints: TripReportWaypoint[],
-        color: TripReportLineColor = DEFAULT_TRIP_REPORT_LINE_COLOR,
+        color: TripReportColor = DEFAULT_TRIP_REPORT_LINE_COLOR,
         style: TripReportLineStyle = DEFAULT_TRIP_REPORT_LINE_STYLE,
         thickness: TripReportLineThickness = DEFAULT_TRIP_REPORT_LINE_THICKNESS,
+        originalColor: TripReportHexColor | null = null,
     ) {
         this.id = id;
         this.name = name;
         this.waypoints = waypoints;
         this.color = color;
+        this.originalColor = originalColor;
         this.style = style;
         this.thickness = thickness;
         this.bounds = boundsOfWaypoints(waypoints);
@@ -136,6 +147,7 @@ export class TripReportLineSegment {
             changes.color ?? this.color,
             changes.style ?? this.style,
             changes.thickness ?? this.thickness,
+            this.originalColor,
         );
     }
 
@@ -169,7 +181,8 @@ export class TripReportLineSegment {
         return trimmed.length === 0 ? this : this.copy({ name: trimmed });
     }
 
-    withColor(color: TripReportLineColor): TripReportLineSegment {
+    /** A palette color, or an exact color such as {@link originalColor}. */
+    withColor(color: TripReportColor): TripReportLineSegment {
         return this.copy({ color });
     }
 
@@ -219,10 +232,11 @@ export class TripReportLineSegment {
             type: 'Feature',
             properties: {
                 [STYLE_PROPERTY.name]: this.name,
-                [STYLE_PROPERTY.stroke]: LINE_SEGMENT_COLOR_HEX[this.color],
+                [STYLE_PROPERTY.stroke]: tripReportColorHex(this.color),
                 [STYLE_PROPERTY.strokeWidth]: LINE_SEGMENT_WIDTH_PX[this.thickness],
                 [ROPEGEO_PROPERTY.id]: this.id,
                 [ROPEGEO_PROPERTY.color]: this.color,
+                ...(this.originalColor != null && { [ROPEGEO_PROPERTY.originalColor]: this.originalColor }),
                 [ROPEGEO_PROPERTY.style]: this.style,
                 [ROPEGEO_PROPERTY.thickness]: this.thickness,
             },
@@ -234,10 +248,11 @@ export class TripReportLineSegment {
     }
 
     /**
-     * A segment from an imported line. RopeGeo's own `ropegeo:*` values win; otherwise the color
-     * and thickness are the palette entries nearest the line's `stroke` / `stroke-width`, falling
-     * back to `defaultColor` and the default thickness. The style is solid unless `ropegeo:style`
-     * says otherwise (other apps can't express dashed or dotted lines).
+     * A segment from an imported line. RopeGeo's own `ropegeo:*` values win. Otherwise a hex
+     * `stroke` is kept exactly as both the color and the original color (with no `stroke`, the color
+     * is `defaultColor` and there is no original color), and the thickness is the one nearest the
+     * line's `stroke-width`. The style is solid unless `ropegeo:style` says otherwise (other apps
+     * can't express dashed or dotted lines).
      */
     static fromMapFileLine(
         line: LineString,
@@ -245,23 +260,21 @@ export class TripReportLineSegment {
         { id, name, defaultColor = DEFAULT_TRIP_REPORT_LINE_COLOR }: FromMapFileLineOptions,
     ): TripReportLineSegment {
         const props = properties ?? {};
+        const { color, originalColor } = importedTripReportColors(props, [STYLE_PROPERTY.stroke], defaultColor);
         return new TripReportLineSegment(
             id,
             name,
             line.coordinates
                 .filter((position) => Number.isFinite(position[0]) && Number.isFinite(position[1]))
                 .map((position) => roundWaypoint([position[0]!, position[1]!])),
-            parseOption(
-                TRIP_REPORT_LINE_COLORS,
-                props[ROPEGEO_PROPERTY.color],
-                nearestLineColor(props[STYLE_PROPERTY.stroke]) ?? defaultColor,
-            ),
+            color,
             parseOption(TRIP_REPORT_LINE_STYLES, props[ROPEGEO_PROPERTY.style], DEFAULT_TRIP_REPORT_LINE_STYLE),
             parseOption(
                 TRIP_REPORT_LINE_THICKNESSES,
                 props[ROPEGEO_PROPERTY.thickness],
                 nearestLineThickness(props[STYLE_PROPERTY.strokeWidth]) ?? DEFAULT_TRIP_REPORT_LINE_THICKNESS,
             ),
+            originalColor,
         );
     }
 
@@ -273,24 +286,26 @@ export class TripReportLineSegment {
             waypoints: this.waypoints.map(([lng, lat]) => [lng, lat]),
         };
         if (this.color !== DEFAULT_TRIP_REPORT_LINE_COLOR) json.color = this.color;
+        if (this.originalColor != null) json.originalColor = this.originalColor;
         if (this.style !== DEFAULT_TRIP_REPORT_LINE_STYLE) json.style = this.style;
         if (this.thickness !== DEFAULT_TRIP_REPORT_LINE_THICKNESS) json.thickness = this.thickness;
         return json;
     }
 
-    /** Missing or unknown appearance values fall back to the defaults. */
+    /** Missing or unknown appearance values fall back to the defaults (no original color). */
     static fromJSON(json: TripReportLineSegmentJson): TripReportLineSegment {
         return new TripReportLineSegment(
             json.id,
             json.name,
             (json.waypoints ?? []).map(([lng, lat]) => roundWaypoint([lng, lat])),
-            parseOption(TRIP_REPORT_LINE_COLORS, json.color, DEFAULT_TRIP_REPORT_LINE_COLOR),
+            parseTripReportColor(json.color) ?? DEFAULT_TRIP_REPORT_LINE_COLOR,
             parseOption(TRIP_REPORT_LINE_STYLES, json.style, DEFAULT_TRIP_REPORT_LINE_STYLE),
             parseOption(
                 TRIP_REPORT_LINE_THICKNESSES,
                 json.thickness,
                 DEFAULT_TRIP_REPORT_LINE_THICKNESS,
             ),
+            toTripReportHexColor(json.originalColor),
         );
     }
 }

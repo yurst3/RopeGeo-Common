@@ -1,5 +1,10 @@
 import { describe, it, expect } from '@jest/globals';
-import { TripReportLineSegment, TripReportMapBlock } from '../../../../src/models';
+import {
+    TripReportLineSegment,
+    TripReportMapBlock,
+    TripReportMarker,
+    TripReportMarkerStyle,
+} from '../../../../src/models';
 
 describe('TripReportMapBlock segments', () => {
     it('creates Segment 1 lazily and appends to the active segment', () => {
@@ -83,14 +88,74 @@ describe('TripReportMapBlock segments', () => {
             expect(() => TripReportMapBlock.fromResult({ ...base, legend: [] })).toThrow(
                 'TripReportMapBlock.legend must be an object',
             );
+            expect(() => TripReportMapBlock.fromResult({ ...base, markers: {} })).toThrow(
+                'TripReportMapBlock.markers must be an array',
+            );
+            expect(() => TripReportMapBlock.fromResult({ ...base, nextMarkerNumber: 1.5 })).toThrow(
+                'TripReportMapBlock.nextMarkerNumber must be a positive integer',
+            );
         });
 
-        it('treats missing segments, features, and legend as empty', () => {
+        it('treats missing segments, markers, features, and legend as empty', () => {
             const block = TripReportMapBlock.fromResult({ blockType: 'map', id: 'map-1' });
             expect(block.segments).toEqual([]);
+            expect(block.markers).toEqual([]);
             expect(block.features).toEqual([]);
             expect(block.legend).toEqual({});
             expect(block.nextSegmentNumber).toBe(1);
+            expect(block.nextMarkerNumber).toBe(1);
         });
+    });
+});
+
+describe('TripReportMapBlock markers', () => {
+    it('adds numbered markers and never reuses numbers after removal', () => {
+        const block = TripReportMapBlock.createEmpty().withNewMarker([-110, 38]).withNewMarker([-110.1, 38.1], 'red');
+        expect(block.markers.map((m) => [m.name, m.color, m.style])).toEqual([
+            ['Marker 1', 'black', TripReportMarkerStyle.Marker],
+            ['Marker 2', 'red', TripReportMarkerStyle.Marker],
+        ]);
+        const removed = block.withMarkerRemoved(block.markers[0]!.id).withNewMarker([0, 0]);
+        expect(removed.markers.map((m) => m.name)).toEqual(['Marker 2', 'Marker 3']);
+        expect(removed.hasId(block.markers[0]!.id)).toBe(false);
+        expect(removed.hasId(block.markers[1]!.id)).toBe(true);
+    });
+
+    it('updates only the matching marker', () => {
+        const block = TripReportMapBlock.createEmpty().withNewMarker([-110, 38]).withNewMarker([-110.1, 38.1]);
+        const updated = block.withMarkerUpdated(block.markers[1]!.id, (m) =>
+            m.withName('Camp').withStyle(TripReportMarkerStyle.Camp),
+        );
+        expect(updated.markers[0]).toBe(block.markers[0]);
+        expect(updated.markers[1]).toMatchObject({ id: block.markers[1]!.id, name: 'Camp', style: 'camp' });
+    });
+
+    it('round-trips markers and their counter through JSON', () => {
+        const block = TripReportMapBlock.createEmpty()
+            .withNewMarker([-110, 38])
+            .withNewMarker([-110.1, 38.1], 'blue', TripReportMarkerStyle.Waterfall);
+        const json = block.toJSON();
+        expect(json.markers![0]).not.toHaveProperty('color');
+        expect(json.markers![1]).toMatchObject({ color: 'blue', style: 'waterfall' });
+        expect(json.nextMarkerNumber).toBe(3);
+        const restored = TripReportMapBlock.fromResult(JSON.parse(JSON.stringify(json)));
+        expect(restored.markers).toEqual(block.markers);
+        expect(restored.toJSON()).toEqual(json);
+    });
+
+    it('continues marker numbering from names when the counter is missing', () => {
+        const restored = TripReportMapBlock.fromResult({
+            blockType: 'map',
+            id: 'map-1',
+            markers: [
+                TripReportMarker.create('Marker 6', [0, 0]).toJSON(),
+                TripReportMarker.create('Camp', [1, 1]).toJSON(),
+            ],
+        });
+        expect(restored.nextMarkerNumber).toBe(7);
+    });
+
+    it('omits markers from JSON when there are none', () => {
+        expect(TripReportMapBlock.createEmpty().toJSON()).not.toHaveProperty('markers');
     });
 });

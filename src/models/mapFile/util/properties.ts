@@ -13,6 +13,7 @@ export const STYLE_PROPERTY = {
     strokeOpacity: 'stroke-opacity',
     fill: 'fill',
     fillOpacity: 'fill-opacity',
+    markerColor: 'marker-color',
     markerSymbol: 'marker-symbol',
 } as const;
 
@@ -23,6 +24,7 @@ export const STYLE_PROPERTY = {
 export const ROPEGEO_PROPERTY = {
     id: 'ropegeo:id',
     color: 'ropegeo:color',
+    originalColor: 'ropegeo:original-color',
     style: 'ropegeo:style',
     thickness: 'ropegeo:thickness',
 } as const;

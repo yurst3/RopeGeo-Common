@@ -15,6 +15,7 @@ const HANDLED_PROPERTIES = new Set<string>([
     STYLE_PROPERTY.strokeOpacity,
     STYLE_PROPERTY.fill,
     STYLE_PROPERTY.fillOpacity,
+    STYLE_PROPERTY.markerColor,
     'title',
     'desc',
     LEGEND_ID_PROPERTY,
@@ -77,7 +78,10 @@ function styleXml(props: Props): string {
             ? `<LineStyle>${stroke != null ? xmlElement('color', rgbToKmlColor(stroke, strokeOpacity)) : ''}${xmlElement('width', strokeWidth)}</LineStyle>`
             : '';
     const polyStyle = fill != null ? `<PolyStyle>${xmlElement('color', rgbToKmlColor(fill, fillOpacity))}</PolyStyle>` : '';
-    return lineStyle || polyStyle ? `<Style>${lineStyle}${polyStyle}</Style>` : '';
+    const markerColor = parseHexColor(props[STYLE_PROPERTY.markerColor]);
+    const iconStyle =
+        markerColor != null ? `<IconStyle>${xmlElement('color', rgbToKmlColor(markerColor, 1))}</IconStyle>` : '';
+    return lineStyle || polyStyle || iconStyle ? `<Style>${iconStyle}${lineStyle}${polyStyle}</Style>` : '';
 }
 
 /** Remaining simple properties (including `ropegeo:*`) as ExtendedData name/value pairs. */
@@ -94,8 +98,9 @@ function extendedDataXml(props: Props): string {
 }
 
 /**
- * KML 2.2 document with one Placemark per feature. Line and fill colors become inline styles
- * (KML has no dashed lines); other simple properties, including `ropegeo:*`, go in ExtendedData.
+ * KML 2.2 document with one Placemark per feature. Line, fill, and marker colors become inline
+ * styles (KML has no dashed lines); other simple properties, including `ropegeo:*`, go in
+ * ExtendedData.
  */
 export function toKml(collection: FeatureCollection, options: { documentName?: string } = {}): string {
     const placemarks = collection.features

@@ -316,10 +316,24 @@ export {
     type TripReportWaypoint,
 } from './tripReport/tripReportLineSegment';
 export {
+    DEFAULT_TRIP_REPORT_MARKER_STYLE,
+    TRIP_REPORT_MARKER_STYLES,
+    TripReportMarker,
+    TripReportMarkerStyle,
+    type FromMapFilePointOptions,
+    type TripReportMarkerJson,
+} from './tripReport/tripReportMarker';
+export {
+    importedTripReportColors,
     LINE_SEGMENT_COLOR_HEX,
     LINE_SEGMENT_WIDTH_PX,
     nearestLineColor,
     nearestLineThickness,
+    parseTripReportColor,
+    toTripReportHexColor,
+    tripReportColorHex,
+    type TripReportColor,
+    type TripReportHexColor,
 } from './tripReport/lineSegmentAppearance';
 export {
     UserAvatar,
