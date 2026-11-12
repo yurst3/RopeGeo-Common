@@ -24,6 +24,7 @@ export type TripReportMapBlockJson = {
     nextSegmentNumber?: number;
     markers?: TripReportMarkerJson[];
     nextMarkerNumber?: number;
+    nextPolygonNumber?: number;
     /** Imported polygon features, each tagged with its legend id. */
     features?: Feature[];
     /** Plain legend items (`LegendItem.toPlain()`) for {@link features}, keyed by legend id. */
@@ -45,10 +46,12 @@ type MapBlockFields = {
     legend: Record<string, LegendItem>;
     markers: TripReportMarker[];
     nextMarkerNumber: number;
+    nextPolygonNumber: number;
 };
 
 const SEGMENT_NAME_PATTERN = /^Segment (\d+)$/;
 const MARKER_NAME_PATTERN = /^Marker (\d+)$/;
+const POLYGON_NAME_PATTERN = /^Polygon (\d+)$/;
 
 function stringProperty(props: GeoJsonProperties, key: string): string | null {
     const value = props?.[key];
@@ -97,6 +100,8 @@ export class TripReportMapBlock extends TripReportBlock {
     readonly markers: TripReportMarker[];
     /** Number used for the next "Marker N" name. Only ever increases, so names stay unique. */
     readonly nextMarkerNumber: number;
+    /** Number used for the next "Polygon N" name. Only ever increases, so names stay unique. */
+    readonly nextPolygonNumber: number;
 
     constructor(
         id: string,
@@ -106,6 +111,7 @@ export class TripReportMapBlock extends TripReportBlock {
         legend: Record<string, LegendItem> = {},
         markers: TripReportMarker[] = [],
         nextMarkerNumber = 1,
+        nextPolygonNumber = 1,
     ) {
         super(id);
         this.segments = segments;
@@ -114,6 +120,7 @@ export class TripReportMapBlock extends TripReportBlock {
         this.legend = legend;
         this.markers = markers;
         this.nextMarkerNumber = nextMarkerNumber;
+        this.nextPolygonNumber = nextPolygonNumber;
     }
 
     static createEmpty(): TripReportMapBlock {
@@ -129,6 +136,7 @@ export class TripReportMapBlock extends TripReportBlock {
             changes.legend ?? this.legend,
             changes.markers ?? this.markers,
             changes.nextMarkerNumber ?? this.nextMarkerNumber,
+            changes.nextPolygonNumber ?? this.nextPolygonNumber,
         );
     }
 
@@ -313,6 +321,7 @@ export class TripReportMapBlock extends TripReportBlock {
             segments: this.segments.map((segment) => segment.toJSON()),
             nextSegmentNumber: this.nextSegmentNumber,
             nextMarkerNumber: this.nextMarkerNumber,
+            nextPolygonNumber: this.nextPolygonNumber,
         };
         if (this.markers.length > 0) json.markers = this.markers.map((marker) => marker.toJSON());
         if (this.features.length > 0) {
@@ -326,7 +335,7 @@ export class TripReportMapBlock extends TripReportBlock {
 
     /**
      * Validates a stored map block. Without a saved counter, names continue after the highest
-     * "Segment N" / "Marker N" name (or the count). Imported features whose legend item is missing
+     * "Segment N" / "Marker N" / "Polygon N" name (or the count). Imported features whose legend item is missing
      * or no longer parses are dropped. Points imported before markers existed (stored as features)
      * become markers.
      */
@@ -384,7 +393,23 @@ export class TripReportMapBlock extends TripReportBlock {
                       MARKER_NAME_PATTERN,
                   )
                 : TripReportMapBlock.assertPositiveInteger(r.nextMarkerNumber, 'TripReportMapBlock.nextMarkerNumber');
-        return new TripReportMapBlock(id, segments, nextSegmentNumber, features, legend, markers, nextMarkerNumber);
+        const nextPolygonNumber =
+            r.nextPolygonNumber === undefined
+                ? nextNumberAfter(
+                      features.map((feature) => legend[legendIdOf(feature)!]!.name),
+                      POLYGON_NAME_PATTERN,
+                  )
+                : TripReportMapBlock.assertPositiveInteger(r.nextPolygonNumber, 'TripReportMapBlock.nextPolygonNumber');
+        return new TripReportMapBlock(
+            id,
+            segments,
+            nextSegmentNumber,
+            features,
+            legend,
+            markers,
+            nextMarkerNumber,
+            nextPolygonNumber,
+        );
     }
 
     private static parseOptionalArray(value: unknown, context: string): unknown[] {

@@ -1,5 +1,8 @@
 import { describe, it, expect } from '@jest/globals';
 import {
+    Bounds,
+    LEGEND_ID_PROPERTY,
+    PolygonLegendItem,
     TripReportLineSegment,
     TripReportMapBlock,
     TripReportMarker,
@@ -94,6 +97,9 @@ describe('TripReportMapBlock segments', () => {
             expect(() => TripReportMapBlock.fromResult({ ...base, nextMarkerNumber: 1.5 })).toThrow(
                 'TripReportMapBlock.nextMarkerNumber must be a positive integer',
             );
+            expect(() => TripReportMapBlock.fromResult({ ...base, nextPolygonNumber: -1 })).toThrow(
+                'TripReportMapBlock.nextPolygonNumber must be a positive integer',
+            );
         });
 
         it('treats missing segments, markers, features, and legend as empty', () => {
@@ -104,6 +110,7 @@ describe('TripReportMapBlock segments', () => {
             expect(block.legend).toEqual({});
             expect(block.nextSegmentNumber).toBe(1);
             expect(block.nextMarkerNumber).toBe(1);
+            expect(block.nextPolygonNumber).toBe(1);
         });
     });
 });
@@ -157,5 +164,54 @@ describe('TripReportMapBlock markers', () => {
 
     it('omits markers from JSON when there are none', () => {
         expect(TripReportMapBlock.createEmpty().toJSON()).not.toHaveProperty('markers');
+    });
+});
+
+describe('TripReportMapBlock polygon numbering', () => {
+    const polygon = (legendId: string, name: string) => ({
+        feature: {
+            type: 'Feature',
+            properties: { [LEGEND_ID_PROPERTY]: legendId },
+            geometry: {
+                type: 'Polygon',
+                coordinates: [
+                    [
+                        [0, 0],
+                        [1, 0],
+                        [1, 1],
+                        [0, 0],
+                    ],
+                ],
+            },
+        },
+        legendItem: new PolygonLegendItem(legendId, name, new Bounds(1, 0, 1, 0)).toPlain(),
+    });
+
+    it('starts at 1 and round-trips through JSON', () => {
+        const block = TripReportMapBlock.createEmpty();
+        expect(block.nextPolygonNumber).toBe(1);
+        const json = { ...block.toJSON(), nextPolygonNumber: 4 };
+        expect(json.nextPolygonNumber).toBe(4);
+        const restored = TripReportMapBlock.fromResult(JSON.parse(JSON.stringify(json)));
+        expect(restored.nextPolygonNumber).toBe(4);
+        expect(restored.toJSON().nextPolygonNumber).toBe(4);
+    });
+
+    it('keeps its counter through other edits', () => {
+        const json = { ...TripReportMapBlock.createEmpty().toJSON(), nextPolygonNumber: 3 };
+        const block = TripReportMapBlock.fromResult(json).withNewMarker([0, 0]).withNewSegment();
+        expect(block.nextPolygonNumber).toBe(3);
+    });
+
+    it('continues numbering from polygon names when the counter is missing', () => {
+        const first = polygon('p1', 'Polygon 2');
+        const second = polygon('p2', 'Swimming hole');
+        const restored = TripReportMapBlock.fromResult({
+            blockType: 'map',
+            id: 'map-1',
+            features: [first.feature, second.feature],
+            legend: { p1: first.legendItem, p2: second.legendItem },
+        });
+        expect(restored.nextPolygonNumber).toBe(3);
     });
 });
