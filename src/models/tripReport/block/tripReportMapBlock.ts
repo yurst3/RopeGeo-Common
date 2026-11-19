@@ -15,12 +15,15 @@ import {
 } from '../tripReportMarker';
 import { AddMarkerUndoChange } from '../undo/addMarkerUndoChange';
 import { AddSegmentUndoChange } from '../undo/addSegmentUndoChange';
+import { AddWaypointUndoChange } from '../undo/addWaypointUndoChange';
 import { ImportMapFileUndoChange } from '../undo/importMapFileUndoChange';
 import { MapBlockUndoChange, type MapBlockUndoChangeJson } from '../undo/mapBlockUndoChange';
 import { MoveMarkerUndoChange } from '../undo/moveMarkerUndoChange';
 import { MoveWaypointUndoChange } from '../undo/moveWaypointUndoChange';
 import { RemoveMarkerUndoChange } from '../undo/removeMarkerUndoChange';
 import { RemoveSegmentUndoChange } from '../undo/removeSegmentUndoChange';
+import { RemoveWaypointUndoChange } from '../undo/removeWaypointUndoChange';
+import { SplitSegmentUndoChange } from '../undo/splitSegmentUndoChange';
 import { createBlockId } from './createBlockId';
 import { registerTripReportBlockParser, TripReportBlock } from './tripReportBlock';
 import { TripReportBlockType } from './tripReportBlockType';
@@ -269,6 +272,74 @@ export class TripReportMapBlock extends TripReportBlock {
                 entry.id === segmentId ? entry.withWaypointMoved(waypointIndex, position) : entry,
             ),
         }).withUndoPushed(new MoveWaypointUndoChange(segmentId, waypointIndex, previous));
+    }
+
+    /**
+     * Inserts a waypoint at `index` (append when `index === length`) and pushes undo. No-op when
+     * the segment is missing or `index` is outside `[0, length]`.
+     */
+    withSegmentWaypointInserted(
+        segmentId: string,
+        index: number,
+        position: TripReportWaypoint,
+    ): TripReportMapBlock {
+        const segment = this.segments.find((entry) => entry.id === segmentId);
+        if (segment == null || index < 0 || index > segment.waypoints.length) return this;
+        return this.copy({
+            segments: this.segments.map((entry) =>
+                entry.id === segmentId ? entry.withWaypointInserted(index, position) : entry,
+            ),
+        }).withUndoPushed(new AddWaypointUndoChange(segmentId, index));
+    }
+
+    /**
+     * Removes a waypoint and pushes undo with its prior position. No-op when the segment or index
+     * is missing.
+     */
+    withSegmentWaypointRemoved(segmentId: string, waypointIndex: number): TripReportMapBlock {
+        const segment = this.segments.find((entry) => entry.id === segmentId);
+        const waypoint = segment?.waypoints[waypointIndex];
+        if (segment == null || waypoint == null) return this;
+        return this.copy({
+            segments: this.segments.map((entry) =>
+                entry.id === segmentId ? entry.withWaypointRemoved(waypointIndex) : entry,
+            ),
+        }).withUndoPushed(new RemoveWaypointUndoChange(segmentId, waypointIndex, waypoint));
+    }
+
+    /**
+     * Splits a segment at `waypointIndex`: the original keeps waypoints before the index; a new
+     * segment (inserted immediately after) owns the selected waypoint and everything after it.
+     * Throws when `waypointIndex === 0` (would leave the original empty). No-op when the segment
+     * is missing or `waypointIndex >= length`.
+     */
+    withSegmentSplitAt(segmentId: string, waypointIndex: number): TripReportMapBlock {
+        const segmentIndex = this.segments.findIndex((entry) => entry.id === segmentId);
+        if (segmentIndex < 0) return this;
+        const segment = this.segments[segmentIndex]!;
+        if (waypointIndex >= segment.waypoints.length) return this;
+        if (waypointIndex === 0) {
+            throw new Error(
+                'TripReportMapBlock.withSegmentSplitAt: cannot split at the first waypoint',
+            );
+        }
+        if (waypointIndex < 0) return this;
+
+        const head = segment.withWaypoints(segment.waypoints.slice(0, waypointIndex));
+        const tail = segment.createSibling(
+            `Segment ${this.nextSegmentNumber}`,
+            segment.waypoints.slice(waypointIndex),
+        );
+        const segments = [
+            ...this.segments.slice(0, segmentIndex),
+            head,
+            tail,
+            ...this.segments.slice(segmentIndex + 1),
+        ];
+        return this.copy({
+            segments,
+            nextSegmentNumber: this.nextSegmentNumber + 1,
+        }).withUndoPushed(new SplitSegmentUndoChange(segmentId, tail.id, waypointIndex));
     }
 
     /** Adds a "Marker N" at `position`. */

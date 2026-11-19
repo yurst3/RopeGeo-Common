@@ -12,6 +12,44 @@ const boundsOf = (segment: TripReportLineSegment) =>
               west: segment.bounds.west,
           };
 
+describe('TripReportLineSegment.withWaypoints / createSibling', () => {
+    it('replaces waypoints and copies appearance onto a sibling', () => {
+        const segment = TripReportLineSegment.fromMapFileLine(
+            {
+                type: 'LineString',
+                coordinates: [
+                    [-109.55, 38.57],
+                    [-109.54, 38.58],
+                    [-109.53, 38.59],
+                ],
+            },
+            { stroke: '#ff8800' },
+            { id: 's', name: 'Approach' },
+        ).withStyle('dashed').withThickness('thick');
+
+        const head = segment.withWaypoints(segment.waypoints.slice(0, 1));
+        expect(head.id).toBe(segment.id);
+        expect(head.name).toBe('Approach');
+        expect(head.waypoints).toEqual([[-109.55, 38.57]]);
+        expect(head.color).toBe('#ff8800');
+        expect(head.originalColor).toBe('#ff8800');
+
+        const sibling = segment.createSibling('Segment 2', segment.waypoints.slice(1));
+        expect(sibling.id).not.toBe(segment.id);
+        expect(sibling.name).toBe('Segment 2');
+        expect(sibling.waypoints).toEqual([
+            [-109.54, 38.58],
+            [-109.53, 38.59],
+        ]);
+        expect(sibling).toMatchObject({
+            color: '#ff8800',
+            originalColor: '#ff8800',
+            style: 'dashed',
+            thickness: 'thick',
+        });
+    });
+});
+
 describe('TripReportLineSegment.bounds', () => {
     it('is null without waypoints', () => {
         expect(TripReportLineSegment.createEmpty('Segment 1').bounds).toBeNull();

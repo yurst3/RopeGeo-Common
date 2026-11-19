@@ -78,6 +78,100 @@ describe('TripReportMapBlock undo', () => {
         expect(markerRestored.markers[0]!.position).toEqual([-110, 38]);
     });
 
+    it('pushes insert/remove waypoint and undoes them', () => {
+        const block = TripReportMapBlock.createEmpty(MAX_UNDO)
+            .withNewSegment()
+            .withWaypointAppendedToActive([-109, 38])
+            .withWaypointAppendedToActive([-109.2, 38.2]);
+        const segmentId = block.segments[0]!.id;
+
+        const inserted = block.withSegmentWaypointInserted(segmentId, 1, [-109.1, 38.1]);
+        expect(inserted.segments[0]!.waypoints).toEqual([
+            [-109, 38],
+            [-109.1, 38.1],
+            [-109.2, 38.2],
+        ]);
+        expect(inserted.undoStack[inserted.undoStack.length - 1]!.type).toBe('addWaypoint');
+        expect(inserted.undoChange().segments[0]!.waypoints).toEqual([
+            [-109, 38],
+            [-109.2, 38.2],
+        ]);
+
+        const appended = block.withSegmentWaypointInserted(segmentId, 2, [-109.3, 38.3]);
+        expect(appended.segments[0]!.waypoints).toEqual([
+            [-109, 38],
+            [-109.2, 38.2],
+            [-109.3, 38.3],
+        ]);
+        expect(appended.undoChange().segments[0]!.waypoints).toEqual([
+            [-109, 38],
+            [-109.2, 38.2],
+        ]);
+
+        const removed = inserted.withSegmentWaypointRemoved(segmentId, 1);
+        expect(removed.segments[0]!.waypoints).toEqual([
+            [-109, 38],
+            [-109.2, 38.2],
+        ]);
+        expect(removed.undoStack[removed.undoStack.length - 1]!.type).toBe('removeWaypoint');
+        expect(removed.undoChange().segments[0]!.waypoints).toEqual([
+            [-109, 38],
+            [-109.1, 38.1],
+            [-109.2, 38.2],
+        ]);
+
+        expect(block.withSegmentWaypointInserted('missing', 0, [0, 0])).toBe(block);
+        expect(block.withSegmentWaypointInserted(segmentId, 3, [0, 0])).toBe(block);
+        expect(block.withSegmentWaypointRemoved(segmentId, 5)).toBe(block);
+    });
+
+    it('pushes split segment and undoes it', () => {
+        const prior = TripReportMapBlock.createEmpty(MAX_UNDO).withNewSegment('blue');
+        const priorId = prior.segments[0]!.id;
+        const block = prior
+            .withNewSegment('red')
+            .withWaypointAppendedToActive([-109, 38])
+            .withWaypointAppendedToActive([-109.1, 38.1])
+            .withWaypointAppendedToActive([-109.2, 38.2])
+            .withWaypointAppendedToActive([-109.3, 38.3]);
+        const segmentId = block.segments[1]!.id;
+        expect(block.nextSegmentNumber).toBe(3);
+
+        const split = block.withSegmentSplitAt(segmentId, 2);
+        expect(split.segments).toHaveLength(3);
+        expect(split.segments[0]!.id).toBe(priorId);
+        expect(split.segments[1]!.id).toBe(segmentId);
+        expect(split.segments[1]!.waypoints).toEqual([
+            [-109, 38],
+            [-109.1, 38.1],
+        ]);
+        expect(split.segments[2]!.name).toBe('Segment 3');
+        expect(split.segments[2]!.color).toBe('red');
+        expect(split.segments[2]!.waypoints).toEqual([
+            [-109.2, 38.2],
+            [-109.3, 38.3],
+        ]);
+        expect(split.nextSegmentNumber).toBe(4);
+        expect(split.undoStack[split.undoStack.length - 1]!.type).toBe('splitSegment');
+
+        const restored = split.undoChange();
+        expect(restored.segments).toHaveLength(2);
+        expect(restored.segments[1]!.id).toBe(segmentId);
+        expect(restored.segments[1]!.waypoints).toEqual([
+            [-109, 38],
+            [-109.1, 38.1],
+            [-109.2, 38.2],
+            [-109.3, 38.3],
+        ]);
+        expect(restored.nextSegmentNumber).toBe(4);
+
+        expect(() => block.withSegmentSplitAt(segmentId, 0)).toThrow(
+            'TripReportMapBlock.withSegmentSplitAt: cannot split at the first waypoint',
+        );
+        expect(block.withSegmentSplitAt('missing', 1)).toBe(block);
+        expect(block.withSegmentSplitAt(segmentId, 4)).toBe(block);
+    });
+
     it('does not push for property updates', () => {
         const block = TripReportMapBlock.createEmpty(MAX_UNDO)
             .withNewSegment()
@@ -170,6 +264,14 @@ describe('TripReportMapBlock undo', () => {
                 waypointIndex: 0,
                 previousPosition: [1, 2] as [number, number],
             },
+            { type: 'addWaypoint', segmentId: 's1', waypointIndex: 1 },
+            {
+                type: 'removeWaypoint',
+                segmentId: 's1',
+                waypointIndex: 1,
+                waypoint: [1, 2] as [number, number],
+            },
+            { type: 'splitSegment', segmentId: 's1', newSegmentId: 's2', waypointIndex: 2 },
             {
                 type: 'importMapFile',
                 segmentIds: ['s1'],

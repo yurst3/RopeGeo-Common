@@ -175,6 +175,27 @@ export class TripReportLineSegment {
         return this.copy({ waypoints: this.waypoints.filter((_, i) => i !== index) });
     }
 
+    /** Replaces the waypoint list (each rounded); keeps id, name, and appearance. */
+    withWaypoints(waypoints: readonly TripReportWaypoint[]): TripReportLineSegment {
+        return this.copy({ waypoints: waypoints.map(roundWaypoint) });
+    }
+
+    /**
+     * A new segment id with the same color, style, thickness, and originalColor as this one.
+     * Used when splitting a segment so the tail inherits appearance.
+     */
+    createSibling(name: string, waypoints: readonly TripReportWaypoint[]): TripReportLineSegment {
+        return new TripReportLineSegment(
+            createSegmentId(),
+            name,
+            waypoints.map(roundWaypoint),
+            this.color,
+            this.style,
+            this.thickness,
+            this.originalColor,
+        );
+    }
+
     /** Blank or whitespace-only names are ignored. */
     withName(name: string): TripReportLineSegment {
         const trimmed = name.trim();

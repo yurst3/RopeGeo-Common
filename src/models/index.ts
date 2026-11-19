@@ -307,6 +307,10 @@ export {
     type AddSegmentUndoChangeJson,
 } from './tripReport/undo/addSegmentUndoChange';
 export {
+    AddWaypointUndoChange,
+    type AddWaypointUndoChangeJson,
+} from './tripReport/undo/addWaypointUndoChange';
+export {
     ImportMapFileUndoChange,
     type ImportMapFileUndoChangeJson,
 } from './tripReport/undo/importMapFileUndoChange';
@@ -329,6 +333,14 @@ export {
     RemoveSegmentUndoChange,
     type RemoveSegmentUndoChangeJson,
 } from './tripReport/undo/removeSegmentUndoChange';
+export {
+    RemoveWaypointUndoChange,
+    type RemoveWaypointUndoChangeJson,
+} from './tripReport/undo/removeWaypointUndoChange';
+export {
+    SplitSegmentUndoChange,
+    type SplitSegmentUndoChangeJson,
+} from './tripReport/undo/splitSegmentUndoChange';
 export { addDays, TripReportDates, type TripReportDatesJson } from './tripReport/tripReportDates';
 export { TripReportDraft, type TripReportDraftJson } from './tripReport/tripReportDraft';
 export {
