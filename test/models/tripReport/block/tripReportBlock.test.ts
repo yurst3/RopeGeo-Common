@@ -10,7 +10,7 @@ import {
 describe('TripReportBlock.fromResult', () => {
     it('dispatches to the concrete block by blockType', () => {
         const text = TripReportTextBlock.createEmpty().withHeader('Notes');
-        const map = TripReportMapBlock.createEmpty().withWaypointAppendedToActive([-109.5, 38.5]);
+        const map = TripReportMapBlock.createEmpty(10).withWaypointAppendedToActive([-109.5, 38.5]);
         const parsedText = TripReportBlock.fromResult(JSON.parse(JSON.stringify(text.toJSON())));
         const parsedMap = TripReportBlock.fromResult(JSON.parse(JSON.stringify(map.toJSON())));
         expect(parsedText).toBeInstanceOf(TripReportTextBlock);

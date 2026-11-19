@@ -298,6 +298,37 @@ export {
     type TripReportMapBlockJson,
 } from './tripReport/block/tripReportMapBlock';
 export { TripReportTextBlock, type TripReportTextBlockJson } from './tripReport/block/tripReportTextBlock';
+export {
+    AddMarkerUndoChange,
+    type AddMarkerUndoChangeJson,
+} from './tripReport/undo/addMarkerUndoChange';
+export {
+    AddSegmentUndoChange,
+    type AddSegmentUndoChangeJson,
+} from './tripReport/undo/addSegmentUndoChange';
+export {
+    ImportMapFileUndoChange,
+    type ImportMapFileUndoChangeJson,
+} from './tripReport/undo/importMapFileUndoChange';
+export { MapBlockUndoChange } from './tripReport/undo/mapBlockUndoChange';
+export type { MapBlockUndoChangeJson } from './tripReport/undo/mapBlockUndoChangeJson';
+export {
+    MoveMarkerUndoChange,
+    type MoveMarkerUndoChangeJson,
+} from './tripReport/undo/moveMarkerUndoChange';
+export {
+    MoveWaypointUndoChange,
+    type MoveWaypointUndoChangeJson,
+} from './tripReport/undo/moveWaypointUndoChange';
+export { parseMapBlockUndoChange } from './tripReport/undo/parseMapBlockUndoChange';
+export {
+    RemoveMarkerUndoChange,
+    type RemoveMarkerUndoChangeJson,
+} from './tripReport/undo/removeMarkerUndoChange';
+export {
+    RemoveSegmentUndoChange,
+    type RemoveSegmentUndoChangeJson,
+} from './tripReport/undo/removeSegmentUndoChange';
 export { addDays, TripReportDates, type TripReportDatesJson } from './tripReport/tripReportDates';
 export { TripReportDraft, type TripReportDraftJson } from './tripReport/tripReportDraft';
 export {

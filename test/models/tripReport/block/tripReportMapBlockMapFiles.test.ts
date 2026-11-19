@@ -43,7 +43,7 @@ function enrichedKml(fileName = 'canyon.kml'): EnrichedGeoJsonMapFile {
 
 describe('TripReportMapBlock.withMapFileImported', () => {
     it('turns lines into segments, points into markers, and keeps polygons as features', () => {
-        const block = TripReportMapBlock.createEmpty().withMapFileImported(enrichedKml());
+        const block = TripReportMapBlock.createEmpty(10).withMapFileImported(enrichedKml());
 
         expect(block.segments.map((s) => s.name)).toEqual(['Approach', 'Segment 1']);
         const [approach, unnamed] = block.segments;
@@ -90,7 +90,7 @@ describe('TripReportMapBlock.withMapFileImported', () => {
             ],
         };
         const file = new EnrichedGeoJsonMapFile('points.geojson', collection);
-        const block = TripReportMapBlock.createEmpty().withMapFileImported(file, { newSegmentColor: 'white' });
+        const block = TripReportMapBlock.createEmpty(10).withMapFileImported(file, { newSegmentColor: 'white' });
         expect(block.markers.map((m) => [m.name, m.color, m.originalColor])).toEqual([
             ['Marker 1', 'white', null],
             ['Marker 2', '#2563eb', '#2563eb'],
@@ -104,7 +104,7 @@ describe('TripReportMapBlock.withMapFileImported', () => {
 
     it('uses the legend id as the segment id so the file maps back to the block', () => {
         const file = enrichedKml();
-        const block = TripReportMapBlock.createEmpty().withMapFileImported(file);
+        const block = TripReportMapBlock.createEmpty(10).withMapFileImported(file);
         const lineIds = file.geoJson.features
             .filter((f) => f.geometry?.type === 'LineString')
             .map((f) => f.properties![LEGEND_ID_PROPERTY]);
@@ -113,18 +113,21 @@ describe('TripReportMapBlock.withMapFileImported', () => {
     });
 
     it('adds nothing when the same file is imported again, even after edits', () => {
-        const once = TripReportMapBlock.createEmpty().withMapFileImported(enrichedKml());
+        const once = TripReportMapBlock.createEmpty(10).withMapFileImported(enrichedKml());
+        expect(once.undoStack).toHaveLength(1);
         const edited = once.withSegmentUpdated(once.segments[0]!.id, (s) => s.withName('Renamed').withColor('blue'));
         const twice = edited.withMapFileImported(enrichedKml());
+        expect(twice).toBe(edited);
         expect(twice.segments).toEqual(edited.segments);
         expect(twice.markers).toEqual(edited.markers);
         expect(twice.features).toEqual(edited.features);
         expect(twice.legend).toEqual(edited.legend);
         expect(twice.nextSegmentNumber).toBe(edited.nextSegmentNumber);
+        expect(twice.undoStack).toHaveLength(1);
     });
 
     it('treats a differently named copy as new features', () => {
-        const block = TripReportMapBlock.createEmpty()
+        const block = TripReportMapBlock.createEmpty(10)
             .withMapFileImported(enrichedKml('canyon.kml'))
             .withMapFileImported(enrichedKml('canyon (1).kml'));
         expect(block.segments).toHaveLength(4);
@@ -133,7 +136,7 @@ describe('TripReportMapBlock.withMapFileImported', () => {
     });
 
     it('inserts imported segments before the active segment', () => {
-        const recording = TripReportMapBlock.createEmpty().withWaypointAppendedToActive([-110, 38]);
+        const recording = TripReportMapBlock.createEmpty(10).withWaypointAppendedToActive([-110, 38]);
         const active = recording.activeSegment!;
         const block = recording.withMapFileImported(enrichedKml());
         expect(block.activeSegment).toBe(active);
@@ -141,7 +144,7 @@ describe('TripReportMapBlock.withMapFileImported', () => {
     });
 
     it('uses newSegmentColor for lines without a color', () => {
-        const block = TripReportMapBlock.createEmpty().withMapFileImported(enrichedKml(), {
+        const block = TripReportMapBlock.createEmpty(10).withMapFileImported(enrichedKml(), {
             newSegmentColor: 'white',
         });
         expect(block.segments.map((s) => s.color)).toEqual(['#ff0000', 'white']);
@@ -154,7 +157,7 @@ describe('TripReportMapBlock.withMapFileImported', () => {
                 { type: 'Feature', properties: {}, geometry: { type: 'GeometryCollection', geometries: [] } },
             ],
         };
-        const block = TripReportMapBlock.createEmpty().withMapFileImported(
+        const block = TripReportMapBlock.createEmpty(10).withMapFileImported(
             new EnrichedGeoJsonMapFile('empty.geojson', collection),
         );
         expect(block.segments).toEqual([]);
@@ -162,7 +165,7 @@ describe('TripReportMapBlock.withMapFileImported', () => {
     });
 
     it('removes an imported feature with its legend item', () => {
-        const block = TripReportMapBlock.createEmpty().withMapFileImported(enrichedKml());
+        const block = TripReportMapBlock.createEmpty(10).withMapFileImported(enrichedKml());
         const id = block.features[0]!.properties![LEGEND_ID_PROPERTY] as string;
         const removed = block.withFeatureRemoved(id);
         expect(removed.features).toHaveLength(0);
@@ -172,7 +175,7 @@ describe('TripReportMapBlock.withMapFileImported', () => {
 });
 
 describe('TripReportMapBlock.toEnrichedGeoJsonMapFile', () => {
-    const block = TripReportMapBlock.createEmpty()
+    const block = TripReportMapBlock.createEmpty(10)
         .withWaypointAppendedToActive([-110, 38])
         .withWaypointAppendedToActive([-110.1, 38.1])
         .withMapFileImported(enrichedKml());
@@ -213,7 +216,7 @@ describe('TripReportMapBlock.toEnrichedGeoJsonMapFile', () => {
     });
 
     it('leaves out segments without waypoints', () => {
-        const empty = TripReportMapBlock.createEmpty().withNewSegment();
+        const empty = TripReportMapBlock.createEmpty(10).withNewSegment();
         expect(empty.toEnrichedGeoJsonMapFile('a.geojson').geoJson.features).toEqual([]);
     });
 
@@ -231,7 +234,7 @@ describe('TripReportMapBlock.toEnrichedGeoJsonMapFile', () => {
     it.each<MapFileExportFormat>(['kml', 'geojson'])(
         'a %s export imported into a new block reproduces the block',
         (format) => {
-            const copy = TripReportMapBlock.createEmpty().withMapFileImported(exportAndReimport(format));
+            const copy = TripReportMapBlock.createEmpty(10).withMapFileImported(exportAndReimport(format));
             expect(segmentSummary(copy)).toEqual(segmentSummary(block));
             expect(markerSummary(copy)).toEqual(markerSummary(block));
             expect(copy.features.map((f) => f.geometry)).toEqual(block.features.map((f) => f.geometry));
@@ -240,7 +243,7 @@ describe('TripReportMapBlock.toEnrichedGeoJsonMapFile', () => {
     );
 
     it('a GPX export imported into a new block turns polygons into segments (GPX has no polygons)', () => {
-        const copy = TripReportMapBlock.createEmpty().withMapFileImported(exportAndReimport('gpx'));
+        const copy = TripReportMapBlock.createEmpty(10).withMapFileImported(exportAndReimport('gpx'));
         const poolId = Object.entries(block.legend).find(([, item]) => item.name === 'Pool')![0];
         expect(segmentSummary(copy).slice(0, block.segments.length)).toEqual(segmentSummary(block));
         expect(copy.segments.at(-1)).toMatchObject({ id: poolId, name: 'Pool' });
@@ -266,7 +269,7 @@ describe('TripReportMapBlock.toEnrichedGeoJsonMapFile', () => {
         expect(kml).toContain('<IconStyle><color>fff6823b</color></IconStyle>');
         // Without RopeGeo's own color, the KML icon color comes back as the exact color.
         const plainKml = kml.replace(/<Data name="ropegeo:color">.*?<\/Data>/g, '');
-        const reimported = TripReportMapBlock.createEmpty().withMapFileImported(
+        const reimported = TripReportMapBlock.createEmpty(10).withMapFileImported(
             MapFile.fromContent('trip.kml', plainKml).toGeoJson().enrich(),
         );
         expect(reimported.markers[0]).toMatchObject({
@@ -284,7 +287,7 @@ describe('TripReportMapBlock.toEnrichedGeoJsonMapFile', () => {
                 .withMarkerUpdated(block.markers[0]!.id, (m) => m.withColor('#123456'));
             const fileName = `trip.${format}`;
             const content = exportMapFile(recolored.toEnrichedGeoJsonMapFile(fileName).geoJson, format);
-            const copy = TripReportMapBlock.createEmpty().withMapFileImported(
+            const copy = TripReportMapBlock.createEmpty(10).withMapFileImported(
                 MapFile.fromContent(fileName, content).toGeoJson().enrich(),
             );
             expect(copy.segments[0]).toMatchObject({ color: 'green', originalColor: '#ff0000' });
@@ -302,7 +305,7 @@ describe('TripReportMapBlock.toEnrichedGeoJsonMapFile', () => {
 
 describe('TripReportMapBlock JSON with imported features', () => {
     it('round-trips markers, features, and legend items', () => {
-        const block = TripReportMapBlock.createEmpty().withMapFileImported(enrichedKml());
+        const block = TripReportMapBlock.createEmpty(10).withMapFileImported(enrichedKml());
         const restored = TripReportMapBlock.fromResult(JSON.parse(JSON.stringify(block.toJSON())));
         expect(restored.markers).toEqual(block.markers);
         expect(restored.nextMarkerNumber).toBe(block.nextMarkerNumber);
@@ -315,13 +318,13 @@ describe('TripReportMapBlock JSON with imported features', () => {
     });
 
     it('omits features and legend when there are none', () => {
-        const json = TripReportMapBlock.createEmpty().toJSON();
+        const json = TripReportMapBlock.createEmpty(10).toJSON();
         expect(json.features).toBeUndefined();
         expect(json.legend).toBeUndefined();
     });
 
     it('drops features whose legend item is missing', () => {
-        const block = TripReportMapBlock.createEmpty().withMapFileImported(enrichedKml());
+        const block = TripReportMapBlock.createEmpty(10).withMapFileImported(enrichedKml());
         const json = block.toJSON();
         const firstId = Object.keys(json.legend!)[0]!;
         delete json.legend![firstId];
@@ -331,7 +334,7 @@ describe('TripReportMapBlock JSON with imported features', () => {
     });
 
     it('turns points saved as features (before markers existed) into markers', () => {
-        const block = TripReportMapBlock.createEmpty().withMapFileImported(enrichedKml());
+        const block = TripReportMapBlock.createEmpty(10).withMapFileImported(enrichedKml());
         const pointId = 'legacy-point';
         const legacy = {
             ...block.toJSON(),

@@ -9,9 +9,11 @@ import {
     TripReportMarkerStyle,
 } from '../../../../src/models';
 
+const MAX_UNDO = 10;
+
 describe('TripReportMapBlock segments', () => {
     it('creates Segment 1 lazily and appends to the active segment', () => {
-        const block = TripReportMapBlock.createEmpty()
+        const block = TripReportMapBlock.createEmpty(MAX_UNDO)
             .withWaypointAppendedToActive([-109.1234567, 38.7654321])
             .withWaypointAppendedToActive([-109.2, 38.8]);
         expect(block.segments).toHaveLength(1);
@@ -24,22 +26,19 @@ describe('TripReportMapBlock segments', () => {
     });
 
     it('gives an auto-created segment the requested color', () => {
-        const block = TripReportMapBlock.createEmpty().withWaypointAppendedToActive(
-            [1, 2],
-            'white',
-        );
+        const block = TripReportMapBlock.createEmpty(MAX_UNDO).withWaypointAppendedToActive([1, 2], 'white');
         expect(block.segments[0].color).toBe('white');
         expect(block.segments[0].toJSON().color).toBe('white');
     });
 
     it('never reuses segment numbers after removal', () => {
-        const block = TripReportMapBlock.createEmpty().withNewSegment().withNewSegment();
+        const block = TripReportMapBlock.createEmpty(MAX_UNDO).withNewSegment().withNewSegment();
         const removed = block.withSegmentRemoved(block.segments[1].id).withNewSegment();
         expect(removed.segments.map((s) => s.name)).toEqual(['Segment 1', 'Segment 3']);
     });
 
     it('round-trips JSON and omits default appearance', () => {
-        const block = TripReportMapBlock.createEmpty()
+        const block = TripReportMapBlock.createEmpty(MAX_UNDO)
             .withWaypointAppendedToActive([1, 2])
             .withNewSegment()
             .withWaypointAppendedToActive([3, 4]);
@@ -117,19 +116,25 @@ describe('TripReportMapBlock segments', () => {
 
 describe('TripReportMapBlock markers', () => {
     it('adds numbered markers and never reuses numbers after removal', () => {
-        const block = TripReportMapBlock.createEmpty().withNewMarker([-110, 38]).withNewMarker([-110.1, 38.1], 'red');
+        const block = TripReportMapBlock.createEmpty(MAX_UNDO)
+            .withNewMarker([-110, 38])
+            .withNewMarker([-110.1, 38.1], 'red');
         expect(block.markers.map((m) => [m.name, m.color, m.style])).toEqual([
             ['Marker 1', 'black', TripReportMarkerStyle.Marker],
             ['Marker 2', 'red', TripReportMarkerStyle.Marker],
         ]);
-        const removed = block.withMarkerRemoved(block.markers[0]!.id).withNewMarker([0, 0]);
+        const removed = block
+            .withMarkerRemoved(block.markers[0]!.id)
+            .withNewMarker([0, 0]);
         expect(removed.markers.map((m) => m.name)).toEqual(['Marker 2', 'Marker 3']);
         expect(removed.hasId(block.markers[0]!.id)).toBe(false);
         expect(removed.hasId(block.markers[1]!.id)).toBe(true);
     });
 
     it('updates only the matching marker', () => {
-        const block = TripReportMapBlock.createEmpty().withNewMarker([-110, 38]).withNewMarker([-110.1, 38.1]);
+        const block = TripReportMapBlock.createEmpty(MAX_UNDO)
+            .withNewMarker([-110, 38])
+            .withNewMarker([-110.1, 38.1]);
         const updated = block.withMarkerUpdated(block.markers[1]!.id, (m) =>
             m.withName('Camp').withStyle(TripReportMarkerStyle.Camp),
         );
@@ -138,7 +143,7 @@ describe('TripReportMapBlock markers', () => {
     });
 
     it('round-trips markers and their counter through JSON', () => {
-        const block = TripReportMapBlock.createEmpty()
+        const block = TripReportMapBlock.createEmpty(MAX_UNDO)
             .withNewMarker([-110, 38])
             .withNewMarker([-110.1, 38.1], 'blue', TripReportMarkerStyle.Waterfall);
         const json = block.toJSON();
@@ -163,7 +168,7 @@ describe('TripReportMapBlock markers', () => {
     });
 
     it('omits markers from JSON when there are none', () => {
-        expect(TripReportMapBlock.createEmpty().toJSON()).not.toHaveProperty('markers');
+        expect(TripReportMapBlock.createEmpty(MAX_UNDO).toJSON()).not.toHaveProperty('markers');
     });
 });
 
@@ -188,7 +193,7 @@ describe('TripReportMapBlock polygon numbering', () => {
     });
 
     it('starts at 1 and round-trips through JSON', () => {
-        const block = TripReportMapBlock.createEmpty();
+        const block = TripReportMapBlock.createEmpty(MAX_UNDO);
         expect(block.nextPolygonNumber).toBe(1);
         const json = { ...block.toJSON(), nextPolygonNumber: 4 };
         expect(json.nextPolygonNumber).toBe(4);
@@ -198,8 +203,10 @@ describe('TripReportMapBlock polygon numbering', () => {
     });
 
     it('keeps its counter through other edits', () => {
-        const json = { ...TripReportMapBlock.createEmpty().toJSON(), nextPolygonNumber: 3 };
-        const block = TripReportMapBlock.fromResult(json).withNewMarker([0, 0]).withNewSegment();
+        const json = { ...TripReportMapBlock.createEmpty(MAX_UNDO).toJSON(), nextPolygonNumber: 3 };
+        const block = TripReportMapBlock.fromResult(json)
+            .withNewMarker([0, 0])
+            .withNewSegment();
         expect(block.nextPolygonNumber).toBe(3);
     });
 

@@ -13,6 +13,14 @@ import {
     type TripReportMarkerJson,
     type TripReportMarkerStyle,
 } from '../tripReportMarker';
+import { AddMarkerUndoChange } from '../undo/addMarkerUndoChange';
+import { AddSegmentUndoChange } from '../undo/addSegmentUndoChange';
+import { ImportMapFileUndoChange } from '../undo/importMapFileUndoChange';
+import { MapBlockUndoChange, type MapBlockUndoChangeJson } from '../undo/mapBlockUndoChange';
+import { MoveMarkerUndoChange } from '../undo/moveMarkerUndoChange';
+import { MoveWaypointUndoChange } from '../undo/moveWaypointUndoChange';
+import { RemoveMarkerUndoChange } from '../undo/removeMarkerUndoChange';
+import { RemoveSegmentUndoChange } from '../undo/removeSegmentUndoChange';
 import { createBlockId } from './createBlockId';
 import { registerTripReportBlockParser, TripReportBlock } from './tripReportBlock';
 import { TripReportBlockType } from './tripReportBlockType';
@@ -29,6 +37,13 @@ export type TripReportMapBlockJson = {
     features?: Feature[];
     /** Plain legend items (`LegendItem.toPlain()`) for {@link features}, keyed by legend id. */
     legend?: Record<string, Record<string, unknown>>;
+    /** Differential undo stack for geometric edits; oldest first. */
+    undoStack?: MapBlockUndoChangeJson[];
+    /**
+     * Max undo entries retained. Owned by the app (e.g. Mobile); persisted so loaded blocks keep
+     * the cap they were created with.
+     */
+    maxUndoStackSize?: number;
 };
 
 export type ImportMapFileOptions = {
@@ -47,6 +62,8 @@ type MapBlockFields = {
     markers: TripReportMarker[];
     nextMarkerNumber: number;
     nextPolygonNumber: number;
+    undoStack: readonly MapBlockUndoChange[];
+    maxUndoStackSize: number;
 };
 
 const SEGMENT_NAME_PATTERN = /^Segment (\d+)$/;
@@ -87,9 +104,18 @@ function nextNumberAfter(names: string[], pattern: RegExp): number {
  *
  * Everything on the block has a unique id: segment, marker, and imported feature ids never
  * repeat, which is how re-importing the same map file is deduplicated.
+ *
+ * Geometric edits ({@link withNewSegment}, remove/move helpers) push differential undo entries
+ * capped by {@link maxUndoStackSize}; property updates and recording appends do not.
+ * {@link undoChange} pops and applies the latest.
  */
 export class TripReportMapBlock extends TripReportBlock {
     readonly blockType = TripReportBlockType.Map;
+    /**
+     * Max undo entries retained. Set by the app at creation (e.g. Mobile's stack-size constant);
+     * geometric {@link withNewSegment | with*} methods use this when pushing.
+     */
+    readonly maxUndoStackSize: number;
     readonly segments: TripReportLineSegment[];
     /** Number used for the next "Segment N" name. Only ever increases, so names stay unique. */
     readonly nextSegmentNumber: number;
@@ -102,9 +128,12 @@ export class TripReportMapBlock extends TripReportBlock {
     readonly nextMarkerNumber: number;
     /** Number used for the next "Polygon N" name. Only ever increases, so names stay unique. */
     readonly nextPolygonNumber: number;
+    /** Differential undo stack for geometric edits; oldest first. */
+    readonly undoStack: readonly MapBlockUndoChange[];
 
     constructor(
         id: string,
+        maxUndoStackSize: number,
         segments: TripReportLineSegment[] = [],
         nextSegmentNumber = 1,
         features: Feature[] = [],
@@ -112,8 +141,13 @@ export class TripReportMapBlock extends TripReportBlock {
         markers: TripReportMarker[] = [],
         nextMarkerNumber = 1,
         nextPolygonNumber = 1,
+        undoStack: readonly MapBlockUndoChange[] = [],
     ) {
         super(id);
+        this.maxUndoStackSize = TripReportMapBlock.assertPositiveInteger(
+            maxUndoStackSize,
+            'TripReportMapBlock.maxUndoStackSize',
+        );
         this.segments = segments;
         this.nextSegmentNumber = nextSegmentNumber;
         this.features = features;
@@ -121,15 +155,17 @@ export class TripReportMapBlock extends TripReportBlock {
         this.markers = markers;
         this.nextMarkerNumber = nextMarkerNumber;
         this.nextPolygonNumber = nextPolygonNumber;
+        this.undoStack = undoStack;
     }
 
-    static createEmpty(): TripReportMapBlock {
-        return new TripReportMapBlock(createBlockId(TripReportBlockType.Map));
+    static createEmpty(maxUndoStackSize: number): TripReportMapBlock {
+        return new TripReportMapBlock(createBlockId(TripReportBlockType.Map), maxUndoStackSize);
     }
 
     private copy(changes: Partial<MapBlockFields>): TripReportMapBlock {
         return new TripReportMapBlock(
             this.id,
+            changes.maxUndoStackSize ?? this.maxUndoStackSize,
             changes.segments ?? this.segments,
             changes.nextSegmentNumber ?? this.nextSegmentNumber,
             changes.features ?? this.features,
@@ -137,7 +173,17 @@ export class TripReportMapBlock extends TripReportBlock {
             changes.markers ?? this.markers,
             changes.nextMarkerNumber ?? this.nextMarkerNumber,
             changes.nextPolygonNumber ?? this.nextPolygonNumber,
+            changes.undoStack ?? this.undoStack,
         );
+    }
+
+    private withUndoPushed(change: MapBlockUndoChange): TripReportMapBlock {
+        const next = [...this.undoStack, change];
+        const undoStack =
+            next.length > this.maxUndoStackSize
+                ? next.slice(next.length - this.maxUndoStackSize)
+                : next;
+        return this.copy({ undoStack });
     }
 
     get activeSegment(): TripReportLineSegment | null {
@@ -153,17 +199,31 @@ export class TripReportMapBlock extends TripReportBlock {
         );
     }
 
+    /**
+     * Replaces segments without pushing undo. Used by {@link MapBlockUndoChange.apply}.
+     */
+    withSegments(segments: readonly TripReportLineSegment[]): TripReportMapBlock {
+        return this.copy({ segments: [...segments] });
+    }
+
+    /**
+     * Replaces markers without pushing undo. Used by {@link MapBlockUndoChange.apply}.
+     */
+    withMarkers(markers: readonly TripReportMarker[]): TripReportMapBlock {
+        return this.copy({ markers: [...markers] });
+    }
+
     withNewSegment(color?: TripReportLineColor): TripReportMapBlock {
         const segment = TripReportLineSegment.createEmpty(`Segment ${this.nextSegmentNumber}`, color);
         return this.copy({
             segments: [...this.segments, segment],
             nextSegmentNumber: this.nextSegmentNumber + 1,
-        });
+        }).withUndoPushed(new AddSegmentUndoChange(segment.id));
     }
 
     /**
      * Appends to the last segment, creating one first (with `newSegmentColor`) if the block has
-     * none.
+     * none. Creating that first segment pushes undo; appending a waypoint does not.
      */
     withWaypointAppendedToActive(
         point: TripReportWaypoint,
@@ -184,7 +244,31 @@ export class TripReportMapBlock extends TripReportBlock {
     }
 
     withSegmentRemoved(segmentId: string): TripReportMapBlock {
-        return this.copy({ segments: this.segments.filter((segment) => segment.id !== segmentId) });
+        const index = this.segments.findIndex((segment) => segment.id === segmentId);
+        if (index < 0) return this;
+        const segment = this.segments[index]!;
+        return this.copy({
+            segments: this.segments.filter((entry) => entry.id !== segmentId),
+        }).withUndoPushed(new RemoveSegmentUndoChange(segment.toJSON(), index));
+    }
+
+    /**
+     * Moves a waypoint and pushes undo with its previous position. No-op when the segment or
+     * index is missing.
+     */
+    withSegmentWaypointMoved(
+        segmentId: string,
+        waypointIndex: number,
+        position: TripReportWaypoint,
+    ): TripReportMapBlock {
+        const segment = this.segments.find((entry) => entry.id === segmentId);
+        const previous = segment?.waypoints[waypointIndex];
+        if (segment == null || previous == null) return this;
+        return this.copy({
+            segments: this.segments.map((entry) =>
+                entry.id === segmentId ? entry.withWaypointMoved(waypointIndex, position) : entry,
+            ),
+        }).withUndoPushed(new MoveWaypointUndoChange(segmentId, waypointIndex, previous));
     }
 
     /** Adds a "Marker N" at `position`. */
@@ -197,7 +281,7 @@ export class TripReportMapBlock extends TripReportBlock {
         return this.copy({
             markers: [...this.markers, marker],
             nextMarkerNumber: this.nextMarkerNumber + 1,
-        });
+        }).withUndoPushed(new AddMarkerUndoChange(marker.id));
     }
 
     withMarkerUpdated(
@@ -210,7 +294,25 @@ export class TripReportMapBlock extends TripReportBlock {
     }
 
     withMarkerRemoved(markerId: string): TripReportMapBlock {
-        return this.copy({ markers: this.markers.filter((marker) => marker.id !== markerId) });
+        const index = this.markers.findIndex((marker) => marker.id === markerId);
+        if (index < 0) return this;
+        const marker = this.markers[index]!;
+        return this.copy({
+            markers: this.markers.filter((entry) => entry.id !== markerId),
+        }).withUndoPushed(new RemoveMarkerUndoChange(marker.toJSON(), index));
+    }
+
+    /**
+     * Moves a marker and pushes undo with its previous position. No-op when the marker is missing.
+     */
+    withMarkerMoved(markerId: string, position: TripReportWaypoint): TripReportMapBlock {
+        const marker = this.markers.find((entry) => entry.id === markerId);
+        if (marker == null) return this;
+        return this.copy({
+            markers: this.markers.map((entry) =>
+                entry.id === markerId ? entry.withPosition(position) : entry,
+            ),
+        }).withUndoPushed(new MoveMarkerUndoChange(markerId, marker.position));
     }
 
     /** Removes an imported polygon and its legend item. */
@@ -221,6 +323,18 @@ export class TripReportMapBlock extends TripReportBlock {
             features: this.features.filter((feature) => legendIdOf(feature) !== legendId),
             legend,
         });
+    }
+
+    /**
+     * Pops the latest undo entry and applies it. Throws when the stack is empty.
+     */
+    undoChange(): TripReportMapBlock {
+        if (this.undoStack.length === 0) {
+            throw new Error('TripReportMapBlock.undoChange: undo stack is empty');
+        }
+        const change = this.undoStack[this.undoStack.length - 1]!;
+        const without = this.copy({ undoStack: this.undoStack.slice(0, -1) });
+        return change.apply(without);
     }
 
     /**
@@ -244,6 +358,9 @@ export class TripReportMapBlock extends TripReportBlock {
             ...Object.keys(this.legend),
         ]);
         const importedSegments: TripReportLineSegment[] = [];
+        const addedSegmentIds: string[] = [];
+        const addedMarkerIds: string[] = [];
+        const addedFeatureIds: string[] = [];
         const markers = [...this.markers];
         const features = [...this.features];
         const legend = { ...this.legend };
@@ -255,6 +372,7 @@ export class TripReportMapBlock extends TripReportBlock {
             const legendItem = legendId != null ? file.legend[legendId] : undefined;
             if (legendId == null || legendItem == null || feature.geometry == null) continue;
             const id = stringProperty(feature.properties, ROPEGEO_PROPERTY.id) ?? legendId;
+            // Already on the block (or earlier in this file): skip — and do not record for undo.
             if (usedIds.has(id)) continue;
             usedIds.add(id);
 
@@ -266,6 +384,7 @@ export class TripReportMapBlock extends TripReportBlock {
                         defaultColor: newSegmentColor,
                     }),
                 );
+                addedSegmentIds.push(id);
             } else if (feature.geometry.type === 'Point') {
                 markers.push(
                     TripReportMarker.fromMapFilePoint(feature.geometry, feature.properties, {
@@ -274,6 +393,7 @@ export class TripReportMapBlock extends TripReportBlock {
                         defaultColor: newSegmentColor,
                     }),
                 );
+                addedMarkerIds.push(id);
             } else {
                 features.push({
                     type: 'Feature',
@@ -281,7 +401,16 @@ export class TripReportMapBlock extends TripReportBlock {
                     geometry: feature.geometry,
                 });
                 legend[id] = withLegendItemId(legendItem, id);
+                addedFeatureIds.push(id);
             }
+        }
+
+        if (
+            addedSegmentIds.length === 0 &&
+            addedMarkerIds.length === 0 &&
+            addedFeatureIds.length === 0
+        ) {
+            return this;
         }
 
         const active = this.activeSegment;
@@ -289,7 +418,16 @@ export class TripReportMapBlock extends TripReportBlock {
             active == null
                 ? importedSegments
                 : [...this.segments.slice(0, -1), ...importedSegments, active];
-        return this.copy({ segments, nextSegmentNumber, markers, nextMarkerNumber, features, legend });
+        return this.copy({
+            segments,
+            nextSegmentNumber,
+            markers,
+            nextMarkerNumber,
+            features,
+            legend,
+        }).withUndoPushed(
+            new ImportMapFileUndoChange(addedSegmentIds, addedMarkerIds, addedFeatureIds),
+        );
     }
 
     /**
@@ -322,6 +460,7 @@ export class TripReportMapBlock extends TripReportBlock {
             nextSegmentNumber: this.nextSegmentNumber,
             nextMarkerNumber: this.nextMarkerNumber,
             nextPolygonNumber: this.nextPolygonNumber,
+            maxUndoStackSize: this.maxUndoStackSize,
         };
         if (this.markers.length > 0) json.markers = this.markers.map((marker) => marker.toJSON());
         if (this.features.length > 0) {
@@ -329,6 +468,9 @@ export class TripReportMapBlock extends TripReportBlock {
             json.legend = Object.fromEntries(
                 Object.entries(this.legend).map(([id, item]) => [id, item.toPlain()]),
             );
+        }
+        if (this.undoStack.length > 0) {
+            json.undoStack = this.undoStack.map((change) => change.toJSON());
         }
         return json;
     }
@@ -400,8 +542,21 @@ export class TripReportMapBlock extends TripReportBlock {
                       POLYGON_NAME_PATTERN,
                   )
                 : TripReportMapBlock.assertPositiveInteger(r.nextPolygonNumber, 'TripReportMapBlock.nextPolygonNumber');
+        const undoStack = TripReportMapBlock.parseOptionalArray(
+            r.undoStack,
+            'TripReportMapBlock.undoStack',
+        ).map((entry) => MapBlockUndoChange.fromResult(entry));
+        // Legacy saves omit the cap; treat as uncapped until the app recreates the block.
+        const maxUndoStackSize =
+            r.maxUndoStackSize === undefined
+                ? Number.MAX_SAFE_INTEGER
+                : TripReportMapBlock.assertPositiveInteger(
+                      r.maxUndoStackSize,
+                      'TripReportMapBlock.maxUndoStackSize',
+                  );
         return new TripReportMapBlock(
             id,
+            maxUndoStackSize,
             segments,
             nextSegmentNumber,
             features,
@@ -409,6 +564,7 @@ export class TripReportMapBlock extends TripReportBlock {
             markers,
             nextMarkerNumber,
             nextPolygonNumber,
+            undoStack,
         );
     }
 

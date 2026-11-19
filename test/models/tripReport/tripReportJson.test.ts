@@ -15,7 +15,7 @@ function sampleReport(): TripReport {
         .withDates(new TripReportDates(new Date(2026, 9, 5), new Date(2026, 9, 7)))
         .withBlockAdded(TripReportTextBlock.createEmpty().withHeader('Approach').withBody('Hot.'))
         .withBlockAdded(
-            TripReportMapBlock.createEmpty().withWaypointAppendedToActive([-109.5, 38.5], 'white'),
+            TripReportMapBlock.createEmpty(10).withWaypointAppendedToActive([-109.5, 38.5], 'white'),
         );
 }
 
