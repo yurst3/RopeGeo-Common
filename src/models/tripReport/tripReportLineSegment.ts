@@ -39,6 +39,9 @@ export const TRIP_REPORT_LINE_THICKNESSES = ['thin', 'medium', 'thick'] as const
 export type TripReportLineThickness = (typeof TRIP_REPORT_LINE_THICKNESSES)[number];
 export const DEFAULT_TRIP_REPORT_LINE_THICKNESS: TripReportLineThickness = 'medium';
 
+/** Whether direction arrows are drawn along the line. */
+export const DEFAULT_TRIP_REPORT_LINE_SHOW_DIRECTION = true;
+
 /** Stored precision: 6 decimals is about 0.1 m. */
 const COORDINATE_DECIMALS = 6;
 
@@ -112,6 +115,10 @@ function parseOption<T extends string>(options: readonly T[], value: unknown, fa
     return options.includes(value as T) ? (value as T) : fallback;
 }
 
+function parseBoolean(value: unknown, fallback: boolean): boolean {
+    return typeof value === 'boolean' ? value : fallback;
+}
+
 let nextSegmentId = 0;
 
 function createSegmentId(): string {
@@ -134,6 +141,7 @@ export type TripReportLineSegmentJson = {
     originalColor?: TripReportHexColor;
     style?: TripReportLineStyle;
     thickness?: TripReportLineThickness;
+    showDirection?: boolean;
 };
 
 /**
@@ -150,6 +158,8 @@ export class TripReportLineSegment {
     readonly originalColor: TripReportHexColor | null;
     readonly style: TripReportLineStyle;
     readonly thickness: TripReportLineThickness;
+    /** When true, direction arrows are drawn along the line. */
+    readonly showDirection: boolean;
     /**
      * Smallest box containing every waypoint, or null with no waypoints. Computed from
      * {@link waypoints} when the segment is created; every waypoint change creates a new segment,
@@ -170,6 +180,7 @@ export class TripReportLineSegment {
         style: TripReportLineStyle = DEFAULT_TRIP_REPORT_LINE_STYLE,
         thickness: TripReportLineThickness = DEFAULT_TRIP_REPORT_LINE_THICKNESS,
         originalColor: TripReportHexColor | null = null,
+        showDirection: boolean = DEFAULT_TRIP_REPORT_LINE_SHOW_DIRECTION,
     ) {
         this.id = id;
         this.name = name;
@@ -178,6 +189,7 @@ export class TripReportLineSegment {
         this.originalColor = originalColor;
         this.style = style;
         this.thickness = thickness;
+        this.showDirection = showDirection;
         this.bounds = boundsOfWaypoints(waypoints);
         this.distance = new LengthMeasurement(pathDistanceMeters(waypoints), METERS);
     }
@@ -191,7 +203,10 @@ export class TripReportLineSegment {
 
     private copy(
         changes: Partial<
-            Pick<TripReportLineSegment, 'name' | 'waypoints' | 'color' | 'style' | 'thickness'>
+            Pick<
+                TripReportLineSegment,
+                'name' | 'waypoints' | 'color' | 'style' | 'thickness' | 'showDirection'
+            >
         >,
     ): TripReportLineSegment {
         return new TripReportLineSegment(
@@ -202,6 +217,7 @@ export class TripReportLineSegment {
             changes.style ?? this.style,
             changes.thickness ?? this.thickness,
             this.originalColor,
+            changes.showDirection ?? this.showDirection,
         );
     }
 
@@ -235,8 +251,8 @@ export class TripReportLineSegment {
     }
 
     /**
-     * A new segment id with the same color, style, thickness, and originalColor as this one.
-     * Used when splitting a segment so the tail inherits appearance.
+     * A new segment id with the same color, style, thickness, showDirection, and originalColor as
+     * this one. Used when splitting a segment so the tail inherits appearance.
      */
     createSibling(name: string, waypoints: readonly TripReportWaypoint[]): TripReportLineSegment {
         return new TripReportLineSegment(
@@ -247,6 +263,7 @@ export class TripReportLineSegment {
             this.style,
             this.thickness,
             this.originalColor,
+            this.showDirection,
         );
     }
 
@@ -267,6 +284,10 @@ export class TripReportLineSegment {
 
     withThickness(thickness: TripReportLineThickness): TripReportLineSegment {
         return this.copy({ thickness });
+    }
+
+    withShowDirection(showDirection: boolean): TripReportLineSegment {
+        return this.copy({ showDirection });
     }
 
     get lastWaypoint(): TripReportWaypoint | null {
@@ -314,6 +335,7 @@ export class TripReportLineSegment {
                 ...(this.originalColor != null && { [ROPEGEO_PROPERTY.originalColor]: this.originalColor }),
                 [ROPEGEO_PROPERTY.style]: this.style,
                 [ROPEGEO_PROPERTY.thickness]: this.thickness,
+                [ROPEGEO_PROPERTY.showDirection]: this.showDirection,
             },
             geometry:
                 coordinates.length === 1
@@ -350,6 +372,7 @@ export class TripReportLineSegment {
                 nearestLineThickness(props[STYLE_PROPERTY.strokeWidth]) ?? DEFAULT_TRIP_REPORT_LINE_THICKNESS,
             ),
             originalColor,
+            parseBoolean(props[ROPEGEO_PROPERTY.showDirection], DEFAULT_TRIP_REPORT_LINE_SHOW_DIRECTION),
         );
     }
 
@@ -364,6 +387,9 @@ export class TripReportLineSegment {
         if (this.originalColor != null) json.originalColor = this.originalColor;
         if (this.style !== DEFAULT_TRIP_REPORT_LINE_STYLE) json.style = this.style;
         if (this.thickness !== DEFAULT_TRIP_REPORT_LINE_THICKNESS) json.thickness = this.thickness;
+        if (this.showDirection !== DEFAULT_TRIP_REPORT_LINE_SHOW_DIRECTION) {
+            json.showDirection = this.showDirection;
+        }
         return json;
     }
 
@@ -381,6 +407,7 @@ export class TripReportLineSegment {
                 DEFAULT_TRIP_REPORT_LINE_THICKNESS,
             ),
             toTripReportHexColor(json.originalColor),
+            parseBoolean(json.showDirection, DEFAULT_TRIP_REPORT_LINE_SHOW_DIRECTION),
         );
     }
 }

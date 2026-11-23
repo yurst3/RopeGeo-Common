@@ -27,6 +27,7 @@ export const ROPEGEO_PROPERTY = {
     originalColor: 'ropegeo:original-color',
     style: 'ropegeo:style',
     thickness: 'ropegeo:thickness',
+    showDirection: 'ropegeo:show-direction',
 } as const;
 
 export const ROPEGEO_PROPERTY_PREFIX = 'ropegeo:';

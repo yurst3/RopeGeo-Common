@@ -52,7 +52,12 @@ describe('TripReportLineSegment.withWaypoints / createSibling', () => {
             originalColor: '#ff8800',
             style: 'dashed',
             thickness: 'thick',
+            showDirection: true,
         });
+
+        const hidden = segment.withShowDirection(false);
+        expect(hidden.showDirection).toBe(false);
+        expect(hidden.createSibling('Tail', segment.waypoints.slice(1)).showDirection).toBe(false);
     });
 });
 
@@ -276,5 +281,29 @@ describe('TripReportLineSegment colors', () => {
         const segment = TripReportLineSegment.fromJSON(json as unknown as TripReportLineSegmentJson);
         expect(segment.color).toBe('black');
         expect(segment.originalColor).toBeNull();
+    });
+
+    it('round-trips showDirection through JSON and map files', () => {
+        const segment = new TripReportLineSegment('s', 'Segment 1', [
+            [0, 0],
+            [1, 1],
+        ]).withShowDirection(false);
+        expect(segment.toJSON()).toMatchObject({ showDirection: false });
+        expect(TripReportLineSegment.fromJSON(segment.toJSON()).showDirection).toBe(false);
+        expect(
+            new TripReportLineSegment('s', 'Segment 1', [
+                [0, 0],
+                [1, 1],
+            ]).toJSON(),
+        ).not.toHaveProperty('showDirection');
+
+        const feature = segment.toMapFileFeature()!;
+        expect(feature.properties).toMatchObject({ 'ropegeo:show-direction': false });
+        const restored = TripReportLineSegment.fromMapFileLine(
+            feature.geometry as LineString,
+            feature.properties,
+            options,
+        );
+        expect(restored.showDirection).toBe(false);
     });
 });

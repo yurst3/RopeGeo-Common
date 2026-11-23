@@ -345,6 +345,7 @@ export { addDays, TripReportDates, type TripReportDatesJson } from './tripReport
 export { TripReportDraft, type TripReportDraftJson } from './tripReport/tripReportDraft';
 export {
     DEFAULT_TRIP_REPORT_LINE_COLOR,
+    DEFAULT_TRIP_REPORT_LINE_SHOW_DIRECTION,
     DEFAULT_TRIP_REPORT_LINE_STYLE,
     DEFAULT_TRIP_REPORT_LINE_THICKNESS,
     TRIP_REPORT_LINE_COLORS,
