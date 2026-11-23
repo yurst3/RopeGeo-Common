@@ -1,4 +1,5 @@
 import type { Feature, FeatureCollection, GeoJsonProperties, LineString, Point } from 'geojson';
+import { LengthMeasurement, METERS } from '../measurements/lengthMeasurement';
 import { ROPEGEO_PROPERTY, STYLE_PROPERTY } from '../mapFile/util/properties';
 import { Bounds } from '../minimap/bounds';
 import {
@@ -49,6 +50,53 @@ function roundCoordinate(value: number): number {
 /** Rounds to the stored precision. */
 export function roundWaypoint([lng, lat]: TripReportWaypoint): TripReportWaypoint {
     return [roundCoordinate(lng), roundCoordinate(lat)];
+}
+
+/** Meters per degree of latitude (WGS84 approximation). */
+const METERS_PER_DEG_LAT = 111_320;
+/** Mean Earth radius used for haversine path length. */
+const EARTH_RADIUS_M = 6_371_000;
+
+/**
+ * Point `meters` from `from` toward `toward`, rounded to stored precision. Null when the two
+ * points coincide (no direction).
+ */
+export function waypointOffsetToward(
+    from: TripReportWaypoint,
+    toward: TripReportWaypoint,
+    meters: number,
+): TripReportWaypoint | null {
+    const [fromLng, fromLat] = from;
+    const dLng = toward[0] - fromLng;
+    const dLat = toward[1] - fromLat;
+    const metersPerDegLng = METERS_PER_DEG_LAT * Math.cos((fromLat * Math.PI) / 180);
+    const distanceM = Math.hypot(dLng * metersPerDegLng, dLat * METERS_PER_DEG_LAT);
+    if (!(distanceM > 0)) return null;
+    const scale = meters / distanceM;
+    return roundWaypoint([fromLng + dLng * scale, fromLat + dLat * scale]);
+}
+
+/** Great-circle distance in meters between two waypoints. */
+function distanceMetersBetween(a: TripReportWaypoint, b: TripReportWaypoint): number {
+    const toRad = Math.PI / 180;
+    const lat1 = a[1] * toRad;
+    const lat2 = b[1] * toRad;
+    const dLat = (b[1] - a[1]) * toRad;
+    const dLng = (b[0] - a[0]) * toRad;
+    const sinDLat = Math.sin(dLat / 2);
+    const sinDLng = Math.sin(dLng / 2);
+    const h =
+        sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLng * sinDLng;
+    return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/** Sum of great-circle lengths along consecutive waypoints. */
+function pathDistanceMeters(waypoints: readonly TripReportWaypoint[]): number {
+    let total = 0;
+    for (let i = 1; i < waypoints.length; i += 1) {
+        total += distanceMetersBetween(waypoints[i - 1]!, waypoints[i]!);
+    }
+    return total;
 }
 
 /** Smallest box containing every waypoint, or null when there are none. */
@@ -108,6 +156,11 @@ export class TripReportLineSegment {
      * so it always matches. Not part of the JSON.
      */
     readonly bounds: Bounds | null;
+    /**
+     * Great-circle length of the polyline in meters. Recomputed from {@link waypoints} whenever
+     * the segment is created (including add/remove/move/split). Not part of the JSON.
+     */
+    readonly distance: LengthMeasurement;
 
     constructor(
         id: string,
@@ -126,6 +179,7 @@ export class TripReportLineSegment {
         this.style = style;
         this.thickness = thickness;
         this.bounds = boundsOfWaypoints(waypoints);
+        this.distance = new LengthMeasurement(pathDistanceMeters(waypoints), METERS);
     }
 
     static createEmpty(

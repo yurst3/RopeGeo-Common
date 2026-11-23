@@ -6,30 +6,41 @@ export type SplitSegmentUndoChangeJson = {
     segmentId: string;
     newSegmentId: string;
     waypointIndex: number;
+    /** When true, the new segment's first waypoint is a 1 m bridge and must be dropped on undo. */
+    hasBridgeStart?: boolean;
 };
 
 /**
  * Undoes {@link TripReportMapBlock.withSegmentSplitAt} by concatenating the new segment's
- * waypoints back onto the original and removing the new segment.
+ * waypoints back onto the original (skipping a bridge start when present) and removing the new
+ * segment.
  */
 export class SplitSegmentUndoChange extends MapBlockUndoChange {
     readonly type = 'splitSegment' as const;
     readonly segmentId: string;
     readonly newSegmentId: string;
     readonly waypointIndex: number;
+    readonly hasBridgeStart: boolean;
 
-    constructor(segmentId: string, newSegmentId: string, waypointIndex: number) {
+    constructor(
+        segmentId: string,
+        newSegmentId: string,
+        waypointIndex: number,
+        hasBridgeStart = false,
+    ) {
         super();
         this.segmentId = segmentId;
         this.newSegmentId = newSegmentId;
         this.waypointIndex = waypointIndex;
+        this.hasBridgeStart = hasBridgeStart;
     }
 
     apply(block: TripReportMapBlock): TripReportMapBlock {
         const original = block.segments.find((segment) => segment.id === this.segmentId);
         const split = block.segments.find((segment) => segment.id === this.newSegmentId);
         if (original == null || split == null) return block;
-        const merged = original.withWaypoints([...original.waypoints, ...split.waypoints]);
+        const rejoined = this.hasBridgeStart ? split.waypoints.slice(1) : split.waypoints;
+        const merged = original.withWaypoints([...original.waypoints, ...rejoined]);
         return block.withSegments(
             block.segments.flatMap((segment) => {
                 if (segment.id === this.segmentId) return [merged];
@@ -45,6 +56,7 @@ export class SplitSegmentUndoChange extends MapBlockUndoChange {
             segmentId: this.segmentId,
             newSegmentId: this.newSegmentId,
             waypointIndex: this.waypointIndex,
+            ...(this.hasBridgeStart ? { hasBridgeStart: true } : {}),
         };
     }
 
@@ -60,6 +72,7 @@ export class SplitSegmentUndoChange extends MapBlockUndoChange {
                 r.waypointIndex,
                 'SplitSegmentUndoChange.waypointIndex',
             ),
+            r.hasBridgeStart === true,
         );
     }
 }

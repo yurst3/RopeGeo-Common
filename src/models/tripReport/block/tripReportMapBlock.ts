@@ -4,6 +4,7 @@ import { LEGEND_ID_PROPERTY, ROPEGEO_PROPERTY, STYLE_PROPERTY } from '../../mapF
 import { LegendItem } from '../../minimap/legend/abstract/legendItem';
 import {
     TripReportLineSegment,
+    waypointOffsetToward,
     type TripReportLineColor,
     type TripReportLineSegmentJson,
     type TripReportWaypoint,
@@ -310,8 +311,10 @@ export class TripReportMapBlock extends TripReportBlock {
     /**
      * Splits a segment at `waypointIndex`: the original keeps waypoints before the index; a new
      * segment (inserted immediately after) owns the selected waypoint and everything after it.
-     * Throws when `waypointIndex === 0` (would leave the original empty). No-op when the segment
-     * is missing or `waypointIndex >= length`.
+     * The new segment also starts with a bridge waypoint 1 m from the split toward the next point
+     * (or continuing past the split when it was the last waypoint), so the two segments don't
+     * share an endpoint. Throws when `waypointIndex === 0` (would leave the original empty).
+     * No-op when the segment is missing or `waypointIndex >= length`.
      */
     withSegmentSplitAt(segmentId: string, waypointIndex: number): TripReportMapBlock {
         const segmentIndex = this.segments.findIndex((entry) => entry.id === segmentId);
@@ -325,11 +328,24 @@ export class TripReportMapBlock extends TripReportBlock {
         }
         if (waypointIndex < 0) return this;
 
+        const shared = segment.waypoints.slice(waypointIndex);
+        const splitPoint = shared[0]!;
+        const nextOnTail = shared[1];
+        const previous = segment.waypoints[waypointIndex - 1]!;
+        // Prefer the next waypoint on the new segment; if the split was at the end, continue in
+        // the travel direction past the split.
+        const toward: TripReportWaypoint =
+            nextOnTail ??
+            ([
+                splitPoint[0] + (splitPoint[0] - previous[0]),
+                splitPoint[1] + (splitPoint[1] - previous[1]),
+            ] as const);
+        const bridge = waypointOffsetToward(splitPoint, toward, 1);
+        const hasBridgeStart = bridge != null;
+        const tailWaypoints = hasBridgeStart ? [bridge, ...shared] : shared;
+
         const head = segment.withWaypoints(segment.waypoints.slice(0, waypointIndex));
-        const tail = segment.createSibling(
-            `Segment ${this.nextSegmentNumber}`,
-            segment.waypoints.slice(waypointIndex),
-        );
+        const tail = segment.createSibling(`Segment ${this.nextSegmentNumber}`, tailWaypoints);
         const segments = [
             ...this.segments.slice(0, segmentIndex),
             head,
@@ -339,7 +355,9 @@ export class TripReportMapBlock extends TripReportBlock {
         return this.copy({
             segments,
             nextSegmentNumber: this.nextSegmentNumber + 1,
-        }).withUndoPushed(new SplitSegmentUndoChange(segmentId, tail.id, waypointIndex));
+        }).withUndoPushed(
+            new SplitSegmentUndoChange(segmentId, tail.id, waypointIndex, hasBridgeStart),
+        );
     }
 
     /** Adds a "Marker N" at `position`. */

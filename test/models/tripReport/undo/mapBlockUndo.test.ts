@@ -147,12 +147,26 @@ describe('TripReportMapBlock undo', () => {
         ]);
         expect(split.segments[2]!.name).toBe('Segment 3');
         expect(split.segments[2]!.color).toBe('red');
-        expect(split.segments[2]!.waypoints).toEqual([
-            [-109.2, 38.2],
-            [-109.3, 38.3],
-        ]);
+        const splitPoint = [-109.2, 38.2] as const;
+        const nextPoint = [-109.3, 38.3] as const;
+        expect(split.segments[2]!.waypoints).toHaveLength(3);
+        const bridge = split.segments[2]!.waypoints[0]!;
+        expect(bridge).not.toEqual(splitPoint);
+        expect(split.segments[2]!.waypoints.slice(1)).toEqual([splitPoint, nextPoint]);
+        const metersPerDegLat = 111_320;
+        const metersPerDegLng = metersPerDegLat * Math.cos((splitPoint[1] * Math.PI) / 180);
+        const bridgeDistanceM = Math.hypot(
+            (bridge[0] - splitPoint[0]) * metersPerDegLng,
+            (bridge[1] - splitPoint[1]) * metersPerDegLat,
+        );
+        expect(bridgeDistanceM).toBeCloseTo(1, 1);
         expect(split.nextSegmentNumber).toBe(4);
         expect(split.undoStack[split.undoStack.length - 1]!.type).toBe('splitSegment');
+        expect(split.undoStack[split.undoStack.length - 1]!.toJSON()).toMatchObject({
+            hasBridgeStart: true,
+        });
+        expect(split.segments[1]!.distance.value).toBeGreaterThan(0);
+        expect(split.segments[2]!.distance.value).toBeGreaterThan(1);
 
         const restored = split.undoChange();
         expect(restored.segments).toHaveLength(2);
@@ -163,6 +177,7 @@ describe('TripReportMapBlock undo', () => {
             [-109.2, 38.2],
             [-109.3, 38.3],
         ]);
+        expect(restored.segments[1]!.distance.value).toBeCloseTo(block.segments[1]!.distance.value, 6);
         expect(restored.nextSegmentNumber).toBe(4);
 
         expect(() => block.withSegmentSplitAt(segmentId, 0)).toThrow(

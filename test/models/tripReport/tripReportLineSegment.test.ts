@@ -1,6 +1,12 @@
 import { describe, it, expect } from '@jest/globals';
 import type { LineString } from 'geojson';
-import { Bounds, TripReportLineSegment, type TripReportLineSegmentJson } from '../../../src/models';
+import {
+    Bounds,
+    LengthMeasurement,
+    METERS,
+    TripReportLineSegment,
+    type TripReportLineSegmentJson,
+} from '../../../src/models';
 
 const boundsOf = (segment: TripReportLineSegment) =>
     segment.bounds == null
@@ -115,6 +121,67 @@ describe('TripReportLineSegment.bounds', () => {
             { id: 's', name: 'Approach' },
         );
         expect(boundsOf(segment)).toEqual({ north: 38.61, south: 38.57, east: -109.52, west: -109.55 });
+    });
+});
+
+describe('TripReportLineSegment.distance', () => {
+    it('is zero without two waypoints', () => {
+        expect(TripReportLineSegment.createEmpty('Segment 1').distance).toEqual(
+            new LengthMeasurement(0, METERS),
+        );
+        const single = TripReportLineSegment.createEmpty('Segment 1').withWaypointAppended([
+            -109.55, 38.57,
+        ]);
+        expect(single.distance.value).toBe(0);
+        expect(single.distance.unit).toEqual(METERS);
+    });
+
+    it('is the great-circle length in meters', () => {
+        // ~111.32 km per degree latitude near the equator; 0.01° ≈ 1.113 km.
+        const segment = new TripReportLineSegment('s', 'Segment 1', [
+            [0, 0],
+            [0, 0.01],
+        ]);
+        expect(segment.distance).toBeInstanceOf(LengthMeasurement);
+        expect(segment.distance.unit).toEqual(METERS);
+        expect(segment.distance.value).toBeGreaterThan(1100);
+        expect(segment.distance.value).toBeLessThan(1125);
+        expect(segment.distance.toMeasurementSystem('Metric', 'kilometers').value).toBeCloseTo(
+            segment.distance.value / 1000,
+            6,
+        );
+    });
+
+    it('sums consecutive legs and updates when waypoints change', () => {
+        const start = new TripReportLineSegment('s', 'Segment 1', [
+            [0, 0],
+            [0, 0.01],
+        ]);
+        const oneLeg = start.distance.value;
+
+        const appended = start.withWaypointAppended([0, 0.02]);
+        expect(appended.distance.value).toBeCloseTo(oneLeg * 2, 0);
+
+        const removed = appended.withWaypointRemoved(1);
+        expect(removed.distance.value).toBeCloseTo(oneLeg * 2, 0);
+
+        const short = appended.withWaypointRemoved(2);
+        expect(short.distance.value).toBeCloseTo(oneLeg, 0);
+
+        const moved = start.withWaypointMoved(1, [0, 0.02]);
+        expect(moved.distance.value).toBeCloseTo(oneLeg * 2, 0);
+    });
+
+    it('is restored from JSON and left out of it', () => {
+        const segment = new TripReportLineSegment('s', 'Segment 1', [
+            [0, 0],
+            [0, 0.01],
+        ]);
+        const json = segment.toJSON();
+        expect(json).not.toHaveProperty('distance');
+        const restored = TripReportLineSegment.fromJSON(json);
+        expect(restored.distance.value).toBeCloseTo(segment.distance.value, 6);
+        expect(restored.distance.unit).toEqual(METERS);
     });
 });
 

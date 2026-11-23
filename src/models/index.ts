@@ -158,7 +158,7 @@ export { formatMeasurementValue } from './measurements/measurementValue';
 export { Measurement, FREEDOM_MEASUREMENT_SYSTEM } from './measurements/measurement';
 export type { MeasurementUnit } from './measurements/measurement';
 export { MinMax } from './measurements/minMax';
-export { LengthMeasurement, MILES, FEET } from './measurements/lengthMeasurement';
+export { LengthMeasurement, MILES, FEET, METERS, KILOMETERS } from './measurements/lengthMeasurement';
 export type {
     ImperialSystem,
     MetricSystem,

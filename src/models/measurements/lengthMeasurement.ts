@@ -9,6 +9,8 @@ export type LengthMeasurementSystem = 'Imperial' | 'Metric' | 'Freedom';
 /** Convenience unit descriptors for the units RopeWiki stores lengths/elevations in. */
 export const MILES: ImperialSystem = { measurementSystem: 'Imperial', name: 'miles' };
 export const FEET: ImperialSystem = { measurementSystem: 'Imperial', name: 'feet' };
+export const METERS: MetricSystem = { measurementSystem: 'Metric', name: 'meters' };
+export const KILOMETERS: MetricSystem = { measurementSystem: 'Metric', name: 'kilometers' };
 
 type StandardLengthName = 'feet' | 'miles' | 'meters' | 'kilometers';
 
